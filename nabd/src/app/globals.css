@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+/* Dark-mode variant keyed on html[data-theme] (set server-side from the
+   session cookie — no flash of wrong theme). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ============ Design tokens (dark-cyan primary, bright-cyan accent) ============ */
+:root {
+  --bg: #f2f7f8;
+  --surface: #ffffff;
+  --surface-2: #f6fafb;
+  --ink: #0c2530;
+  --ink-2: #46626d;
+  --ink-3: #7d939c;
+  --line: #dce8ec;
+  --grid: #e6eef1;
+  --primary: #0e7490;
+  --primary-strong: #155e75;
+  --accent: #06b6d4;
+  --accent-soft: #d7f5fa;
+  --on-primary: #ffffff;
+
+  /* Status — fixed scale, always paired with icon + label */
+  --st-done: #0f8c0f;       --st-done-bg: #e4f5e4;
+  --st-ontrack: #0e7490;    --st-ontrack-bg: #dcf3f8;
+  --st-pending: #9a6700;    --st-pending-bg: #fdf0d3;
+  --st-blocked: #c22f2f;    --st-blocked-bg: #fbe5e5;
+  --st-delayed: #b34a20;    --st-delayed-bg: #fdeadf;
+
+  /* Chart mark fills (direct labels + table view provide contrast relief) */
+  --ch-done: #0ca30c;
+  --ch-ontrack: #06b6d4;
+  --ch-pending: #fab219;
+  --ch-blocked: #d03b3b;
+  --ch-delayed: #ec835a;
+}
+
+[data-theme="dark"] {
+  --bg: #0a1418;
+  --surface: #101e24;
+  --surface-2: #16262d;
+  --ink: #e8f4f7;
+  --ink-2: #a7c2cb;
+  --ink-3: #6d8892;
+  --line: #1f3540;
+  --grid: #1c3038;
+  --primary: #22d3ee;
+  --primary-strong: #06b6d4;
+  --accent: #22d3ee;
+  --accent-soft: #123c46;
+  --on-primary: #06222b;
+
+  --st-done: #4ade4a;       --st-done-bg: #12300f;
+  --st-ontrack: #22d3ee;    --st-ontrack-bg: #0d3540;
+  --st-pending: #fac23f;    --st-pending-bg: #3a2d08;
+  --st-blocked: #f47070;    --st-blocked-bg: #3d1414;
+  --st-delayed: #f5936b;    --st-delayed-bg: #3b1e10;
+
+  --ch-ontrack: #22d3ee;
+}
+
+/* Expose tokens as Tailwind color utilities (bg-surface, text-ink-2, …) */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-grid: var(--grid);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-primary: var(--on-primary);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 6px;
+}
+
+/* ============ Repeated component patterns ============ */
+@layer components {
+  .card {
+    @apply bg-surface border border-line rounded-2xl p-5;
+    box-shadow: 0 1px 3px rgb(8 51 68 / 0.08), 0 4px 16px rgb(8 51 68 / 0.06);
+  }
+  [data-theme="dark"] .card {
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.3);
+  }
+
+  .btn, .btn-primary, .btn-ghost, .btn-soft {
+    @apply inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold cursor-pointer transition hover:-translate-y-px active:translate-y-0 disabled:opacity-50;
+  }
+  .btn-primary { @apply bg-primary-strong text-on-primary hover:bg-primary; }
+  .btn-ghost { @apply border border-line text-primary bg-transparent hover:bg-surface-2; }
+  .btn-soft { @apply bg-accent-soft text-primary-strong dark:text-accent; }
+  .btn-sm { @apply !px-3 !py-1.5 !text-xs; }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap;
+  }
+  .chip-done    { background: var(--st-done-bg);    color: var(--st-done); }
+  .chip-ontrack { background: var(--st-ontrack-bg); color: var(--st-ontrack); }
+  .chip-pending { background: var(--st-pending-bg); color: var(--st-pending); }
+  .chip-blocked { background: var(--st-blocked-bg); color: var(--st-blocked); }
+  .chip-delayed { background: var(--st-delayed-bg); color: var(--st-delayed); }
+
+  .field-input {
+    @apply w-full border border-line rounded-xl px-3 py-2.5 bg-surface-2 text-ink focus:border-accent;
+  }
+
+  .icon-btn {
+    @apply w-10 h-10 rounded-full border border-line bg-surface text-ink-2 grid place-items-center cursor-pointer relative transition hover:bg-surface-2 hover:-translate-y-px;
+  }
+}
+
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+@keyframes eq-bounce {
+  0%, 100% { height: 6px; }
+  50% { height: 22px; }
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(208 59 59 / 0.5); }
+  50% { box-shadow: 0 0 0 12px rgb(208 59 59 / 0); }
+}
+@keyframes modal-pop {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.animate-modal-pop { animation: modal-pop 0.18s ease; }
+.animate-mic-pulse { animation: mic-pulse 1.2s ease-in-out infinite; }

@@ -1,0 +1,123 @@
+/* Domain types shared across server and client */
+
+export type Lang = "en" | "ar";
+export type Theme = "light" | "dark";
+export type Role = "senior" | "manager" | "employee";
+
+/** Stored status. "delayed" is derived (past due & unfinished), never stored. */
+export type TaskStatus = "done" | "ontrack" | "pending" | "blocked";
+export type EffStatus = TaskStatus | "delayed";
+export type Priority = "high" | "med" | "low";
+
+export interface Localized {
+  en: string;
+  ar: string;
+}
+
+export interface Unit {
+  id: string;
+  emoji: string;
+  name: Localized;
+}
+
+export interface Team {
+  id: string;
+  unitId: string;
+  emoji: string;
+  managerId: string;
+  name: Localized;
+}
+
+export interface User {
+  id: string;
+  role: Role;
+  teamId: string | null;
+  name: Localized;
+  streak: number;
+}
+
+export interface TaskUpdate {
+  ts: number;
+  text: Localized;
+  status: TaskStatus;
+  progress: number;
+}
+
+export interface Task {
+  id: string;
+  ownerId: string;
+  teamId: string;
+  status: TaskStatus;
+  progress: number;
+  priority: Priority;
+  title: Localized;
+  due: string | null; // YYYY-MM-DD
+  updatedAt: number;
+  history: TaskUpdate[];
+}
+
+export interface StatusCounts {
+  done: number;
+  ontrack: number;
+  pending: number;
+  blocked: number;
+  delayed: number;
+  total: number;
+}
+
+export type NotifKind = "blocked" | "delayed" | "stale" | "done";
+
+export interface Notification {
+  id: string;
+  kind: NotifKind;
+  taskId: string;
+  ts: number;
+  whoId: string;
+  teamId: string;
+  staleDays?: number;
+  read: boolean;
+}
+
+export const DAY_MS = 86_400_000;
+export const STALE_AFTER_DAYS = 3;
+
+export const STATUS_ORDER: EffStatus[] = ["done", "ontrack", "pending", "delayed", "blocked"];
+
+/** Status metadata — icon is mandatory: color never carries meaning alone. */
+export const STATUS_META: Record<EffStatus, { icon: string; labelKey: string; chartVar: string }> = {
+  done: { icon: "✅", labelKey: "st_done", chartVar: "var(--ch-done)" },
+  ontrack: { icon: "🟢", labelKey: "st_ontrack", chartVar: "var(--ch-ontrack)" },
+  pending: { icon: "⏳", labelKey: "st_pending", chartVar: "var(--ch-pending)" },
+  blocked: { icon: "⛔", labelKey: "st_blocked", chartVar: "var(--ch-blocked)" },
+  delayed: { icon: "⚠️", labelKey: "st_delayed", chartVar: "var(--ch-delayed)" },
+};
+
+export function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function effStatus(task: Pick<Task, "status" | "due">): EffStatus {
+  if (task.status === "done" || task.status === "blocked") return task.status;
+  if (task.due && task.due < todayISO()) return "delayed";
+  return task.status;
+}
+
+export function isStale(task: Pick<Task, "status" | "updatedAt">): boolean {
+  return task.status !== "done" && Date.now() - task.updatedAt > STALE_AFTER_DAYS * DAY_MS;
+}
+
+export function countStatuses(tasks: Task[]): StatusCounts {
+  const c: StatusCounts = { done: 0, ontrack: 0, pending: 0, blocked: 0, delayed: 0, total: tasks.length };
+  for (const t of tasks) c[effStatus(t)]++;
+  return c;
+}
+
+export type Health = "great" | "ok" | "risk";
+
+export function teamHealth(s: StatusCounts): Health {
+  if (!s.total) return "great";
+  const good = (s.done + s.ontrack) / s.total;
+  if (s.blocked + s.delayed === 0 && good >= 0.6) return "great";
+  if (s.blocked >= 2 || (s.blocked + s.delayed) / s.total > 0.34) return "risk";
+  return "ok";
+}

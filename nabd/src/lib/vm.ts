@@ -1,0 +1,59 @@
+/* Server-side view-model builders shared by pages. */
+
+import { makeT } from "./i18n";
+import { getTeam, getUser } from "./repo";
+import type { TaskVM } from "@/components/tasks";
+import { STATUS_META, effStatus, type Lang, type Task } from "./types";
+
+export function toVM(task: Task): TaskVM {
+  const owner = getUser(task.ownerId)!;
+  const team = getTeam(task.teamId)!;
+  return { task, ownerName: owner.name, teamName: team.name, teamEmoji: team.emoji };
+}
+
+export function csvRows(tasks: Task[], lang: Lang): string[][] {
+  const t = makeT(lang);
+  return [
+    ["Task", "Owner", "Team", "Status", "Progress %", "Due", "Last updated"],
+    ...tasks.map((x) => [
+      x.title[lang],
+      getUser(x.ownerId)!.name[lang],
+      getTeam(x.teamId)!.name[lang],
+      t(STATUS_META[effStatus(x)].labelKey),
+      String(x.progress),
+      x.due ?? "",
+      new Date(x.updatedAt).toISOString().slice(0, 10),
+    ]),
+  ];
+}
+
+export const doneThisWeekCount = (tasks: Task[]): number =>
+  tasks.filter((x) => x.status === "done" && Date.now() - x.updatedAt < 7 * 86_400_000).length;
+
+export function greetingKey(): string {
+  const h = new Date().getHours();
+  return h < 12 ? "greeting_morning" : h < 17 ? "greeting_afternoon" : "greeting_evening";
+}
+
+/** Recent history entries across a task set, with a relative-day count. */
+export function recentActivity(tasks: Task[], limit: number) {
+  return tasks
+    .flatMap((task) => task.history.map((h) => ({ task, h, daysAgo: Math.floor((Date.now() - h.ts) / 86_400_000) })))
+    .sort((a, b) => b.h.ts - a.h.ts)
+    .slice(0, limit);
+}
+
+/** Completions per day over the trailing week (from task history). */
+export function weekTrend(tasks: Task[], lang: Lang): { label: string; count: number }[] {
+  return [...Array(7)].map((_, i) => {
+    const d = new Date(Date.now() - (6 - i) * 86_400_000);
+    const key = d.toISOString().slice(0, 10);
+    let count = 0;
+    for (const task of tasks) {
+      for (const h of task.history) {
+        if (h.status === "done" && new Date(h.ts).toISOString().slice(0, 10) === key) count++;
+      }
+    }
+    return { label: d.toLocaleDateString(lang === "ar" ? "ar" : "en", { weekday: "short" }), count };
+  });
+}
