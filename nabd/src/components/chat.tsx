@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { applyCheckin } from "@/app/actions";
 import { useI18n } from "./providers";
 import { Modal } from "./ui";
+import { Icon } from "./icons";
 import { isSummaryRequest, matchTask, parseUpdate, type ParsedUpdate } from "@/lib/parser";
 import { STATUS_META, effStatus, type Task, type TaskStatus } from "@/lib/types";
 
@@ -43,7 +44,7 @@ export function CheckinButtons({ tasks, userFirstName, doneThisWeek }: {
   return (
     <>
       <button className="btn-soft" onClick={() => setMode("chat")}>💬 {t("update_chat")}</button>
-      <button className="btn-soft" onClick={() => setMode("voice")}>🎙️ {t("update_voice")}</button>
+      <button className="btn-soft flex items-center gap-1" onClick={() => setMode("voice")}><Icon name="mic" size={16} /> {t("update_voice")}</button>
       {mode !== "closed" && (
         <ChatModal
           tasks={tasks}
@@ -147,7 +148,7 @@ function ChatModal({ tasks, userFirstName, doneThisWeek, startVoice, onClose }: 
     rec.start();
     recRef.current = rec;
     setRecording(true);
-    push({ who: "bot", text: `🎙️ ${t("voice_listening")}` });
+    push({ who: "bot", text: t("voice_listening") });
   };
 
   useEffect(() => {
@@ -161,18 +162,18 @@ function ChatModal({ tasks, userFirstName, doneThisWeek, startVoice, onClose }: 
   return (
     <Modal
       title={t("chat_title")}
-      icon="🤖"
+      icon="search"
       onClose={onClose}
       footer={
         <>
           <button
-            className={`w-11 h-11 rounded-full grid place-items-center text-lg shrink-0 cursor-pointer transition
+            className={`w-11 h-11 rounded-full grid place-items-center shrink-0 cursor-pointer transition
               ${recording ? "text-white animate-mic-pulse" : "bg-accent-soft text-primary-strong dark:text-accent hover:scale-105"}`}
             style={recording ? { background: "var(--st-blocked)" } : undefined}
             onClick={toggleVoice}
             title={t("update_voice")}
           >
-            🎙️
+            <Icon name="mic" size={20} />
           </button>
           <input
             className="flex-1 border border-line rounded-full px-4 py-2.5 bg-surface-2 text-ink focus:border-accent"
@@ -182,7 +183,7 @@ function ChatModal({ tasks, userFirstName, doneThisWeek, startVoice, onClose }: 
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { handle(input); setInput(""); } }}
           />
-          <button className="btn-primary" onClick={() => { handle(input); setInput(""); }}>➤</button>
+          <button className="btn-primary flex items-center gap-1" onClick={() => { handle(input); setInput(""); }}><Icon name="arrow-right" size={16} /></button>
         </>
       }
     >

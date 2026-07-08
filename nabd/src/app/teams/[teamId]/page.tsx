@@ -6,16 +6,17 @@ import { ChartCard, Donut, MiniBars, StatTiles, StatusTable } from "@/components
 import { ExportCsvButton } from "@/components/dashboard-widgets";
 import { TaskListSection } from "@/components/tasks";
 import { Avatar } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { makeT } from "@/lib/i18n";
 import { getTeam, getUnit, teamMembers, teamTasks, userTasks } from "@/lib/repo";
 import { getSession } from "@/lib/session";
 import { countStatuses, teamHealth, type Health } from "@/lib/types";
 import { csvRows, toVM } from "@/lib/vm";
 
-const HEALTH_BADGE: Record<Health, { emoji: string; labelKey: string; color: string }> = {
-  great: { emoji: "💚", labelKey: "health_great", color: "var(--st-done)" },
-  ok: { emoji: "👀", labelKey: "health_ok", color: "var(--st-pending)" },
-  risk: { emoji: "🚨", labelKey: "health_risk", color: "var(--st-blocked)" },
+const HEALTH_BADGE: Record<Health, { icon: string; labelKey: string; color: string }> = {
+  great: { icon: "check-circle", labelKey: "health_great", color: "var(--st-done)" },
+  ok: { icon: "alert-circle", labelKey: "health_ok", color: "var(--st-pending)" },
+  risk: { icon: "alert-triangle", labelKey: "health_risk", color: "var(--st-blocked)" },
 };
 
 export default async function TeamPage({ params }: { params: Promise<{ teamId: string }> }) {
@@ -39,8 +40,7 @@ export default async function TeamPage({ params }: { params: Promise<{ teamId: s
         <div>
           <h2 className="m-0 text-2xl font-extrabold">{team.emoji} {team.name[lang]}</h2>
           <p className="m-0 mt-0.5 text-sm text-ink-2">
-            {unit.name[lang]} · {t("team_health")}:{" "}
-            <b style={{ color: h.color }}>{h.emoji} {t(h.labelKey)}</b>
+            {unit.name[lang]} · {t("team_health")}: {t(h.labelKey)}
           </p>
         </div>
         <div className="flex-1" />
@@ -53,7 +53,7 @@ export default async function TeamPage({ params }: { params: Promise<{ teamId: s
 
       <div className="grid gap-4.5 lg:[grid-template-columns:1.1fr_1.6fr] items-start">
         <div className="card">
-          <h3 className="m-0 mb-3 text-base font-extrabold">👥 {t("members")}</h3>
+          <h3 className="m-0 mb-3 text-base font-extrabold">{t("members")}</h3>
           {members.map((m) => {
             const mstats = countStatuses(userTasks(m.id));
             return (
@@ -67,7 +67,7 @@ export default async function TeamPage({ params }: { params: Promise<{ teamId: s
                     )}
                   </div>
                   <div className="text-xs text-ink-3">
-                    {mstats.total} {t("active_tasks")}{m.streak > 0 && ` · 🔥 ${m.streak}`}
+                    {mstats.total} {t("active_tasks")}{m.streak > 0 && ` · ${m.streak} streak`}
                   </div>
                 </div>
                 <MiniBars stats={mstats} label={m.name[lang]} />
