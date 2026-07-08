@@ -6,12 +6,13 @@
 
 import { useState } from "react";
 import { useI18n } from "./providers";
+import { Icon } from "./icons";
 import { STATUS_META, STATUS_ORDER, type StatusCounts } from "@/lib/types";
 
 export function StatTiles({ stats }: { stats: StatusCounts }) {
   const { t } = useI18n();
   const tiles: { label: string; icon: string; val: number; edge: string }[] = [
-    { label: t("tasks_total"), icon: "🗂️", val: stats.total, edge: "var(--accent)" },
+    { label: t("tasks_total"), icon: "tasks", val: stats.total, edge: "var(--accent)" },
     ...STATUS_ORDER.map((s) => ({
       label: t(STATUS_META[s].labelKey), icon: STATUS_META[s].icon,
       val: stats[s], edge: STATUS_META[s].chartVar,
@@ -22,7 +23,7 @@ export function StatTiles({ stats }: { stats: StatusCounts }) {
       {tiles.map((x) => (
         <div key={x.label} className="card relative overflow-hidden !p-4 flex flex-col gap-1">
           <span className="absolute start-0 top-0 bottom-0 w-1" style={{ background: x.edge }} />
-          <span className="text-xs font-bold text-ink-2 flex items-center gap-1.5">{x.icon} {x.label}</span>
+          <span className="text-xs font-bold text-ink-2 flex items-center gap-1.5"><Icon name={x.icon} size={16} /> {x.label}</span>
           <span className="text-3xl font-extrabold leading-tight">{x.val}</span>
         </div>
       ))}
@@ -37,7 +38,7 @@ function Legend({ stats }: { stats: StatusCounts }) {
       {STATUS_ORDER.filter((s) => stats[s] > 0).map((s) => (
         <span key={s} className="flex items-center gap-1.5 text-xs text-ink-2 font-semibold">
           <span className="w-2.5 h-2.5 rounded-xs shrink-0" style={{ background: STATUS_META[s].chartVar }} />
-          {STATUS_META[s].icon} {t(STATUS_META[s].labelKey)} · {stats[s]}
+          <Icon name={STATUS_META[s].icon} size={14} /> {t(STATUS_META[s].labelKey)} · {stats[s]}
         </span>
       ))}
     </div>
@@ -58,7 +59,7 @@ function StatusTable({ stats }: { stats: StatusCounts }) {
       <tbody>
         {STATUS_ORDER.map((s) => (
           <tr key={s}>
-            <td className="px-2.5 py-2 border-b border-grid">{STATUS_META[s].icon} {t(STATUS_META[s].labelKey)}</td>
+            <td className="px-2.5 py-2 border-b border-grid flex items-center gap-1.5"><Icon name={STATUS_META[s].icon} size={16} /> {t(STATUS_META[s].labelKey)}</td>
             <td className="px-2.5 py-2 border-b border-grid tabular-nums">{stats[s]}</td>
             <td className="px-2.5 py-2 border-b border-grid tabular-nums">{stats.total ? Math.round((stats[s] / stats.total) * 100) : 0}%</td>
           </tr>
@@ -182,14 +183,14 @@ export function TeamBarsTable({ rows }: { rows: TeamBarRow[] }) {
         <tr>
           <th className="text-start text-ink-3 text-[0.7rem] uppercase px-2.5 py-2 border-b border-line">{t("team")}</th>
           {STATUS_ORDER.map((s) => (
-            <th key={s} className="text-start text-ink-3 text-[0.7rem] px-2.5 py-2 border-b border-line">{STATUS_META[s].icon} {t(STATUS_META[s].labelKey)}</th>
+            <th key={s} className="text-start text-ink-3 text-[0.7rem] px-2.5 py-2 border-b border-line flex items-center gap-1.5"><Icon name={STATUS_META[s].icon} size={14} /> {t(STATUS_META[s].labelKey)}</th>
           ))}
         </tr>
       </thead>
       <tbody>
         {rows.map((r) => (
           <tr key={r.id}>
-            <td className="px-2.5 py-2 border-b border-grid">{r.emoji} {r.label}</td>
+            <td className="px-2.5 py-2 border-b border-grid">{r.label}</td>
             {STATUS_ORDER.map((s) => <td key={s} className="px-2.5 py-2 border-b border-grid tabular-nums">{r.stats[s]}</td>)}
           </tr>
         ))}

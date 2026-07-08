@@ -54,6 +54,22 @@ export interface Task {
   due: string | null; // YYYY-MM-DD
   updatedAt: number;
   history: TaskUpdate[];
+  auditLog?: AuditEntry[];
+  notes?: TaskNote;
+}
+
+export interface AuditEntry {
+  id: number;
+  changedBy: string;
+  ts: number;
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+export interface TaskNote {
+  id: number;
+  checklistItems: string[];
 }
 
 export interface StatusCounts {
@@ -85,11 +101,11 @@ export const STATUS_ORDER: EffStatus[] = ["done", "ontrack", "pending", "delayed
 
 /** Status metadata — icon is mandatory: color never carries meaning alone. */
 export const STATUS_META: Record<EffStatus, { icon: string; labelKey: string; chartVar: string }> = {
-  done: { icon: "✅", labelKey: "st_done", chartVar: "var(--ch-done)" },
-  ontrack: { icon: "🟢", labelKey: "st_ontrack", chartVar: "var(--ch-ontrack)" },
-  pending: { icon: "⏳", labelKey: "st_pending", chartVar: "var(--ch-pending)" },
-  blocked: { icon: "⛔", labelKey: "st_blocked", chartVar: "var(--ch-blocked)" },
-  delayed: { icon: "⚠️", labelKey: "st_delayed", chartVar: "var(--ch-delayed)" },
+  done: { icon: "check-circle", labelKey: "st_done", chartVar: "var(--ch-done)" },
+  ontrack: { icon: "play-circle", labelKey: "st_ontrack", chartVar: "var(--ch-ontrack)" },
+  pending: { icon: "clock", labelKey: "st_pending", chartVar: "var(--ch-pending)" },
+  blocked: { icon: "alert-circle", labelKey: "st_blocked", chartVar: "var(--ch-blocked)" },
+  delayed: { icon: "alert-triangle", labelKey: "st_delayed", chartVar: "var(--ch-delayed)" },
 };
 
 export function todayISO(): string {

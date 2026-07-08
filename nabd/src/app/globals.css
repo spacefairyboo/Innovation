@@ -4,59 +4,59 @@
    session cookie — no flash of wrong theme). */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* ============ Design tokens (dark-cyan primary, bright-cyan accent) ============ */
+/* ============ Design tokens (professional teal palette) ============ */
 :root {
-  --bg: #f2f7f8;
+  --bg: #dff5f1;
   --surface: #ffffff;
-  --surface-2: #f6fafb;
-  --ink: #0c2530;
-  --ink-2: #46626d;
-  --ink-3: #7d939c;
-  --line: #dce8ec;
-  --grid: #e6eef1;
-  --primary: #0e7490;
-  --primary-strong: #155e75;
-  --accent: #06b6d4;
-  --accent-soft: #d7f5fa;
+  --surface-2: #f5faf8;
+  --ink: #0f2e29;
+  --ink-2: #2a4d47;
+  --ink-3: #5d7571;
+  --line: #c7e6e0;
+  --grid: #d4efea;
+  --primary: #2596be;
+  --primary-strong: #1a6d8a;
+  --accent: #46c7b4;
+  --accent-soft: #e6f9f5;
   --on-primary: #ffffff;
 
   /* Status — fixed scale, always paired with icon + label */
-  --st-done: #0f8c0f;       --st-done-bg: #e4f5e4;
-  --st-ontrack: #0e7490;    --st-ontrack-bg: #dcf3f8;
-  --st-pending: #9a6700;    --st-pending-bg: #fdf0d3;
-  --st-blocked: #c22f2f;    --st-blocked-bg: #fbe5e5;
-  --st-delayed: #b34a20;    --st-delayed-bg: #fdeadf;
+  --st-done: #16a34a;       --st-done-bg: #f0fdf4;
+  --st-ontrack: #2596be;    --st-ontrack-bg: #f0f9ff;
+  --st-pending: #d97706;    --st-pending-bg: #fffbeb;
+  --st-blocked: #dc2626;    --st-blocked-bg: #fef2f2;
+  --st-delayed: #ea580c;    --st-delayed-bg: #fff7ed;
 
   /* Chart mark fills (direct labels + table view provide contrast relief) */
-  --ch-done: #0ca30c;
-  --ch-ontrack: #06b6d4;
-  --ch-pending: #fab219;
-  --ch-blocked: #d03b3b;
-  --ch-delayed: #ec835a;
+  --ch-done: #22c55e;
+  --ch-ontrack: #2596be;
+  --ch-pending: #f59e0b;
+  --ch-blocked: #ef4444;
+  --ch-delayed: #f97316;
 }
 
 [data-theme="dark"] {
-  --bg: #0a1418;
-  --surface: #101e24;
-  --surface-2: #16262d;
-  --ink: #e8f4f7;
-  --ink-2: #a7c2cb;
-  --ink-3: #6d8892;
-  --line: #1f3540;
-  --grid: #1c3038;
-  --primary: #22d3ee;
-  --primary-strong: #06b6d4;
-  --accent: #22d3ee;
-  --accent-soft: #123c46;
-  --on-primary: #06222b;
+  --bg: #061b18;
+  --surface: #0f2e29;
+  --surface-2: #1a3f39;
+  --ink: #e6f7f4;
+  --ink-2: #a8d4ce;
+  --ink-3: #6b8b83;
+  --line: #1f4440;
+  --grid: #1c3c36;
+  --primary: #46c7b4;
+  --primary-strong: #2a9686;
+  --accent: #46c7b4;
+  --accent-soft: #0d3a33;
+  --on-primary: #06120f;
 
-  --st-done: #4ade4a;       --st-done-bg: #12300f;
-  --st-ontrack: #22d3ee;    --st-ontrack-bg: #0d3540;
-  --st-pending: #fac23f;    --st-pending-bg: #3a2d08;
-  --st-blocked: #f47070;    --st-blocked-bg: #3d1414;
-  --st-delayed: #f5936b;    --st-delayed-bg: #3b1e10;
+  --st-done: #4ade80;       --st-done-bg: #064e3b;
+  --st-ontrack: #38bdf8;    --st-ontrack-bg: #0c2d4a;
+  --st-pending: #fbbf24;    --st-pending-bg: #422006;
+  --st-blocked: #f87171;    --st-blocked-bg: #4c0519;
+  --st-delayed: #fb923c;    --st-delayed-bg: #431407;
 
-  --ch-ontrack: #22d3ee;
+  --ch-ontrack: #38bdf8;
 }
 
 /* Expose tokens as Tailwind color utilities (bg-surface, text-ink-2, …) */

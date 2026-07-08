@@ -59,6 +59,20 @@ function migrate(d: DatabaseSync) {
       status TEXT NOT NULL, progress INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_updates_task ON task_updates(task_id, ts DESC);
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      changed_by TEXT NOT NULL REFERENCES users(id),
+      ts INTEGER NOT NULL,
+      field TEXT NOT NULL,
+      old_value TEXT, new_value TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_task ON audit_logs(task_id, ts DESC);
+    CREATE TABLE IF NOT EXISTS task_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id TEXT NOT NULL UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
+      checklist_items TEXT NOT NULL DEFAULT '[]'
+    );
     CREATE TABLE IF NOT EXISTS notif_reads (
       user_id TEXT NOT NULL, notif_id TEXT NOT NULL,
       PRIMARY KEY (user_id, notif_id)
