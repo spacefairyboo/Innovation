@@ -103,6 +103,7 @@ export default async function TeamPage({ params, searchParams }: {
           canEdit={canManage}
           canNudge={canManage}
           withFilters
+          valueFilter={canManage}
           assignees={assignees}
           initialQuery={q}
           key={q ?? ""}

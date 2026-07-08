@@ -33,6 +33,9 @@ Use the profile button in the sidebar to switch between demo users and experienc
 
 ## Features
 
+- **High-value flagging** — the AI reads every task and flags outsized business impact (critical topics, priority, deadline pressure, blocked high-priority work) with an explainable "High value" badge; managers get a one-tap **High value only** filter.
+- **Tasks from email** — an AI scanner turns inbound mail into task suggestions on My Tasks: each card shows the source email plus the extracted title, deadline (parsed from phrases like "by Friday" or "July 15"), and urgency-derived priority, with one-click **Add to my tasks** / dismiss. Wire `OUTLOOK_*` credentials (Microsoft Graph) to scan a real Outlook mailbox; a demo inbox is seeded.
+- **Task pages** — every task has a full page (`/task/{id}`) with the editor, checklist, and activity log; the Update dialog has an expand button, and calendar chips and palette results open it directly.
 - **Command palette** — press `Ctrl/Cmd + K` (or the Search button) to search every task, team, and page in your scope; selecting a task lands on its list pre-filtered.
 - **Calendar** — the month at a glance with tasks placed on their due dates as status-colored chips, plus a strip for undated work.
 - **Email digest** — one click sends the current narrative briefing to your inbox through the same outbox/SMTP pipeline as reminders.

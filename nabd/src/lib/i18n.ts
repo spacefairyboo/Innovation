@@ -236,6 +236,25 @@ export const I18N: Record<Lang, Record<string, string>> = {
     leaderboard: "Top contributors",
     leaderboard_sub: "Tasks completed in the last 7 days",
     leaderboard_empty: "No completions in the last 7 days.",
+    // high value
+    high_value: "High value",
+    value_filter: "High value only",
+    value_r_keyword: "Business-critical topic",
+    value_r_priority: "High priority",
+    value_r_overdue: "Past its due date",
+    value_r_due: "Due within 3 days",
+    value_r_blocked: "High-priority work is blocked",
+    // tasks from email
+    inbox_title: "Tasks from your email",
+    inbox_sub: "The AI scanned your inbox (Outlook) and found possible tasks",
+    inbox_from: "From",
+    inbox_extracted: "Suggested task",
+    inbox_add: "Add to my tasks",
+    inbox_dismiss: "Dismiss",
+    inbox_added: "Task added from email.",
+    inbox_dismissed: "Suggestion dismissed.",
+    // task page
+    open_full: "Open full page",
   },
 
   ar: {
@@ -461,6 +480,25 @@ export const I18N: Record<Lang, Record<string, string>> = {
     leaderboard: "الأكثر إنجازًا",
     leaderboard_sub: "المهام المكتملة خلال آخر ٧ أيام",
     leaderboard_empty: "لا إنجازات خلال آخر ٧ أيام.",
+    // high value
+    high_value: "عالية القيمة",
+    value_filter: "عالية القيمة فقط",
+    value_r_keyword: "موضوع حساس للأعمال",
+    value_r_priority: "أولوية عالية",
+    value_r_overdue: "تجاوزت موعدها",
+    value_r_due: "تستحق خلال ٣ أيام",
+    value_r_blocked: "عمل عالي الأولوية متعثر",
+    // tasks from email
+    inbox_title: "مهام من بريدك",
+    inbox_sub: "فحص الذكاء الاصطناعي بريدك (Outlook) ووجد مهامًا محتملة",
+    inbox_from: "من",
+    inbox_extracted: "المهمة المقترحة",
+    inbox_add: "أضف إلى مهامي",
+    inbox_dismiss: "تجاهل",
+    inbox_added: "أُضيفت المهمة من البريد.",
+    inbox_dismissed: "تم تجاهل الاقتراح.",
+    // task page
+    open_full: "فتح الصفحة الكاملة",
   },
 };
 

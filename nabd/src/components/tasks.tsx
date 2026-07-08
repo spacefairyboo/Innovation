@@ -5,6 +5,7 @@
    full attributable activity log (who, what, when). */
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { quickDone, removeTask, saveTask } from "@/app/actions";
 import { useI18n, useToast } from "./providers";
 import { dueInfo, Avatar, Modal, relTime, StatusChip } from "./ui";
@@ -14,6 +15,7 @@ import {
   type ActivityEvent, type ChecklistItem, type EffStatus, type FieldChange,
   type Localized, type Priority, type Task, type TaskStatus,
 } from "@/lib/types";
+import type { TaskValue } from "@/lib/value";
 import type { TFunc } from "@/lib/i18n";
 
 /** Serializable view-model built server-side. */
@@ -24,6 +26,22 @@ export interface TaskVM {
   assignees: { id: string; name: Localized; managerName: Localized | null }[];
   activity: ActivityEvent[];
   checklist: ChecklistItem[];
+  value: TaskValue;
+}
+
+/** The gold high-value flag, with the AI's reasoning in the tooltip. */
+export function ValueChip({ value }: { value: TaskValue }) {
+  const { t } = useI18n();
+  if (!value.high) return null;
+  return (
+    <span
+      className="chip cursor-help"
+      style={{ background: "rgb(201 143 19 / 0.14)", color: "var(--st-pending)" }}
+      data-tt={`${t("high_value")}|${value.reasons.map((r) => t(r)).join(" · ")}`}
+    >
+      <Icon name="sparkles" size={12} /> {t("high_value")}
+    </span>
+  );
 }
 
 export interface AssigneeOption { id: string; name: Localized; teamName: Localized }
@@ -66,6 +84,7 @@ export function TaskRow({ vm, mine, canEdit, canNudge, showTeam, onOpen }: {
         <div className="font-semibold text-sm flex items-center gap-2 flex-wrap">
           <span className={task.status === "done" ? "text-ink-3 line-through decoration-1" : ""}>{task.title[lang]}</span>
           <StatusChip status={eff} />
+          <ValueChip value={vm.value} />
           <span className={`inline-flex items-center gap-1 text-xs font-semibold ${prio.cls}`}>
             <Icon name="flag" size={12} /> {t(prio.labelKey)}
           </span>
@@ -135,13 +154,15 @@ export function TaskRow({ vm, mine, canEdit, canNudge, showTeam, onOpen }: {
 type SortKey = "due" | "priority" | "updated";
 const PRIO_RANK: Record<Priority, number> = { high: 0, med: 1, low: 2 };
 
-export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFilters, assignees, initialQuery }: {
+export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFilters, valueFilter, assignees, initialQuery }: {
   vms: TaskVM[];
   mine?: boolean;
   canEdit?: boolean;
   canNudge?: boolean;
   showTeam?: boolean;
   withFilters?: boolean;
+  /** Managers: show the "High value only" toggle. */
+  valueFilter?: boolean;
   assignees?: AssigneeOption[];
   initialQuery?: string;
 }) {
@@ -149,19 +170,21 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
   const [q, setQ] = useState(initialQuery ?? "");
   const [status, setStatus] = useState<EffStatus | "all">("all");
   const [sort, setSort] = useState<SortKey>("due");
+  const [highOnly, setHighOnly] = useState(false);
   const [editing, setEditing] = useState<TaskVM | null>(null);
 
   const filtered = useMemo(() => {
     let out = vms;
     if (q) out = out.filter((v) => v.task.title[lang].toLowerCase().includes(q.toLowerCase()));
     if (status !== "all") out = out.filter((v) => effStatus(v.task) === status);
+    if (highOnly) out = out.filter((v) => v.value.high);
     const bySort = (a: TaskVM, b: TaskVM) =>
       sort === "priority" ? PRIO_RANK[a.task.priority] - PRIO_RANK[b.task.priority]
       : sort === "updated" ? b.task.updatedAt - a.task.updatedAt
       : (a.task.due ?? "9999").localeCompare(b.task.due ?? "9999");
     return [...out].sort((a, b) =>
       Number(a.task.status === "done") - Number(b.task.status === "done") || bySort(a, b));
-  }, [vms, q, status, sort, lang]);
+  }, [vms, q, status, sort, highOnly, lang]);
 
   return (
     <div className="card">
@@ -188,6 +211,18 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
             <option value="priority">{t("sort_by")}: {t("sort_priority")}</option>
             <option value="updated">{t("sort_by")}: {t("sort_updated")}</option>
           </select>
+          {valueFilter && (
+            <button
+              className="btn-sm inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold cursor-pointer transition border"
+              aria-pressed={highOnly}
+              style={highOnly
+                ? { background: "rgb(201 143 19 / 0.16)", color: "var(--st-pending)", borderColor: "var(--st-pending)" }
+                : { background: "var(--surface-2)", color: "var(--ink-2)", borderColor: "var(--line)" }}
+              onClick={() => setHighOnly(!highOnly)}
+            >
+              <Icon name="sparkles" size={13} /> {t("value_filter")}
+            </button>
+          )}
         </div>
       )}
       {filtered.length ? (
@@ -232,7 +267,7 @@ function fmtChangeValue(field: FieldChange["field"], raw: string | null, label: 
   return raw;
 }
 
-function ActivityLog({ events }: { events: ActivityEvent[] }) {
+export function ActivityLog({ events }: { events: ActivityEvent[] }) {
   const { t, lang } = useI18n();
   if (!events.length) return <div className="text-xs text-ink-3 py-3">{t("activity_empty")}</div>;
   return (
@@ -264,7 +299,7 @@ function ActivityLog({ events }: { events: ActivityEvent[] }) {
   );
 }
 
-function ChecklistEditor({ items, onChange }: {
+export function ChecklistEditor({ items, onChange }: {
   items: ChecklistItem[];
   onChange: (items: ChecklistItem[]) => void;
 }) {
@@ -366,6 +401,16 @@ function TaskModal({ vm, assignees, onClose }: {
       title={task ? t("update_task") : t("add_task")}
       icon={task ? "pencil" : "plus"}
       onClose={onClose}
+      headerAction={task ? (
+        <Link
+          href={`/task/${task.id}`}
+          className="icon-btn !w-8 !h-8 no-underline"
+          title={t("open_full")}
+          aria-label={t("open_full")}
+        >
+          <Icon name="maximize" size={15} />
+        </Link>
+      ) : undefined}
       footer={
         <>
           {task && (

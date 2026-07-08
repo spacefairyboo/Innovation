@@ -132,6 +132,33 @@ export async function markNotificationsRead() {
   refresh();
 }
 
+/** Accepts an AI email suggestion: creates the task for the caller. */
+export async function addSuggestedTask(suggestionId: number) {
+  const { user } = await getSession();
+  const { getSuggestion, setSuggestionStatus } = await import("@/lib/inbox");
+  const s = getSuggestion(suggestionId);
+  if (!s || s.userId !== user.id) throw new Error("Not your suggestion");
+  if (s.status !== "pending") return;
+  repo.createTask({
+    title: s.title,
+    assigneeIds: [user.id],
+    due: s.due,
+    priority: s.priority,
+    createdBy: user.id,
+  });
+  setSuggestionStatus(suggestionId, "added");
+  refresh();
+}
+
+export async function dismissSuggestion(suggestionId: number) {
+  const { user } = await getSession();
+  const { getSuggestion, setSuggestionStatus } = await import("@/lib/inbox");
+  const s = getSuggestion(suggestionId);
+  if (!s || s.userId !== user.id) throw new Error("Not your suggestion");
+  setSuggestionStatus(suggestionId, "dismissed");
+  refresh();
+}
+
 /** Emails the caller their current briefing (same narrative the podcast speaks). */
 export async function emailMyBriefing() {
   const { user, lang } = await getSession();

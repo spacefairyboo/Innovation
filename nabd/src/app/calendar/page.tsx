@@ -50,10 +50,7 @@ export default async function CalendarPage({ searchParams }: {
   const weekdays = Array.from({ length: 7 }, (_, i) =>
     new Date(2024, 0, i + 1).toLocaleDateString(lang === "ar" ? "ar" : "en", { weekday: "short" })); // 2024-01-01 is a Monday
 
-  const chipHref = (task: Task) =>
-    task.assigneeIds.includes(user.id) && user.role !== "senior"
-      ? `/tasks?q=${encodeURIComponent(task.title[lang])}`
-      : `/teams/${task.teamId}?q=${encodeURIComponent(task.title[lang])}`;
+  const chipHref = (task: Task) => `/task/${task.id}`;
 
   const chip = (task: Task) => {
     const eff: EffStatus = effStatus(task);
