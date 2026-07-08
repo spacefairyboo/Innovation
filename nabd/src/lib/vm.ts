@@ -8,10 +8,19 @@ import { STATUS_META, effStatus, type Lang, type Task } from "./types";
 export function toVM(task: Task): TaskVM {
   const owner = getUser(task.ownerId)!;
   const team = getTeam(task.teamId)!;
+  const assignees = task.assigneeIds
+    .map((id) => getUser(id))
+    .filter((u) => u !== null)
+    .map((u) => {
+      const uTeam = u!.teamId ? getTeam(u!.teamId) : null;
+      const manager = uTeam ? getUser(uTeam.managerId) : null;
+      return { id: u!.id, name: u!.name, managerName: manager && manager.id !== u!.id ? manager.name : null };
+    });
   return {
     task,
     ownerName: owner.name,
     teamName: team.name,
+    assignees,
     activity: taskActivity(task.id),
     checklist: getChecklist(task.id),
   };
@@ -51,10 +60,10 @@ export function recentActivity(tasks: Task[], limit: number) {
     .slice(0, limit);
 }
 
-/** Completions per day over the trailing week (from task history). */
-export function weekTrend(tasks: Task[], lang: Lang): { label: string; count: number }[] {
-  return [...Array(7)].map((_, i) => {
-    const d = new Date(Date.now() - (6 - i) * 86_400_000);
+/** Completions per day over the trailing N days (from task history). */
+export function completionTrend(tasks: Task[], lang: Lang, days: number): { label: string; count: number }[] {
+  return [...Array(days)].map((_, i) => {
+    const d = new Date(Date.now() - (days - 1 - i) * 86_400_000);
     const key = d.toISOString().slice(0, 10);
     let count = 0;
     for (const task of tasks) {
@@ -62,6 +71,11 @@ export function weekTrend(tasks: Task[], lang: Lang): { label: string; count: nu
         if (h.status === "done" && new Date(h.ts).toISOString().slice(0, 10) === key) count++;
       }
     }
-    return { label: d.toLocaleDateString(lang === "ar" ? "ar" : "en", { weekday: "short" }), count };
+    const label = days <= 7
+      ? d.toLocaleDateString(lang === "ar" ? "ar" : "en", { weekday: "short" })
+      : d.toLocaleDateString(lang === "ar" ? "ar" : "en", { day: "numeric", month: "short" });
+    return { label, count };
   });
 }
+
+export const weekTrend = (tasks: Task[], lang: Lang) => completionTrend(tasks, lang, 7);

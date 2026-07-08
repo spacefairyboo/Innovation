@@ -3,6 +3,7 @@ import "./globals.css";
 import { AppProviders } from "@/components/providers";
 import { Shell, type ShellUser } from "@/components/shell";
 import { getSession } from "@/lib/session";
+import { runReminderSweep } from "@/lib/mailer";
 import { getTeam, listUsers, unreadCount } from "@/lib/repo";
 import type { User } from "@/lib/types";
 
@@ -17,6 +18,7 @@ function withTeamName(u: User): ShellUser {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { user, lang, theme } = await getSession();
+  await runReminderSweep(); // throttled internally; sends stale-task email reminders
   const users = listUsers().map(withTeamName);
 
   return (

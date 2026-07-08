@@ -10,7 +10,7 @@ import { insightFor } from "@/lib/briefing";
 import { makeT } from "@/lib/i18n";
 import { getTeam, getUser, listTeams, scopeTasks, teamTasks } from "@/lib/repo";
 import { getSession } from "@/lib/session";
-import { countStatuses, effStatus } from "@/lib/types";
+import { HEALTH_META, countStatuses, effStatus, teamHealth } from "@/lib/types";
 import { csvRows, doneThisWeekCount, greetingKey, recentActivity, weekTrend } from "@/lib/vm";
 
 export default async function Dashboard() {
@@ -61,6 +61,18 @@ export default async function Dashboard() {
           </p>
         </div>
         <div className="flex-1" />
+        {(() => {
+          const h = HEALTH_META[teamHealth(stats)];
+          return (
+            <span
+              className="inline-flex items-center gap-1.5 text-sm font-bold px-3.5 py-2 rounded-xl border border-line bg-surface"
+              style={{ color: h.color }}
+              title={t("health_overall")}
+            >
+              <Icon name={h.icon} size={16} /> {t("health_overall")}: {t(h.labelKey)}
+            </span>
+          );
+        })()}
         {user.role !== "employee" && (
           <ExportCsvButton rows={csvRows(tasks, lang)} filename={`nabd-report-${new Date().toISOString().slice(0, 10)}.csv`} />
         )}

@@ -31,6 +31,8 @@ export function Shell({ user, users, unreadCount, theme, children }: {
   const nav: { href: string; ico: string; label: string; badge?: number }[] = [
     { href: "/", ico: "layout-dashboard", label: t("nav_dashboard") },
     ...(user.role !== "senior" ? [{ href: "/tasks", ico: "clipboard-list", label: t("nav_mytasks") }] : []),
+    { href: "/advisor", ico: "lightbulb", label: t("nav_advisor") },
+    ...(user.role !== "employee" ? [{ href: "/stats", ico: "trending-up", label: t("nav_stats") }] : []),
     { href: "/teams", ico: "users", label: t("nav_teams") },
     { href: "/podcast", ico: "headphones", label: t("nav_podcast") },
     { href: "/notifications", ico: "bell", label: t("nav_notifications"), badge: unreadCount },

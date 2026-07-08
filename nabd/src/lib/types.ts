@@ -34,6 +34,7 @@ export interface User {
   teamId: string | null;
   name: Localized;
   streak: number;
+  email: string | null;
 }
 
 export interface TaskUpdate {
@@ -46,7 +47,8 @@ export interface TaskUpdate {
 
 export interface Task {
   id: string;
-  ownerId: string;
+  ownerId: string; // primary assignee (first of assigneeIds)
+  assigneeIds: string[];
   teamId: string;
   status: TaskStatus;
   progress: number;
@@ -55,6 +57,19 @@ export interface Task {
   due: string | null; // YYYY-MM-DD
   updatedAt: number;
   history: TaskUpdate[];
+}
+
+/** A reminder / notification email recorded in the outbox. */
+export interface EmailRecord {
+  id: number;
+  toUser: string;
+  toEmail: string;
+  kind: string;
+  taskId: string | null;
+  subject: string;
+  body: string;
+  ts: number;
+  delivered: boolean;
 }
 
 /** One field change captured in the audit log. */
