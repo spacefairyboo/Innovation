@@ -24,7 +24,7 @@ export function Avatar({ name, size = "md" }: { name: Localized; size?: "sm" | "
   return (
     <span
       className={`${cls} rounded-full grid place-items-center font-extrabold text-white shrink-0`}
-      style={{ background: "linear-gradient(135deg, #2596be, #46c7b4)" }}
+      style={{ background: "linear-gradient(135deg, #2a9686, #46c7b4)" }}
     >
       {initials}
     </span>
@@ -40,10 +40,13 @@ export function Modal({ title, icon, onClose, children, footer }: {
 }) {
   return (
     <div
-      className="fixed inset-0 z-90 grid place-items-center p-5 bg-[rgb(15_46_41/0.55)] backdrop-blur-xs"
+      className="fixed inset-0 z-90 grid place-items-center p-5 bg-[rgb(7_30_25/0.45)] backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden animate-modal-pop">
+      <div
+        className="rounded-3xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden animate-modal-pop backdrop-blur-2xl"
+        style={{ background: "color-mix(in srgb, var(--surface-solid) 88%, transparent)", border: "1px solid var(--glass-edge)" }}
+      >
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-line">
           {icon && <Icon name={icon} size={24} className="text-primary" />}
           <h3 className="m-0 text-base font-extrabold flex-1">{title}</h3>

@@ -5,37 +5,42 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ============ Design tokens ============
-   Brand palette: #2596be · #0f2e29 · #061b18 · #2a9686 · #46c7b4 · #dff5f1 */
+   Cyan-green glass aesthetic: soft gradients, translucent surfaces,
+   fully rounded shapes. Brand palette:
+   #2596be · #0f2e29 · #061b18 · #2a9686 · #46c7b4 · #dff5f1 */
 :root {
-  --bg: #eef8f5;
-  --surface: #ffffff;
-  --surface-2: #f4faf8;
+  --bg: #ecf3ef;
+  --surface: rgb(255 255 255 / 0.74);
+  --surface-solid: #ffffff;
+  --surface-2: #f0f7f3;
   --ink: #0f2e29;
   --ink-2: #3c5a54;
   --ink-3: #6e8781;
-  --line: #d5e9e4;
-  --grid: #e2f1ed;
-  --primary: #2596be;
-  --primary-strong: #1b7fa3;
+  --line: rgb(15 46 41 / 0.10);
+  --grid: rgb(15 46 41 / 0.07);
+  --primary: #2a9686;
+  --primary-strong: #1d7a6c;
   --accent: #2a9686;
   --accent-2: #46c7b4;
-  --accent-soft: #dff5f1;
+  --accent-soft: rgb(70 199 180 / 0.14);
   --on-primary: #ffffff;
+  --glass-edge: rgb(255 255 255 / 0.65);
 
-  /* Sidebar is always deep green — the brand anchor in both themes */
-  --side-bg: #0f2e29;
+  /* Deep-green glass sidebar (both themes) */
+  --side-bg: linear-gradient(178deg, #16463c 0%, #0d2f28 55%, #071e19 100%);
   --side-ink: #c9e5de;
   --side-ink-dim: #7ea89f;
-  --side-active-bg: rgb(70 199 180 / 0.14);
-  --side-active-ink: #46c7b4;
-  --side-line: rgb(223 245 241 / 0.09);
+  --side-line: rgb(223 245 241 / 0.10);
+
+  /* Hero / feature gradient */
+  --hero-bg: linear-gradient(130deg, #0a2620 0%, #12463a 52%, #2a9686 130%);
 
   /* Status — fixed scale, always paired with icon + label */
-  --st-done: #177a4c;       --st-done-bg: #e3f5ec;
-  --st-ontrack: #1b7fa3;    --st-ontrack-bg: #e2f2f8;
-  --st-pending: #97620a;    --st-pending-bg: #faf0da;
-  --st-blocked: #b33636;    --st-blocked-bg: #fbe9e9;
-  --st-delayed: #ad5220;    --st-delayed-bg: #faeade;
+  --st-done: #177a4c;       --st-done-bg: rgb(34 197 94 / 0.12);
+  --st-ontrack: #1b7fa3;    --st-ontrack-bg: rgb(37 150 190 / 0.12);
+  --st-pending: #97620a;    --st-pending-bg: rgb(227 172 46 / 0.14);
+  --st-blocked: #b33636;    --st-blocked-bg: rgb(210 74 74 / 0.11);
+  --st-delayed: #ad5220;    --st-delayed-bg: rgb(224 112 47 / 0.12);
 
   /* Chart mark fills — validated palette (2px gaps, direct labels, icons,
      and table views provide the required secondary encoding / relief) */
@@ -47,29 +52,33 @@
 }
 
 [data-theme="dark"] {
-  --bg: #061b18;
-  --surface: #0f2e29;
-  --surface-2: #153832;
+  --bg: #04110e;
+  --surface: rgb(16 48 42 / 0.62);
+  --surface-solid: #0f2e29;
+  --surface-2: rgb(28 66 58 / 0.55);
   --ink: #e3f4f0;
   --ink-2: #a3c6bf;
   --ink-3: #6e938b;
-  --line: #1e453e;
-  --grid: #1a3d37;
+  --line: rgb(223 245 241 / 0.10);
+  --grid: rgb(223 245 241 / 0.07);
   --primary: #46c7b4;
   --primary-strong: #2a9686;
   --accent: #46c7b4;
   --accent-2: #46c7b4;
-  --accent-soft: #123f38;
+  --accent-soft: rgb(70 199 180 / 0.13);
   --on-primary: #061b18;
+  --glass-edge: rgb(223 245 241 / 0.10);
 
-  --side-bg: #0a231f;
+  --side-bg: linear-gradient(178deg, rgb(17 52 45 / 0.85) 0%, rgb(7 26 22 / 0.9) 100%);
   --side-line: rgb(223 245 241 / 0.07);
 
-  --st-done: #5fd3a5;       --st-done-bg: #10362a;
-  --st-ontrack: #64c2e4;    --st-ontrack-bg: #0e3341;
-  --st-pending: #ecc25c;    --st-pending-bg: #38300f;
-  --st-blocked: #f08c8c;    --st-blocked-bg: #421a1a;
-  --st-delayed: #f0a06c;    --st-delayed-bg: #3d2412;
+  --hero-bg: linear-gradient(130deg, #071e19 0%, #113d33 52%, #1f7466 130%);
+
+  --st-done: #5fd3a5;       --st-done-bg: rgb(95 211 165 / 0.13);
+  --st-ontrack: #64c2e4;    --st-ontrack-bg: rgb(100 194 228 / 0.13);
+  --st-pending: #ecc25c;    --st-pending-bg: rgb(236 194 92 / 0.13);
+  --st-blocked: #f08c8c;    --st-blocked-bg: rgb(240 140 140 / 0.13);
+  --st-delayed: #f0a06c;    --st-delayed-bg: rgb(240 160 108 / 0.13);
 
   /* Dark-surface chart fills — validated separately against #0f2e29 */
   --ch-done: #17a586;
@@ -97,46 +106,93 @@
   --font-sans: system-ui, -apple-system, "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
 }
 
+/* Ambient gradient wash — the soft cyan-green atmosphere behind everything */
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(52rem 36rem at 88% -12%, rgb(70 199 180 / 0.18), transparent 62%),
+    radial-gradient(44rem 32rem at -12% 28%, rgb(42 150 134 / 0.14), transparent 60%),
+    radial-gradient(40rem 30rem at 55% 115%, rgb(37 150 190 / 0.10), transparent 62%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.55;
   letter-spacing: 0.01em;
-  transition: background 0.25s ease, color 0.25s ease;
+  transition: color 0.25s ease;
+}
+[data-theme="dark"] body {
+  background:
+    radial-gradient(52rem 36rem at 88% -12%, rgb(70 199 180 / 0.10), transparent 62%),
+    radial-gradient(44rem 32rem at -12% 30%, rgb(42 150 134 / 0.09), transparent 60%),
+    radial-gradient(40rem 30rem at 55% 115%, rgb(37 150 190 / 0.07), transparent 62%),
+    var(--bg);
+  background-attachment: fixed;
 }
 
 :focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
 /* ============ Repeated component patterns ============ */
 @layer components {
+  /* Frosted glass card */
   .card {
-    @apply bg-surface border border-line rounded-2xl p-5;
-    box-shadow: 0 1px 2px rgb(15 46 41 / 0.05), 0 6px 20px rgb(15 46 41 / 0.05);
+    @apply rounded-3xl p-5;
+    background: var(--surface);
+    border: 1px solid var(--glass-edge);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    box-shadow: 0 2px 6px rgb(15 46 41 / 0.04), 0 14px 34px rgb(15 46 41 / 0.06);
   }
   [data-theme="dark"] .card {
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.35), 0 6px 20px rgb(0 0 0 / 0.25);
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.3), 0 14px 34px rgb(0 0 0 / 0.22);
   }
 
+  /* Glass top bar */
+  .glass-bar {
+    background: color-mix(in srgb, var(--surface) 85%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--glass-edge);
+  }
+
+  /* Pill buttons */
   .btn, .btn-primary, .btn-ghost, .btn-soft {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold cursor-pointer transition active:scale-[0.98] disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4.5 py-2.5 text-sm font-semibold cursor-pointer transition active:scale-[0.98] disabled:opacity-50;
   }
   .btn-primary {
-    @apply text-on-primary;
-    background: var(--primary);
+    color: #eafaf5;
+    background: linear-gradient(135deg, #17453a, #0d2f28);
+    box-shadow: 0 4px 14px rgb(13 47 40 / 0.28), inset 0 1px 0 rgb(255 255 255 / 0.08);
   }
-  .btn-primary:hover { background: var(--primary-strong); }
-  .btn-ghost { @apply border border-line text-ink-2 bg-surface hover:bg-surface-2 hover:text-ink; }
-  .btn-soft { @apply bg-accent-soft text-ink hover:brightness-97 dark:hover:brightness-110; }
-  .btn-sm { @apply !px-3 !py-1.5 !text-xs !rounded-lg; }
+  .btn-primary:hover { background: linear-gradient(135deg, #1c5648, #113a31); }
+  [data-theme="dark"] .btn-primary {
+    color: #061b18;
+    background: linear-gradient(135deg, #46c7b4, #2a9686);
+    box-shadow: 0 4px 16px rgb(70 199 180 / 0.25);
+  }
+  [data-theme="dark"] .btn-primary:hover { background: linear-gradient(135deg, #5cd6c4, #33a897); }
+  .btn-ghost {
+    @apply text-ink-2 hover:text-ink;
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(10px);
+  }
+  .btn-ghost:hover { background: var(--surface-2); }
+  .btn-soft {
+    @apply text-ink;
+    background: var(--accent-soft);
+    border: 1px solid rgb(70 199 180 / 0.25);
+    backdrop-filter: blur(10px);
+  }
+  .btn-soft:hover { background: rgb(70 199 180 / 0.22); }
+  .btn-sm { @apply !px-3.5 !py-1.5 !text-xs; }
 
   .chip {
-    @apply inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md whitespace-nowrap;
+    @apply inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap;
   }
   .chip-done    { background: var(--st-done-bg);    color: var(--st-done); }
   .chip-ontrack { background: var(--st-ontrack-bg); color: var(--st-ontrack); }
@@ -145,16 +201,23 @@ body {
   .chip-delayed { background: var(--st-delayed-bg); color: var(--st-delayed); }
 
   .field-input {
-    @apply w-full border border-line rounded-xl px-3 py-2.5 bg-surface-2 text-ink text-sm focus:border-accent;
+    @apply w-full rounded-2xl px-3.5 py-2.5 text-ink text-sm;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
   }
+  .field-input:focus { border-color: var(--accent); }
 
   .icon-btn {
-    @apply w-10 h-10 rounded-xl border border-line bg-surface text-ink-2 grid place-items-center cursor-pointer relative transition hover:bg-surface-2 hover:text-ink;
+    @apply w-10 h-10 rounded-full text-ink-2 grid place-items-center cursor-pointer relative transition hover:text-ink;
+    background: color-mix(in srgb, var(--surface) 75%, transparent);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(10px);
   }
+  .icon-btn:hover { background: var(--surface-2); }
 }
 
 ::-webkit-scrollbar { width: 9px; height: 9px; }
-::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ink-3) 35%, transparent); border-radius: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 @keyframes eq-bounce {

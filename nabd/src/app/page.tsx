@@ -79,10 +79,13 @@ export default async function Dashboard() {
     <>
       {/* ---- Hero: greeting, health, insight, quick actions, completion ---- */}
       <div
-        className="rounded-2xl p-6 md:p-7 mb-5 flex gap-6 items-center flex-wrap shadow-xl"
-        style={{ background: "linear-gradient(130deg, #061b18, #0f2e29 55%, #14453c)", color: "#d9efe9" }}
+        className="relative overflow-hidden rounded-3xl p-6 md:p-7 mb-5 flex gap-6 items-center flex-wrap shadow-xl"
+        style={{ background: "var(--hero-bg)", color: "#d9efe9", border: "1px solid rgb(223 245 241 / 0.08)" }}
       >
-        <div className="flex-1 min-w-64">
+        {/* soft glass blobs */}
+        <span aria-hidden className="absolute -top-24 -end-16 w-72 h-72 rounded-full pointer-events-none" style={{ background: "rgb(70 199 180 / 0.22)", filter: "blur(70px)" }} />
+        <span aria-hidden className="absolute -bottom-28 start-1/3 w-80 h-80 rounded-full pointer-events-none" style={{ background: "rgb(37 150 190 / 0.16)", filter: "blur(80px)" }} />
+        <div className="flex-1 min-w-64 relative">
           <div className="text-xs font-medium" style={{ color: "#7fa89e" }}>{dateStr} · {scopeTitle}</div>
           <h2 className="m-0 mt-1 text-2xl font-bold text-white">{greeting}, {user.name[lang].split(" ")[0]}</h2>
           <p className="m-0 mt-2.5 text-sm leading-6 flex items-start gap-2 max-w-xl" style={{ color: "#b7d9d0" }}>
@@ -92,14 +95,14 @@ export default async function Dashboard() {
           <div className="flex items-center gap-2.5 mt-4 flex-wrap">
             <Link
               href="/advisor"
-              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold no-underline transition hover:brightness-110"
-              style={{ background: "#46c7b4", color: "#061b18" }}
+              className="inline-flex items-center gap-2 rounded-full px-4.5 py-2.5 text-sm font-semibold no-underline transition hover:brightness-110 shadow-lg"
+              style={{ background: "linear-gradient(135deg, #5cd6c4, #46c7b4)", color: "#061b18" }}
             >
               <Icon name="lightbulb" size={16} /> {t("advisor_open")}
             </Link>
             <Link
               href="/podcast"
-              className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold no-underline text-white border border-white/20 bg-white/10 hover:bg-white/20 transition"
+              className="inline-flex items-center gap-2 rounded-full px-4.5 py-2.5 text-sm font-semibold no-underline text-white border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition"
             >
               <Icon name="headphones" size={16} /> {t("nav_podcast")}
             </Link>
@@ -111,9 +114,9 @@ export default async function Dashboard() {
           </div>
         </div>
 
-        <div className="flex flex-col items-center gap-2 shrink-0">
+        <div className="flex flex-col items-center gap-2 shrink-0 relative">
           <span
-            className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border border-white/15 bg-white/10"
+            className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border border-white/15 bg-white/10 backdrop-blur-md"
             style={{ color: health.color === "var(--st-done)" ? "#5fd3a5" : health.color === "var(--st-pending)" ? "#ecc25c" : "#f08c8c" }}
           >
             <Icon name={health.icon} size={14} /> {t("health_overall")}: {t(health.labelKey)}
