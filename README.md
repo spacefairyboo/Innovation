@@ -1,6 +1,6 @@
-# 💠 Nabd (نبض) — Team Pulse
+# Nabd — Team Pulse
 
-A friendly, bilingual (English / العربية) task-pulse platform where **employees update tasks by tap, chat, or voice** — and **managers listen to their team's status as a podcast**.
+A bilingual (English / العربية) task-tracking platform where **employees update tasks by tap, chat, or voice** — and **managers listen to their team's status as a spoken story**.
 
 ## Repository layout
 
@@ -19,25 +19,25 @@ npm run dev        # development, http://localhost:3000
 npm run build && npm start
 ```
 
-The SQLite database is created and seeded automatically on first request (`nabd/data/nabd.db`, gitignored).
+The SQLite database is created and seeded automatically on first request (`nabd/data/nabd.db`, gitignored). Node 22+ required.
 
 ## Roles
 
 | Role | Scope |
 |---|---|
-| 👑 **Senior Manager** | All units and teams — org-wide pulse, podcast briefing, blocked/delayed alerts |
-| ⭐ **Manager** | Their own section/team — member workloads, nudges, team podcast |
-| 💼 **Employee** | Their own tasks — manual, AI chat, or voice updates, stale-task reminders |
+| **Senior Manager** | All units and teams — org-wide overview, audio briefing, blocked/delayed alerts |
+| **Manager** | Their own section/team — member workloads, reminders, reassignment, team briefing |
+| **Employee** | Their own tasks — manual, AI chat, or voice updates, stale-task reminders |
 
-Use the avatar in the top bar to switch between demo users and experience each role.
+Use the profile button in the sidebar to switch between demo users and experience each role.
 
 ## Features
 
-- **📊 Live statistics** — stat tiles + donut + per-team stacked bars for Completed / On track / Pending / Delayed / Blocked, each with a table view for accessibility. Delayed is derived automatically from due dates.
-- **🎧 Podcast briefing** — a spoken daily briefing generated fresh from live data server-side and spoken on-device (Web Speech synthesis). Scope selector for the senior manager (org / unit / team), playback speed, live transcript highlighting, downloadable script. Works in both languages.
-- **🤖 AI Check-in chat** — type “finished the payment page”, “blocked on the API review”, or “landing page 70%” (or the Arabic equivalents) and the assistant matches the task, updates status/progress, celebrates completions, and flags blockers to the manager. Say “summary” for a quick overview.
-- **🎙️ Voice updates** — tap the mic and speak your update (Web Speech recognition, `ar-SA` / `en-US`), parsed by the same intent engine.
-- **🔔 Smart notifications** — senior manager & managers are alerted on blocked/overdue tasks; employees get reminders for tasks not updated in 3+ days; completion kudos with one-tap 🎉.
-- **🏢 Units → Teams → Members** — drill-down with team health badges (Healthy / Watch / At risk), member workload mini-bars, and per-team exports.
-- **✨ Extras** — smart insight card, 7-day completion sparkline, update streaks 🔥, focus banner, kudos & nudges, search + status filters, CSV export, activity feed, task history timeline, mobile bottom nav.
-- **🌗 Dark & light mode**, **🌐 full RTL Arabic + English**, dark-cyan / bright-cyan brand palette. Status is never conveyed by color alone (icon + label everywhere).
+- **Update workflow** — every task has an **Update** button opening a full editor: title, status, progress, due date, priority, assignee (managers), a written progress update, and a private **"note to self" checklist** for subtasks and reminders.
+- **Audit log** — every change is recorded with **who made it (name + avatar), what changed (old → new value), and when** (e.g. `10:35 am 7/7/2026`), shown as an activity timeline inside each task.
+- **Audio briefing** — a daily briefing written as a **narrated story**, not a list of numbers: the wins first, then the blockers with the person and the reason, deadline slips, a team roundup in prose, and a single recommended next action. Generated fresh from live data server-side, spoken on-device (Web Speech), in both languages, with scope selection for the senior manager.
+- **AI check-in chat** — type "finished the payment page", "blocked on the API review", or "landing page 70%" (or the Arabic equivalents); the assistant matches the task and applies the update. Voice input uses the same intent engine (`ar-SA` / `en-US`).
+- **Live statistics** — stat tiles (including completion rate), status donut, and per-team stacked bars, each with an accessible table view. *Delayed* is derived automatically from due dates.
+- **Smart notifications** — managers are alerted on blocked/overdue tasks; employees get reminders for tasks untouched for 3+ days; recent completions surface for recognition.
+- **Units → Teams → Members** — drill-down with team health badges (Healthy / Watch / At risk), member workload bars, and per-team CSV export.
+- **Professional interface** — brand palette `#2596be · #0f2e29 · #061b18 · #2a9686 · #46c7b4 · #dff5f1`, a consistent stroke-icon system (no emojis), dark & light themes rendered server-side (no flash), and full RTL Arabic. Status is never conveyed by color alone.

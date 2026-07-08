@@ -38,6 +38,7 @@ export interface User {
 
 export interface TaskUpdate {
   ts: number;
+  byId: string | null;
   text: Localized;
   status: TaskStatus;
   progress: number;
@@ -54,22 +55,30 @@ export interface Task {
   due: string | null; // YYYY-MM-DD
   updatedAt: number;
   history: TaskUpdate[];
-  auditLog?: AuditEntry[];
-  notes?: TaskNote;
 }
 
-export interface AuditEntry {
-  id: number;
-  changedBy: string;
+/** One field change captured in the audit log. */
+export interface FieldChange {
+  field: "status" | "progress" | "priority" | "due" | "title" | "assignee";
+  from: string | null;
+  to: string | null;
+  /** Localized display values (e.g. assignee ids resolved to names), filled server-side. */
+  fromLabel?: Localized | null;
+  toLabel?: Localized | null;
+}
+
+/** One update event: who did it, when, the note they wrote, and what changed. */
+export interface ActivityEvent {
   ts: number;
-  field: string;
-  oldValue: string | null;
-  newValue: string | null;
+  byId: string | null;
+  byName: Localized | null;
+  note: Localized | null;
+  changes: FieldChange[];
 }
 
-export interface TaskNote {
-  id: number;
-  checklistItems: string[];
+export interface ChecklistItem {
+  text: string;
+  done: boolean;
 }
 
 export interface StatusCounts {
@@ -99,12 +108,12 @@ export const STALE_AFTER_DAYS = 3;
 
 export const STATUS_ORDER: EffStatus[] = ["done", "ontrack", "pending", "delayed", "blocked"];
 
-/** Status metadata — icon is mandatory: color never carries meaning alone. */
+/** Status metadata — icon name for <Icon>; color never carries meaning alone. */
 export const STATUS_META: Record<EffStatus, { icon: string; labelKey: string; chartVar: string }> = {
   done: { icon: "check-circle", labelKey: "st_done", chartVar: "var(--ch-done)" },
-  ontrack: { icon: "play-circle", labelKey: "st_ontrack", chartVar: "var(--ch-ontrack)" },
+  ontrack: { icon: "trending-up", labelKey: "st_ontrack", chartVar: "var(--ch-ontrack)" },
   pending: { icon: "clock", labelKey: "st_pending", chartVar: "var(--ch-pending)" },
-  blocked: { icon: "alert-circle", labelKey: "st_blocked", chartVar: "var(--ch-blocked)" },
+  blocked: { icon: "ban", labelKey: "st_blocked", chartVar: "var(--ch-blocked)" },
   delayed: { icon: "alert-triangle", labelKey: "st_delayed", chartVar: "var(--ch-delayed)" },
 };
 
@@ -136,4 +145,21 @@ export function teamHealth(s: StatusCounts): Health {
   if (s.blocked + s.delayed === 0 && good >= 0.6) return "great";
   if (s.blocked >= 2 || (s.blocked + s.delayed) / s.total > 0.34) return "risk";
   return "ok";
+}
+
+export const HEALTH_META: Record<Health, { icon: string; labelKey: string; color: string }> = {
+  great: { icon: "shield-check", labelKey: "health_great", color: "var(--st-done)" },
+  ok: { icon: "eye", labelKey: "health_ok", color: "var(--st-pending)" },
+  risk: { icon: "alert-triangle", labelKey: "health_risk", color: "var(--st-blocked)" },
+};
+
+/** "12 pm 2/7/2026" — hour, meridiem, then day/month/year. */
+export function formatStamp(ts: number, lang: Lang): string {
+  const d = new Date(ts);
+  let h = d.getHours();
+  const mer = h >= 12 ? (lang === "ar" ? "م" : "pm") : (lang === "ar" ? "ص" : "am");
+  h = h % 12 || 12;
+  const min = d.getMinutes();
+  const hm = min ? `${h}:${String(min).padStart(2, "0")}` : `${h}`;
+  return `${hm} ${mer} ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
 }

@@ -2,6 +2,7 @@
 
 import { StatTiles } from "@/components/charts";
 import { CheckinButtons } from "@/components/chat";
+import { Icon } from "@/components/icons";
 import { NewTaskButton, TaskListSection, type AssigneeOption } from "@/components/tasks";
 import { makeT } from "@/lib/i18n";
 import { getTeam, teamMembers, userTasks } from "@/lib/repo";
@@ -20,7 +21,7 @@ export default async function MyTasksPage() {
     user.role === "manager" && user.teamId
       ? teamMembers(user.teamId).map((m) => {
           const team = getTeam(m.teamId!)!;
-          return { id: m.id, name: m.name, teamName: team.name, teamEmoji: team.emoji };
+          return { id: m.id, name: m.name, teamName: team.name };
         })
       : undefined;
 
@@ -28,10 +29,14 @@ export default async function MyTasksPage() {
     <>
       <div className="flex items-center gap-3.5 mb-5 flex-wrap">
         <div>
-          <h2 className="m-0 text-2xl font-extrabold">📝 {t("nav_mytasks")}</h2>
-          <p className="m-0 mt-0.5 text-sm text-ink-2">
+          <h2 className="m-0 text-xl font-bold">{t("nav_mytasks")}</h2>
+          <p className="m-0 mt-0.5 text-sm text-ink-2 flex items-center gap-1.5 flex-wrap">
             {t("my_tasks_sub")}
-            {user.streak > 0 && <span className="font-bold text-[var(--st-delayed)]"> · 🔥 {user.streak} {t("streak")}</span>}
+            {user.streak > 0 && (
+              <span className="inline-flex items-center gap-1 font-semibold text-[var(--st-delayed)]">
+                · <Icon name="flame" size={13} /> {user.streak} {t("streak")}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex-1" />

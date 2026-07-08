@@ -1,14 +1,20 @@
 /* Server-side view-model builders shared by pages. */
 
 import { makeT } from "./i18n";
-import { getTeam, getUser } from "./repo";
+import { getChecklist, getTeam, getUser, taskActivity } from "./repo";
 import type { TaskVM } from "@/components/tasks";
 import { STATUS_META, effStatus, type Lang, type Task } from "./types";
 
 export function toVM(task: Task): TaskVM {
   const owner = getUser(task.ownerId)!;
   const team = getTeam(task.teamId)!;
-  return { task, ownerName: owner.name, teamName: team.name, teamEmoji: team.emoji };
+  return {
+    task,
+    ownerName: owner.name,
+    teamName: team.name,
+    activity: taskActivity(task.id),
+    checklist: getChecklist(task.id),
+  };
 }
 
 export function csvRows(tasks: Task[], lang: Lang): string[][] {
@@ -38,7 +44,9 @@ export function greetingKey(): string {
 /** Recent history entries across a task set, with a relative-day count. */
 export function recentActivity(tasks: Task[], limit: number) {
   return tasks
-    .flatMap((task) => task.history.map((h) => ({ task, h, daysAgo: Math.floor((Date.now() - h.ts) / 86_400_000) })))
+    .flatMap((task) => task.history
+      .filter((h) => h.text.en || h.text.ar)
+      .map((h) => ({ task, h, daysAgo: Math.floor((Date.now() - h.ts) / 86_400_000) })))
     .sort((a, b) => b.h.ts - a.h.ts)
     .slice(0, limit);
 }

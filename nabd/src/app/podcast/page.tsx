@@ -1,4 +1,4 @@
-/* Podcast briefing — the script is generated fresh server-side from live
+/* Audio briefing — the narrative is generated fresh server-side from live
    data; the client player speaks it on-device. */
 
 import { PodcastPlayer } from "@/components/podcast";
@@ -32,16 +32,16 @@ export default async function PodcastPage({ searchParams }: {
 
   const scopeOptions = user.role === "senior"
     ? [
-        { value: "all", label: `🌐 ${t("org_pulse")}` },
-        ...listUnits().map((u) => ({ value: u.id, label: `${u.emoji} ${u.name[lang]}` })),
-        ...listTeams().map((tm) => ({ value: tm.id, label: `${tm.emoji} ${tm.name[lang]}` })),
+        { value: "all", label: t("org_pulse") },
+        ...listUnits().map((u) => ({ value: u.id, label: `${t("unit")}: ${u.name[lang]}` })),
+        ...listTeams().map((tm) => ({ value: tm.id, label: `${t("team")}: ${tm.name[lang]}` })),
       ]
     : null;
 
   return (
     <>
       <div className="mb-5">
-        <h2 className="m-0 text-2xl font-extrabold">🎧 {t("nav_podcast")}</h2>
+        <h2 className="m-0 text-xl font-bold">{t("nav_podcast")}</h2>
         <p className="m-0 mt-0.5 text-sm text-ink-2">{t("podcast_daily")}</p>
       </div>
       <PodcastPlayer lines={lines} scopeOptions={scopeOptions} scope={scope} />

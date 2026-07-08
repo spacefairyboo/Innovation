@@ -4,59 +4,73 @@
    session cookie — no flash of wrong theme). */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* ============ Design tokens (professional teal palette) ============ */
+/* ============ Design tokens ============
+   Brand palette: #2596be · #0f2e29 · #061b18 · #2a9686 · #46c7b4 · #dff5f1 */
 :root {
-  --bg: #dff5f1;
+  --bg: #eef8f5;
   --surface: #ffffff;
-  --surface-2: #f5faf8;
+  --surface-2: #f4faf8;
   --ink: #0f2e29;
-  --ink-2: #2a4d47;
-  --ink-3: #5d7571;
-  --line: #c7e6e0;
-  --grid: #d4efea;
+  --ink-2: #3c5a54;
+  --ink-3: #6e8781;
+  --line: #d5e9e4;
+  --grid: #e2f1ed;
   --primary: #2596be;
-  --primary-strong: #1a6d8a;
-  --accent: #46c7b4;
-  --accent-soft: #e6f9f5;
+  --primary-strong: #1b7fa3;
+  --accent: #2a9686;
+  --accent-2: #46c7b4;
+  --accent-soft: #dff5f1;
   --on-primary: #ffffff;
 
+  /* Sidebar is always deep green — the brand anchor in both themes */
+  --side-bg: #0f2e29;
+  --side-ink: #c9e5de;
+  --side-ink-dim: #7ea89f;
+  --side-active-bg: rgb(70 199 180 / 0.14);
+  --side-active-ink: #46c7b4;
+  --side-line: rgb(223 245 241 / 0.09);
+
   /* Status — fixed scale, always paired with icon + label */
-  --st-done: #16a34a;       --st-done-bg: #f0fdf4;
-  --st-ontrack: #2596be;    --st-ontrack-bg: #f0f9ff;
-  --st-pending: #d97706;    --st-pending-bg: #fffbeb;
-  --st-blocked: #dc2626;    --st-blocked-bg: #fef2f2;
-  --st-delayed: #ea580c;    --st-delayed-bg: #fff7ed;
+  --st-done: #177a4c;       --st-done-bg: #e3f5ec;
+  --st-ontrack: #1b7fa3;    --st-ontrack-bg: #e2f2f8;
+  --st-pending: #97620a;    --st-pending-bg: #faf0da;
+  --st-blocked: #b33636;    --st-blocked-bg: #fbe9e9;
+  --st-delayed: #ad5220;    --st-delayed-bg: #faeade;
 
   /* Chart mark fills (direct labels + table view provide contrast relief) */
-  --ch-done: #22c55e;
+  --ch-done: #2a9686;
   --ch-ontrack: #2596be;
-  --ch-pending: #f59e0b;
-  --ch-blocked: #ef4444;
-  --ch-delayed: #f97316;
+  --ch-pending: #e3ac2e;
+  --ch-blocked: #d24a4a;
+  --ch-delayed: #e88652;
 }
 
 [data-theme="dark"] {
   --bg: #061b18;
   --surface: #0f2e29;
-  --surface-2: #1a3f39;
-  --ink: #e6f7f4;
-  --ink-2: #a8d4ce;
-  --ink-3: #6b8b83;
-  --line: #1f4440;
-  --grid: #1c3c36;
+  --surface-2: #153832;
+  --ink: #e3f4f0;
+  --ink-2: #a3c6bf;
+  --ink-3: #6e938b;
+  --line: #1e453e;
+  --grid: #1a3d37;
   --primary: #46c7b4;
   --primary-strong: #2a9686;
   --accent: #46c7b4;
-  --accent-soft: #0d3a33;
-  --on-primary: #06120f;
+  --accent-2: #46c7b4;
+  --accent-soft: #123f38;
+  --on-primary: #061b18;
 
-  --st-done: #4ade80;       --st-done-bg: #064e3b;
-  --st-ontrack: #38bdf8;    --st-ontrack-bg: #0c2d4a;
-  --st-pending: #fbbf24;    --st-pending-bg: #422006;
-  --st-blocked: #f87171;    --st-blocked-bg: #4c0519;
-  --st-delayed: #fb923c;    --st-delayed-bg: #431407;
+  --side-bg: #0a231f;
+  --side-line: rgb(223 245 241 / 0.07);
 
-  --ch-ontrack: #38bdf8;
+  --st-done: #5fd3a5;       --st-done-bg: #10362a;
+  --st-ontrack: #64c2e4;    --st-ontrack-bg: #0e3341;
+  --st-pending: #ecc25c;    --st-pending-bg: #38300f;
+  --st-blocked: #f08c8c;    --st-blocked-bg: #421a1a;
+  --st-delayed: #f0a06c;    --st-delayed-bg: #3d2412;
+
+  --ch-pending: #d9a72e;
 }
 
 /* Expose tokens as Tailwind color utilities (bg-surface, text-ink-2, …) */
@@ -86,30 +100,34 @@ body {
 
 :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent);
-  border-radius: 6px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 8px;
 }
 
 /* ============ Repeated component patterns ============ */
 @layer components {
   .card {
     @apply bg-surface border border-line rounded-2xl p-5;
-    box-shadow: 0 1px 3px rgb(8 51 68 / 0.08), 0 4px 16px rgb(8 51 68 / 0.06);
+    box-shadow: 0 1px 2px rgb(15 46 41 / 0.05), 0 6px 20px rgb(15 46 41 / 0.05);
   }
   [data-theme="dark"] .card {
-    box-shadow: 0 1px 3px rgb(0 0 0 / 0.4), 0 4px 16px rgb(0 0 0 / 0.3);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.35), 0 6px 20px rgb(0 0 0 / 0.25);
   }
 
   .btn, .btn-primary, .btn-ghost, .btn-soft {
-    @apply inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold cursor-pointer transition hover:-translate-y-px active:translate-y-0 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold cursor-pointer transition active:scale-[0.98] disabled:opacity-50;
   }
-  .btn-primary { @apply bg-primary-strong text-on-primary hover:bg-primary; }
-  .btn-ghost { @apply border border-line text-primary bg-transparent hover:bg-surface-2; }
-  .btn-soft { @apply bg-accent-soft text-primary-strong dark:text-accent; }
-  .btn-sm { @apply !px-3 !py-1.5 !text-xs; }
+  .btn-primary {
+    @apply text-on-primary;
+    background: var(--primary);
+  }
+  .btn-primary:hover { background: var(--primary-strong); }
+  .btn-ghost { @apply border border-line text-ink-2 bg-surface hover:bg-surface-2 hover:text-ink; }
+  .btn-soft { @apply bg-accent-soft text-ink hover:brightness-97 dark:hover:brightness-110; }
+  .btn-sm { @apply !px-3 !py-1.5 !text-xs !rounded-lg; }
 
   .chip {
-    @apply inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap;
+    @apply inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md whitespace-nowrap;
   }
   .chip-done    { background: var(--st-done-bg);    color: var(--st-done); }
   .chip-ontrack { background: var(--st-ontrack-bg); color: var(--st-ontrack); }
@@ -118,11 +136,11 @@ body {
   .chip-delayed { background: var(--st-delayed-bg); color: var(--st-delayed); }
 
   .field-input {
-    @apply w-full border border-line rounded-xl px-3 py-2.5 bg-surface-2 text-ink focus:border-accent;
+    @apply w-full border border-line rounded-xl px-3 py-2.5 bg-surface-2 text-ink text-sm focus:border-accent;
   }
 
   .icon-btn {
-    @apply w-10 h-10 rounded-full border border-line bg-surface text-ink-2 grid place-items-center cursor-pointer relative transition hover:bg-surface-2 hover:-translate-y-px;
+    @apply w-10 h-10 rounded-xl border border-line bg-surface text-ink-2 grid place-items-center cursor-pointer relative transition hover:bg-surface-2 hover:text-ink;
   }
 }
 
@@ -135,12 +153,12 @@ body {
   50% { height: 22px; }
 }
 @keyframes mic-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgb(208 59 59 / 0.5); }
-  50% { box-shadow: 0 0 0 12px rgb(208 59 59 / 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgb(210 74 74 / 0.5); }
+  50% { box-shadow: 0 0 0 12px rgb(210 74 74 / 0); }
 }
 @keyframes modal-pop {
-  from { transform: scale(0.96); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from { transform: scale(0.97) translateY(4px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
 }
-.animate-modal-pop { animation: modal-pop 0.18s ease; }
+.animate-modal-pop { animation: modal-pop 0.16s ease; }
 .animate-mic-pulse { animation: mic-pulse 1.2s ease-in-out infinite; }
