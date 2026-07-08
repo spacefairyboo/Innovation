@@ -108,6 +108,7 @@ export function updateTask(
   taskId: string,
   patch: Partial<Pick<Task, "status" | "progress" | "priority" | "due">> & { title?: string },
   note?: { en: string; ar: string },
+  changedBy?: string,
 ): Task | null {
   const db = getDB();
   const existing = getTask(taskId);
@@ -122,6 +123,26 @@ export function updateTask(
     title_ar: patch.title ?? existing.title.ar,
   };
   if (next.status === "done") next.progress = 100;
+
+  // Log audit entries for changed fields
+  if (changedBy) {
+    if (patch.status && patch.status !== existing.status) {
+      logAuditEntry(taskId, changedBy, "status", existing.status, patch.status);
+    }
+    if (patch.progress !== undefined && patch.progress !== existing.progress) {
+      logAuditEntry(taskId, changedBy, "progress", String(existing.progress), String(patch.progress));
+    }
+    if (patch.priority && patch.priority !== existing.priority) {
+      logAuditEntry(taskId, changedBy, "priority", existing.priority, patch.priority);
+    }
+    if (patch.due !== undefined && patch.due !== existing.due) {
+      logAuditEntry(taskId, changedBy, "due", existing.due ?? null, patch.due ?? null);
+    }
+    if (patch.title && patch.title !== existing.title.en) {
+      logAuditEntry(taskId, changedBy, "title", existing.title.en, patch.title);
+    }
+  }
+
   db.prepare(
     "UPDATE tasks SET status=?, progress=?, priority=?, due=?, title_en=?, title_ar=?, updated_at=? WHERE id=?",
   ).run(next.status, next.progress, next.priority, next.due, next.title_en, next.title_ar, now, taskId);
@@ -191,4 +212,48 @@ export function markAllRead(user: User): void {
   const db = getDB();
   const ins = db.prepare("INSERT OR IGNORE INTO notif_reads (user_id, notif_id) VALUES (?,?)");
   for (const nn of buildNotifications(user)) ins.run(user.id, nn.id);
+}
+
+/* ---------- audit logging ---------- */
+export function logAuditEntry(
+  taskId: string,
+  changedBy: string,
+  field: string,
+  oldValue: string | null,
+  newValue: string | null,
+): void {
+  const db = getDB();
+  db.prepare(
+    "INSERT INTO audit_logs (task_id, changed_by, ts, field, old_value, new_value) VALUES (?,?,?,?,?,?)",
+  ).run(taskId, changedBy, Date.now(), field, oldValue, newValue);
+}
+
+export function getAuditLog(taskId: string): Array<{ id: number; changedBy: string; ts: number; field: string; oldValue: string | null; newValue: string | null }> {
+  const db = getDB();
+  return db.prepare("SELECT * FROM audit_logs WHERE task_id = ? ORDER BY ts DESC LIMIT 50").all(taskId) as any[];
+}
+
+/* ---------- task notes ---------- */
+export function getTaskNotes(taskId: string): { id: number; checklistItems: string[] } | null {
+  const db = getDB();
+  const row = db.prepare("SELECT * FROM task_notes WHERE task_id = ?").get(taskId) as any;
+  if (!row) return null;
+  return {
+    id: row.id,
+    checklistItems: JSON.parse(row.checklist_items ?? "[]"),
+  };
+}
+
+export function updateTaskNotes(taskId: string, checklistItems: string[]): void {
+  const db = getDB();
+  const existing = getTaskNotes(taskId);
+  if (existing) {
+    db.prepare("UPDATE task_notes SET checklist_items = ? WHERE task_id = ?").run(
+      JSON.stringify(checklistItems), taskId
+    );
+  } else {
+    db.prepare("INSERT INTO task_notes (task_id, checklist_items) VALUES (?,?)").run(
+      taskId, JSON.stringify(checklistItems)
+    );
+  }
 }
