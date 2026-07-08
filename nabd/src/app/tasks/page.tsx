@@ -10,7 +10,10 @@ import { getSession } from "@/lib/session";
 import { countStatuses } from "@/lib/types";
 import { doneThisWeekCount, toVM } from "@/lib/vm";
 
-export default async function MyTasksPage() {
+export default async function MyTasksPage({ searchParams }: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const { user, lang } = await getSession();
   const t = makeT(lang);
   const tasks = userTasks(user.id);
@@ -46,7 +49,7 @@ export default async function MyTasksPage() {
 
       <StatTiles stats={stats} />
 
-      <TaskListSection vms={tasks.map(toVM)} mine withFilters assignees={assignees} />
+      <TaskListSection vms={tasks.map(toVM)} mine withFilters assignees={assignees} initialQuery={q} key={q ?? ""} />
     </>
   );
 }

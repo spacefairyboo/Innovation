@@ -135,7 +135,7 @@ export function TaskRow({ vm, mine, canEdit, canNudge, showTeam, onOpen }: {
 type SortKey = "due" | "priority" | "updated";
 const PRIO_RANK: Record<Priority, number> = { high: 0, med: 1, low: 2 };
 
-export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFilters, assignees }: {
+export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFilters, assignees, initialQuery }: {
   vms: TaskVM[];
   mine?: boolean;
   canEdit?: boolean;
@@ -143,9 +143,10 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
   showTeam?: boolean;
   withFilters?: boolean;
   assignees?: AssigneeOption[];
+  initialQuery?: string;
 }) {
   const { t, lang } = useI18n();
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initialQuery ?? "");
   const [status, setStatus] = useState<EffStatus | "all">("all");
   const [sort, setSort] = useState<SortKey>("due");
   const [editing, setEditing] = useState<TaskVM | null>(null);

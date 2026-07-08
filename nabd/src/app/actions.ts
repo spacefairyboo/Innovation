@@ -132,6 +132,23 @@ export async function markNotificationsRead() {
   refresh();
 }
 
+/** Emails the caller their current briefing (same narrative the podcast speaks). */
+export async function emailMyBriefing() {
+  const { user, lang } = await getSession();
+  if (!user.email) throw new Error("No email address on file");
+  const { buildPodcastScript } = await import("@/lib/briefing");
+  const { sendEmail } = await import("@/lib/mailer");
+  const lines = buildPodcastScript(user, lang, repo.scopeTasks(user), user.role === "senior");
+  const dateStr = new Date().toLocaleDateString(lang === "ar" ? "ar" : "en", { day: "numeric", month: "long" });
+  await sendEmail({
+    toUser: user,
+    kind: "digest",
+    subject: lang === "ar" ? `ملخص نبض — ${dateStr}` : `Your Nabd briefing — ${dateStr}`,
+    body: lines.join("\n\n"),
+  });
+  refresh();
+}
+
 export async function resetDemo() {
   resetDB();
   refresh();
