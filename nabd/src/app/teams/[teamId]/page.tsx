@@ -14,8 +14,12 @@ import { getSession } from "@/lib/session";
 import { HEALTH_META, countStatuses, teamHealth } from "@/lib/types";
 import { csvRows, toVM } from "@/lib/vm";
 
-export default async function TeamPage({ params }: { params: Promise<{ teamId: string }> }) {
+export default async function TeamPage({ params, searchParams }: {
+  params: Promise<{ teamId: string }>;
+  searchParams: Promise<{ q?: string }>;
+}) {
   const { teamId } = await params;
+  const { q } = await searchParams;
   const { user, lang } = await getSession();
   const t = makeT(lang);
   const team = getTeam(teamId);
@@ -100,6 +104,8 @@ export default async function TeamPage({ params }: { params: Promise<{ teamId: s
           canNudge={canManage}
           withFilters
           assignees={assignees}
+          initialQuery={q}
+          key={q ?? ""}
         />
       </div>
     </>

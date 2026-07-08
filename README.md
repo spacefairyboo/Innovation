@@ -33,6 +33,10 @@ Use the profile button in the sidebar to switch between demo users and experienc
 
 ## Features
 
+- **Command palette** — press `Ctrl/Cmd + K` (or the Search button) to search every task, team, and page in your scope; selecting a task lands on its list pre-filtered.
+- **Calendar** — the month at a glance with tasks placed on their due dates as status-colored chips, plus a strip for undated work.
+- **Email digest** — one click sends the current narrative briefing to your inbox through the same outbox/SMTP pipeline as reminders.
+- **Top contributors** — a weekly completions leaderboard on the Statistics page, computed from the attributed audit history.
 - **Advisor** — a "what should I do next?" page for every role: a prioritized plan built from live task data (status, due dates, priority, progress, staleness) with step-by-step guidance per task and **fully compiled email drafts** (recipient, subject, body) ready to copy or open in a mail client. Employees get tackling instructions, managers get unblock/nudge/rebalance moves, the senior manager gets team visits, escalations, and recognition.
 - **Statistics** — a manager/senior analytics page: 14-day completion line chart, status donut, average-progress bars per team (or per member for managers), and stacked per-team breakdowns — every chart with an accessible table view, on a CVD-validated palette.
 - **Email reminders** — tasks left without an update for 3+ days automatically email every assignee (at most once per task per day) alongside the in-app notification. All emails are recorded in an outbox visible on the Notifications page; configure `SMTP_HOST/PORT/USER/PASS/FROM` for real delivery.

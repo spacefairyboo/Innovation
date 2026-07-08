@@ -217,6 +217,25 @@ export const I18N: Record<Lang, Record<string, string>> = {
     voice_female: "Female voices",
     voice_male: "Male voices",
     voice_other: "Other voices",
+    // command palette
+    palette_placeholder: "Search tasks, teams, pages…",
+    palette_pages: "Pages",
+    palette_tasks: "Tasks",
+    palette_teams: "Teams",
+    palette_empty: "No matches.",
+    palette_hint: "Ctrl K",
+    search: "Search",
+    // calendar
+    nav_calendar: "Calendar",
+    calendar_sub: "Your tasks laid out by due date",
+    no_due: "No due date",
+    // digest
+    digest_btn: "Email me this briefing",
+    digest_sent: "Briefing sent — check the email log.",
+    // leaderboard
+    leaderboard: "Top contributors",
+    leaderboard_sub: "Tasks completed in the last 7 days",
+    leaderboard_empty: "No completions in the last 7 days.",
   },
 
   ar: {
@@ -423,6 +442,25 @@ export const I18N: Record<Lang, Record<string, string>> = {
     voice_female: "أصوات نسائية",
     voice_male: "أصوات رجالية",
     voice_other: "أصوات أخرى",
+    // command palette
+    palette_placeholder: "ابحث في المهام والفرق والصفحات…",
+    palette_pages: "الصفحات",
+    palette_tasks: "المهام",
+    palette_teams: "الفرق",
+    palette_empty: "لا نتائج.",
+    palette_hint: "Ctrl K",
+    search: "بحث",
+    // calendar
+    nav_calendar: "التقويم",
+    calendar_sub: "مهامك موزعة حسب تاريخ الاستحقاق",
+    no_due: "بدون تاريخ استحقاق",
+    // digest
+    digest_btn: "أرسل الملخص إلى بريدي",
+    digest_sent: "أُرسل الملخص — راجع سجل البريد.",
+    // leaderboard
+    leaderboard: "الأكثر إنجازًا",
+    leaderboard_sub: "المهام المكتملة خلال آخر ٧ أيام",
+    leaderboard_empty: "لا إنجازات خلال آخر ٧ أيام.",
   },
 };
 

@@ -1,38 +1,55 @@
 "use client";
 
-/* App shell: dark brand sidebar, clean topbar (theme/lang/bell/user), mobile nav. */
+/* App shell: dark brand sidebar, clean topbar (theme/lang/search/bell/user),
+   command palette (Ctrl/Cmd+K), mobile nav. */
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { resetDemo, setLang, setTheme, switchUser } from "@/app/actions";
 import { useI18n, useToast } from "./providers";
 import { Avatar, Modal } from "./ui";
 import { Icon } from "./icons";
+import { CommandPalette, type PaletteItem } from "./palette";
 import type { Localized, Role, Theme, User } from "@/lib/types";
 
 export interface ShellUser extends User {
   teamName: Localized | null;
 }
 
-export function Shell({ user, users, unreadCount, theme, children }: {
+export function Shell({ user, users, unreadCount, theme, palette, children }: {
   user: ShellUser;
   users: ShellUser[];
   unreadCount: number;
   theme: Theme;
+  palette: PaletteItem[];
   children: React.ReactNode;
 }) {
   const { t, lang } = useI18n();
   const pathname = usePathname();
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [, startTransition] = useTransition();
   const toast = useToast();
+
+  // Global Ctrl/Cmd+K opens the command palette.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const nav: { href: string; ico: string; label: string; badge?: number }[] = [
     { href: "/", ico: "layout-dashboard", label: t("nav_dashboard") },
     ...(user.role !== "senior" ? [{ href: "/tasks", ico: "clipboard-list", label: t("nav_mytasks") }] : []),
     { href: "/advisor", ico: "lightbulb", label: t("nav_advisor") },
     ...(user.role !== "employee" ? [{ href: "/stats", ico: "trending-up", label: t("nav_stats") }] : []),
+    { href: "/calendar", ico: "calendar", label: t("nav_calendar") },
     { href: "/teams", ico: "users", label: t("nav_teams") },
     { href: "/podcast", ico: "headphones", label: t("nav_podcast") },
     { href: "/notifications", ico: "bell", label: t("nav_notifications"), badge: unreadCount },
@@ -111,6 +128,23 @@ export function Shell({ user, users, unreadCount, theme, children }: {
             </p>
           </div>
           <div className="flex-1" />
+          <button
+            className="icon-btn !w-auto !rounded-full px-3.5 gap-2 text-sm hidden sm:flex items-center"
+            onClick={() => setPaletteOpen(true)}
+            title={`${t("search")} (${t("palette_hint")})`}
+          >
+            <Icon name="search" size={15} />
+            <span className="text-ink-3 text-xs font-medium">{t("search")}</span>
+            <kbd className="text-[0.6rem] font-semibold text-ink-3 border border-line rounded-md px-1 py-0.5">{t("palette_hint")}</kbd>
+          </button>
+          <button
+            className="icon-btn sm:hidden"
+            onClick={() => setPaletteOpen(true)}
+            title={t("search")}
+            aria-label={t("search")}
+          >
+            <Icon name="search" size={16} />
+          </button>
           <button
             className="icon-btn !w-auto px-3.5 text-sm font-semibold"
             onClick={() => startTransition(() => setLang(lang === "en" ? "ar" : "en"))}
@@ -194,6 +228,8 @@ export function Shell({ user, users, unreadCount, theme, children }: {
           }}
         />
       )}
+
+      <CommandPalette items={palette} open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

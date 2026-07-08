@@ -1,6 +1,7 @@
 /* Notifications — blocked/delayed alerts, stale reminders, kudos, plus the
    log of email reminders sent to the current user. */
 
+import { EmailBriefingButton } from "@/components/digest";
 import { NotificationList } from "@/components/notifications";
 import { Icon } from "@/components/icons";
 import { notificationViews } from "@/lib/briefing";
@@ -23,11 +24,15 @@ export default async function NotificationsPage() {
       <NotificationList notifs={notifs} names={names} canNudge={user.role !== "employee"} />
 
       <div className="card mt-5">
-        <div className="mb-3">
-          <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
-            <Icon name="send" size={16} className="text-ink-3" /> {t("email_log")}
-          </h3>
-          <p className="m-0 text-xs text-ink-3">{t("email_log_sub")}</p>
+        <div className="mb-3 flex items-start gap-3 flex-wrap">
+          <div>
+            <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
+              <Icon name="send" size={16} className="text-ink-3" /> {t("email_log")}
+            </h3>
+            <p className="m-0 text-xs text-ink-3">{t("email_log_sub")}</p>
+          </div>
+          <div className="flex-1" />
+          <EmailBriefingButton />
         </div>
         {emails.length === 0 && (
           <div className="text-center text-ink-3 py-6 text-sm">{t("email_log_empty")}</div>

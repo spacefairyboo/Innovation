@@ -1,6 +1,7 @@
 /* Audio briefing — the narrative is generated fresh server-side from live
    data; the client player speaks it on-device. */
 
+import { EmailBriefingButton } from "@/components/digest";
 import { PodcastPlayer } from "@/components/podcast";
 import { buildPodcastScript } from "@/lib/briefing";
 import { makeT } from "@/lib/i18n";
@@ -40,9 +41,13 @@ export default async function PodcastPage({ searchParams }: {
 
   return (
     <>
-      <div className="mb-5">
-        <h2 className="m-0 text-xl font-bold">{t("nav_podcast")}</h2>
-        <p className="m-0 mt-0.5 text-sm text-ink-2">{t("podcast_daily")}</p>
+      <div className="flex items-center gap-3.5 mb-5 flex-wrap">
+        <div>
+          <h2 className="m-0 text-xl font-bold">{t("nav_podcast")}</h2>
+          <p className="m-0 mt-0.5 text-sm text-ink-2">{t("podcast_daily")}</p>
+        </div>
+        <div className="flex-1" />
+        <EmailBriefingButton />
       </div>
       <PodcastPlayer lines={lines} scopeOptions={scopeOptions} scope={scope} />
     </>

@@ -106,13 +106,15 @@
   --font-sans: system-ui, -apple-system, "Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif;
 }
 
-/* Ambient gradient wash — the soft cyan-green atmosphere behind everything */
+/* Ambient soft gradient — large sweeping sage forms on a warm cream base,
+   heavily diffused, with a film-grain overlay (the "movement" look). */
 body {
   background:
-    radial-gradient(52rem 36rem at 88% -12%, rgb(70 199 180 / 0.18), transparent 62%),
-    radial-gradient(44rem 32rem at -12% 28%, rgb(42 150 134 / 0.14), transparent 60%),
-    radial-gradient(40rem 30rem at 55% 115%, rgb(37 150 190 / 0.10), transparent 62%),
-    var(--bg);
+    radial-gradient(70rem 48rem at 80% -14%, rgb(94 146 119 / 0.52), transparent 64%),
+    radial-gradient(56rem 44rem at -14% 66%, rgb(110 162 135 / 0.38), transparent 62%),
+    radial-gradient(34rem 26rem at 96% 74%, rgb(255 255 255 / 0.85), transparent 62%),
+    radial-gradient(46rem 36rem at 42% 118%, rgb(84 138 112 / 0.30), transparent 62%),
+    linear-gradient(160deg, #edebe0 0%, #e8ebdf 48%, #e2e8de 100%);
   background-attachment: fixed;
   color: var(--ink);
   font-family: var(--font-sans);
@@ -123,12 +125,26 @@ body {
 }
 [data-theme="dark"] body {
   background:
-    radial-gradient(52rem 36rem at 88% -12%, rgb(70 199 180 / 0.10), transparent 62%),
-    radial-gradient(44rem 32rem at -12% 30%, rgb(42 150 134 / 0.09), transparent 60%),
-    radial-gradient(40rem 30rem at 55% 115%, rgb(37 150 190 / 0.07), transparent 62%),
-    var(--bg);
+    radial-gradient(70rem 48rem at 80% -14%, rgb(94 156 124 / 0.22), transparent 64%),
+    radial-gradient(56rem 44rem at -14% 66%, rgb(70 199 180 / 0.10), transparent 62%),
+    radial-gradient(46rem 36rem at 42% 118%, rgb(84 138 112 / 0.14), transparent 62%),
+    linear-gradient(160deg, #071b16 0%, #04110e 100%);
   background-attachment: fixed;
 }
+
+/* Fine film grain over the whole canvas — subtle, non-interactive */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  opacity: 0.34;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+}
+[data-theme="dark"] body::after { opacity: 0.22; }
 
 :focus-visible {
   outline: none;

@@ -10,14 +10,37 @@ import {
 } from "@/components/charts";
 import { ExportCsvButton } from "@/components/dashboard-widgets";
 import { Icon } from "@/components/icons";
+import { Avatar } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
-import { listTeams, scopeTasks, teamMembers, teamTasks, userTasks } from "@/lib/repo";
+import { getUser, listTeams, scopeTasks, teamMembers, teamTasks, userTasks } from "@/lib/repo";
 import { getSession } from "@/lib/session";
-import { HEALTH_META, countStatuses, teamHealth, type Task } from "@/lib/types";
+import { DAY_MS, HEALTH_META, countStatuses, teamHealth, type Task, type User } from "@/lib/types";
 import { completionTrend, csvRows } from "@/lib/vm";
 
 const avgProgress = (tasks: Task[]): number =>
   tasks.length ? Math.round(tasks.reduce((s, t) => s + t.progress, 0) / tasks.length) : 0;
+
+/** Completions per person over the trailing week, from attributed history. */
+function topContributors(tasks: Task[], limit: number): { user: User; count: number }[] {
+  const cutoff = Date.now() - 7 * DAY_MS;
+  const seen = new Set<string>();
+  const counts = new Map<string, number>();
+  for (const task of tasks) {
+    for (const h of task.history) {
+      if (h.status !== "done" || h.ts < cutoff) continue;
+      const who = h.byId ?? task.ownerId;
+      const key = `${task.id}|${who}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      counts.set(who, (counts.get(who) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .map(([id, count]) => ({ user: getUser(id), count }))
+    .filter((x): x is { user: User; count: number } => x.user !== null)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
 
 export default async function StatsPage() {
   const { user, lang } = await getSession();
@@ -28,6 +51,7 @@ export default async function StatsPage() {
   const stats = countStatuses(tasks);
   const trend = completionTrend(tasks, lang, 14);
   const health = HEALTH_META[teamHealth(stats)];
+  const contributors = topContributors(tasks, 5);
 
   // Senior: group by team. Manager: group by member.
   const groups: { rows: ProgressRow[]; barRows: TeamBarRow[]; groupLabel: string } = (() => {
@@ -82,13 +106,35 @@ export default async function StatsPage() {
 
       <StatTiles stats={stats} />
 
-      <div className="grid gap-5 mb-5">
+      <div className="grid gap-5 lg:[grid-template-columns:1.7fr_1fr] items-start mb-5">
         <ChartCard
           title={t("completions_trend")}
           sub={t("completions_trend_sub")}
           chart={<LineChart points={trend} seriesLabel={t("st_done")} />}
           table={<TrendTable points={trend} seriesLabel={t("st_done")} />}
         />
+        <div className="card">
+          <div className="mb-3">
+            <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
+              <Icon name="award" size={16} className="text-ink-3" /> {t("leaderboard")}
+            </h3>
+            <p className="m-0 text-xs text-ink-3">{t("leaderboard_sub")}</p>
+          </div>
+          {contributors.length === 0 && (
+            <div className="text-center text-ink-3 py-6 text-sm">{t("leaderboard_empty")}</div>
+          )}
+          {contributors.map((c, i) => (
+            <div key={c.user.id} className="flex items-center gap-3 py-2.5 border-b border-grid last:border-b-0">
+              <span className={`w-6 h-6 rounded-full grid place-items-center text-[0.7rem] font-bold shrink-0
+                ${i === 0 ? "bg-accent-soft text-primary" : "bg-surface-2 text-ink-3 border border-line"}`}>
+                {i + 1}
+              </span>
+              <Avatar name={c.user.name} size="sm" />
+              <span className="flex-1 min-w-0 text-sm font-semibold truncate">{c.user.name[lang]}</span>
+              <span className="text-sm font-bold tabular-nums text-primary">{c.count}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2 items-start mb-5">
