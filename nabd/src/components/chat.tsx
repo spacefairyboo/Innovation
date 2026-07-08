@@ -43,8 +43,8 @@ export function CheckinButtons({ tasks, userFirstName, doneThisWeek }: {
   const [mode, setMode] = useState<"closed" | "chat" | "voice">("closed");
   return (
     <>
-      <button className="btn-soft" onClick={() => setMode("chat")}>💬 {t("update_chat")}</button>
-      <button className="btn-soft flex items-center gap-1" onClick={() => setMode("voice")}><Icon name="mic" size={16} /> {t("update_voice")}</button>
+      <button className="btn-soft" onClick={() => setMode("chat")}><Icon name="message-circle" size={16} /> {t("update_chat")}</button>
+      <button className="btn-soft" onClick={() => setMode("voice")}><Icon name="mic" size={16} /> {t("update_voice")}</button>
       {mode !== "closed" && (
         <ChatModal
           tasks={tasks}
@@ -83,7 +83,7 @@ function ChatModal({ tasks, userFirstName, doneThisWeek, startVoice, onClose }: 
 
   const summaryText = () =>
     `${t("chat_summary_head")}\n` +
-    tasks.map((x) => `${STATUS_META[effStatus(x)].icon} ${x.title[lang]} — ${x.progress}%`).join("\n");
+    tasks.map((x) => `${x.title[lang]} — ${t(STATUS_META[effStatus(x)].labelKey)} · ${x.progress}%`).join("\n");
 
   const apply = (task: Task, parsed: ParsedUpdate, raw: string) => {
     const patch: { status?: TaskStatus; progress?: number } = {};
@@ -97,18 +97,18 @@ function ChatModal({ tasks, userFirstName, doneThisWeek, startVoice, onClose }: 
       completions.current += 1;
       push({
         who: "bot",
-        text: `${t("chat_updated", { task: title, status: `${STATUS_META.done.icon} ${t("st_done")}` })}\n${t("chat_kudos", { n: completions.current })}`,
+        text: `${t("chat_updated", { task: title, status: t("st_done") })}\n${t("chat_kudos", { n: completions.current })}`,
       });
     } else if (parsed.intent === "blocked") {
       push({
         who: "bot",
-        text: `${t("chat_updated", { task: title, status: `${STATUS_META.blocked.icon} ${t("st_blocked")}` })}\n${t("chat_blocked_note")}`,
+        text: `${t("chat_updated", { task: title, status: t("st_blocked") })}\n${t("chat_blocked_note")}`,
       });
     } else if (parsed.pct !== null) {
       push({ who: "bot", text: t("chat_progress_set", { task: title, pct: parsed.pct }) });
     } else {
       const st = patch.status ?? task.status;
-      push({ who: "bot", text: t("chat_updated", { task: title, status: `${STATUS_META[st].icon} ${t(STATUS_META[st].labelKey)}` }) });
+      push({ who: "bot", text: t("chat_updated", { task: title, status: t(STATUS_META[st].labelKey) }) });
     }
     push({ who: "bot", text: t("chat_summary_q") });
   };
@@ -162,28 +162,31 @@ function ChatModal({ tasks, userFirstName, doneThisWeek, startVoice, onClose }: 
   return (
     <Modal
       title={t("chat_title")}
-      icon="search"
+      icon="message-circle"
       onClose={onClose}
       footer={
         <>
           <button
             className={`w-11 h-11 rounded-full grid place-items-center shrink-0 cursor-pointer transition
-              ${recording ? "text-white animate-mic-pulse" : "bg-accent-soft text-primary-strong dark:text-accent hover:scale-105"}`}
+              ${recording ? "text-white animate-mic-pulse" : "bg-accent-soft text-primary hover:scale-105"}`}
             style={recording ? { background: "var(--st-blocked)" } : undefined}
             onClick={toggleVoice}
             title={t("update_voice")}
+            aria-label={t("update_voice")}
           >
-            <Icon name="mic" size={20} />
+            <Icon name="mic" size={19} />
           </button>
           <input
-            className="flex-1 border border-line rounded-full px-4 py-2.5 bg-surface-2 text-ink focus:border-accent"
+            className="flex-1 border border-line rounded-full px-4 py-2.5 bg-surface-2 text-ink text-sm focus:border-accent"
             placeholder={t("chat_placeholder")}
             value={input}
             autoFocus={!startVoice}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { handle(input); setInput(""); } }}
           />
-          <button className="btn-primary flex items-center gap-1" onClick={() => { handle(input); setInput(""); }}><Icon name="arrow-right" size={16} /></button>
+          <button className="btn-primary !rounded-full !px-3.5" onClick={() => { handle(input); setInput(""); }} aria-label={t("chat_placeholder")}>
+            <Icon name="send" size={17} />
+          </button>
         </>
       }
     >
@@ -194,7 +197,7 @@ function ChatModal({ tasks, userFirstName, doneThisWeek, startVoice, onClose }: 
             className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl text-sm whitespace-pre-line
               ${m.who === "bot"
                 ? "bg-surface-2 border border-line self-start rounded-ss-sm"
-                : "bg-primary-strong text-on-primary self-end rounded-se-sm"}`}
+                : "bg-primary text-on-primary self-end rounded-se-sm"}`}
           >
             {m.text}
             {m.picks && (
@@ -209,7 +212,7 @@ function ChatModal({ tasks, userFirstName, doneThisWeek, startVoice, onClose }: 
                       apply(p, pend?.parsed ?? { intent: "ontrack", pct: null }, pend?.raw ?? "");
                     }}
                   >
-                    {STATUS_META[effStatus(p)].icon} {p.title[lang]}
+                    <Icon name={STATUS_META[effStatus(p)].icon} size={13} /> {p.title[lang]}
                   </button>
                 ))}
               </div>

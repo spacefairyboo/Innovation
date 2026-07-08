@@ -55,6 +55,7 @@ function migrate(d: DatabaseSync) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
       ts INTEGER NOT NULL,
+      by_id TEXT,
       text_en TEXT NOT NULL, text_ar TEXT NOT NULL,
       status TEXT NOT NULL, progress INTEGER NOT NULL
     );
@@ -78,6 +79,11 @@ function migrate(d: DatabaseSync) {
       PRIMARY KEY (user_id, notif_id)
     );
   `);
+  // Databases created before the audit-log release lack task_updates.by_id.
+  const cols = d.prepare("SELECT name FROM pragma_table_info('task_updates')").all() as { name: string }[];
+  if (!cols.some((c) => c.name === "by_id")) {
+    d.exec("ALTER TABLE task_updates ADD COLUMN by_id TEXT");
+  }
 }
 
 function isEmpty(d: DatabaseSync): boolean {
@@ -90,14 +96,14 @@ const inDays = (n: number) => new Date(Date.now() + n * DAY_MS).toISOString().sl
 
 function seed(d: DatabaseSync) {
   const insUnit = d.prepare("INSERT INTO units VALUES (?,?,?,?)");
-  insUnit.run("u1", "💻", "Technology Unit", "وحدة التقنية");
-  insUnit.run("u2", "📈", "Business Unit", "وحدة الأعمال");
+  insUnit.run("u1", "T", "Technology Unit", "وحدة التقنية");
+  insUnit.run("u2", "B", "Business Unit", "وحدة الأعمال");
 
   const insTeam = d.prepare("INSERT INTO teams VALUES (?,?,?,?,?,?)");
-  insTeam.run("t1", "u1", "🛠️", "m1", "Development", "التطوير");
-  insTeam.run("t2", "u1", "🎨", "m2", "Design", "التصميم");
-  insTeam.run("t3", "u2", "📣", "m3", "Marketing", "التسويق");
-  insTeam.run("t4", "u2", "🤝", "m4", "Customer Success", "نجاح العملاء");
+  insTeam.run("t1", "u1", "D", "m1", "Development", "التطوير");
+  insTeam.run("t2", "u1", "X", "m2", "Design", "التصميم");
+  insTeam.run("t3", "u2", "M", "m3", "Marketing", "التسويق");
+  insTeam.run("t4", "u2", "C", "m4", "Customer Success", "نجاح العملاء");
 
   const insUser = d.prepare("INSERT INTO users VALUES (?,?,?,?,?,?)");
   insUser.run("s1", "senior", null, "Layla Al-Harbi", "ليلى الحربي", 0);
@@ -116,7 +122,9 @@ function seed(d: DatabaseSync) {
   insUser.run("e9", "employee", "t4", "Ziad Karim", "زياد كريم", 0);
 
   const insTask = d.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?)");
-  const insUpd = d.prepare("INSERT INTO task_updates (task_id, ts, text_en, text_ar, status, progress) VALUES (?,?,?,?,?,?)");
+  const insUpd = d.prepare("INSERT INTO task_updates (task_id, ts, by_id, text_en, text_ar, status, progress) VALUES (?,?,?,?,?,?,?)");
+  const insAudit = d.prepare("INSERT INTO audit_logs (task_id, changed_by, ts, field, old_value, new_value) VALUES (?,?,?,?,?,?)");
+  const insNote = d.prepare("INSERT INTO task_notes (task_id, checklist_items) VALUES (?,?)");
   type SeedTask = [id: string, owner: string, team: string, status: string, progress: number, prio: string,
     en: string, arTitle: string, due: string, updatedAt: number, noteEn: string, noteAr: string];
   const rows: SeedTask[] = [
@@ -143,13 +151,34 @@ function seed(d: DatabaseSync) {
   ];
   for (const [id, owner, team, status, progress, prio, en, arTitle, due, updatedAt, noteEn, noteAr] of rows) {
     insTask.run(id, owner, team, status, progress, prio, en, arTitle, due, updatedAt);
-    insUpd.run(id, updatedAt, noteEn, noteAr, status, progress);
+    insUpd.run(id, updatedAt, owner, noteEn, noteAr, status, progress);
   }
+
+  // Seed audit trail so the activity log has real, attributable history.
+  insAudit.run("k4", "e2", ago(1), "status", "ontrack", "done");
+  insAudit.run("k4", "e2", ago(1), "progress", "85", "100");
+  insAudit.run("k2", "e1", ago(1), "status", "ontrack", "blocked");
+  insAudit.run("k1", "e1", ago(0, 3), "progress", "50", "65");
+  insAudit.run("k1", "m1", ago(2), "due", inDays(2), inDays(4));
+  insAudit.run("k17", "e9", ago(3), "status", "pending", "blocked");
+  insAudit.run("k15", "e8", ago(0, 8), "status", "ontrack", "done");
+  insAudit.run("k9", "m2", ago(4), "assignee", "e4", "e5");
+
+  // Seed a couple of personal checklists ("note to self").
+  insNote.run("k1", JSON.stringify([
+    { text: "Test with saved cards", done: true },
+    { text: "Verify RTL layout of the form", done: false },
+    { text: "Ask QA for a regression pass", done: false },
+  ]));
+  insNote.run("k16", JSON.stringify([
+    { text: "Confirm churn KPI formula", done: true },
+    { text: "Draft dashboard wireframe", done: false },
+  ]));
 }
 
 /** Test/demo helper: wipe and reseed. */
 export function resetDB() {
   const d = getDB();
-  d.exec("DELETE FROM notif_reads; DELETE FROM task_updates; DELETE FROM tasks; DELETE FROM users; DELETE FROM teams; DELETE FROM units;");
+  d.exec("DELETE FROM notif_reads; DELETE FROM task_notes; DELETE FROM audit_logs; DELETE FROM task_updates; DELETE FROM tasks; DELETE FROM users; DELETE FROM teams; DELETE FROM units;");
   seed(d);
 }

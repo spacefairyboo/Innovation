@@ -11,20 +11,24 @@ import { STATUS_META, STATUS_ORDER, type StatusCounts } from "@/lib/types";
 
 export function StatTiles({ stats }: { stats: StatusCounts }) {
   const { t } = useI18n();
-  const tiles: { label: string; icon: string; val: number; edge: string }[] = [
-    { label: t("tasks_total"), icon: "tasks", val: stats.total, edge: "var(--accent)" },
+  const pct = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
+  const tiles: { label: string; icon: string; val: string; edge: string }[] = [
+    { label: t("tasks_total"), icon: "clipboard-list", val: String(stats.total), edge: "var(--accent)" },
     ...STATUS_ORDER.map((s) => ({
       label: t(STATUS_META[s].labelKey), icon: STATUS_META[s].icon,
-      val: stats[s], edge: STATUS_META[s].chartVar,
+      val: String(stats[s]), edge: STATUS_META[s].chartVar,
     })),
+    { label: t("completion_rate"), icon: "trending-up", val: `${pct}%`, edge: "var(--primary)" },
   ];
   return (
-    <div className="grid gap-3.5 mb-4.5 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
+    <div className="grid gap-3 mb-5 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
       {tiles.map((x) => (
-        <div key={x.label} className="card relative overflow-hidden !p-4 flex flex-col gap-1">
+        <div key={x.label} className="card relative overflow-hidden !p-4 flex flex-col gap-1.5">
           <span className="absolute start-0 top-0 bottom-0 w-1" style={{ background: x.edge }} />
-          <span className="text-xs font-bold text-ink-2 flex items-center gap-1.5"><Icon name={x.icon} size={16} /> {x.label}</span>
-          <span className="text-3xl font-extrabold leading-tight">{x.val}</span>
+          <span className="text-xs font-semibold text-ink-2 flex items-center gap-1.5">
+            <Icon name={x.icon} size={14} /> {x.label}
+          </span>
+          <span className="text-[1.7rem] font-bold leading-tight tabular-nums">{x.val}</span>
         </div>
       ))}
     </div>
@@ -36,9 +40,9 @@ function Legend({ stats }: { stats: StatusCounts }) {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3">
       {STATUS_ORDER.filter((s) => stats[s] > 0).map((s) => (
-        <span key={s} className="flex items-center gap-1.5 text-xs text-ink-2 font-semibold">
+        <span key={s} className="flex items-center gap-1.5 text-xs text-ink-2 font-medium">
           <span className="w-2.5 h-2.5 rounded-xs shrink-0" style={{ background: STATUS_META[s].chartVar }} />
-          <Icon name={STATUS_META[s].icon} size={14} /> {t(STATUS_META[s].labelKey)} · {stats[s]}
+          {t(STATUS_META[s].labelKey)} · {stats[s]}
         </span>
       ))}
     </div>
@@ -59,7 +63,11 @@ function StatusTable({ stats }: { stats: StatusCounts }) {
       <tbody>
         {STATUS_ORDER.map((s) => (
           <tr key={s}>
-            <td className="px-2.5 py-2 border-b border-grid flex items-center gap-1.5"><Icon name={STATUS_META[s].icon} size={16} /> {t(STATUS_META[s].labelKey)}</td>
+            <td className="px-2.5 py-2 border-b border-grid">
+              <span className="inline-flex items-center gap-1.5">
+                <Icon name={STATUS_META[s].icon} size={14} className="text-ink-3" /> {t(STATUS_META[s].labelKey)}
+              </span>
+            </td>
             <td className="px-2.5 py-2 border-b border-grid tabular-nums">{stats[s]}</td>
             <td className="px-2.5 py-2 border-b border-grid tabular-nums">{stats.total ? Math.round((stats[s] / stats.total) * 100) : 0}%</td>
           </tr>
@@ -79,17 +87,17 @@ export function ChartCard({ title, sub, chart, table }: {
     <div className="card">
       <div className="flex items-center gap-2.5 mb-3">
         <div>
-          <h3 className="m-0 text-base font-extrabold">{title}</h3>
+          <h3 className="m-0 text-base font-bold">{title}</h3>
           <p className="m-0 text-xs text-ink-3">{sub}</p>
         </div>
         <div className="flex-1" />
-        <div className="inline-flex border border-line rounded-full overflow-hidden bg-surface-2" role="tablist">
+        <div className="inline-flex border border-line rounded-lg overflow-hidden bg-surface-2" role="tablist">
           {(["chart", "table"] as const).map((m) => (
             <button
               key={m}
               role="tab"
               aria-selected={mode === m}
-              className={`px-3.5 py-1.5 text-xs font-bold cursor-pointer ${mode === m ? "bg-primary-strong text-on-primary" : "text-ink-2"}`}
+              className={`px-3 py-1.5 text-xs font-semibold cursor-pointer ${mode === m ? "bg-primary text-on-primary" : "text-ink-2"}`}
               onClick={() => setMode(m)}
             >
               {t(m === "chart" ? "view_chart" : "view_table")}
@@ -119,7 +127,7 @@ export function Donut({ stats, centerLabel }: { stats: StatusCounts; centerLabel
         key={s} r={R} cx={CX} cy={CY} fill="none"
         stroke={STATUS_META[s].chartVar} strokeWidth={SW}
         strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-offset}
-        data-tt={`${STATUS_META[s].icon} ${t(STATUS_META[s].labelKey)}|${stats[s]} · ${Math.round((stats[s] / total) * 100)}%`}
+        data-tt={`${t(STATUS_META[s].labelKey)}|${stats[s]} · ${Math.round((stats[s] / total) * 100)}%`}
         className="cursor-pointer"
       />,
     );
@@ -129,8 +137,8 @@ export function Donut({ stats, centerLabel }: { stats: StatusCounts; centerLabel
     <div>
       <svg viewBox="0 0 200 184" role="img" aria-label={t("status_mix")} className="block w-full h-auto">
         {segs.length ? segs : <circle r={R} cx={CX} cy={CY} fill="none" stroke="var(--grid)" strokeWidth={SW} />}
-        <text x={CX} y={CY - 2} textAnchor="middle" fontSize={30} fontWeight={800} fill="var(--ink)">{stats.total}</text>
-        <text x={CX} y={CY + 18} textAnchor="middle" fontSize={11} fontWeight={600} fill="var(--ink-3)">{centerLabel}</text>
+        <text x={CX} y={CY - 2} textAnchor="middle" fontSize={30} fontWeight={700} fill="var(--ink)">{stats.total}</text>
+        <text x={CX} y={CY + 18} textAnchor="middle" fontSize={11} fontWeight={500} fill="var(--ink-3)">{centerLabel}</text>
       </svg>
       <Legend stats={stats} />
     </div>
@@ -138,7 +146,7 @@ export function Donut({ stats, centerLabel }: { stats: StatusCounts; centerLabel
 }
 
 /* ---------- Stacked horizontal bars per team, 2px gaps, direct labels ---------- */
-export interface TeamBarRow { id: string; label: string; emoji: string; stats: StatusCounts }
+export interface TeamBarRow { id: string; label: string; stats: StatusCounts }
 
 export function TeamBars({ rows }: { rows: TeamBarRow[] }) {
   const { t } = useI18n();
@@ -149,7 +157,7 @@ export function TeamBars({ rows }: { rows: TeamBarRow[] }) {
     <div>
       {rows.map((r) => (
         <div key={r.id} className="flex items-center gap-3 mb-3">
-          <div className="w-32 shrink-0 text-[0.82rem] font-bold text-ink-2 truncate">{r.emoji} {r.label}</div>
+          <div className="w-32 shrink-0 text-[0.82rem] font-semibold text-ink-2 truncate">{r.label}</div>
           <div className="flex-1 flex gap-0.5 h-5.5 rounded overflow-hidden bg-surface-2">
             {STATUS_ORDER.filter((s) => r.stats[s] > 0).map((s) => {
               const pct = (r.stats[s] / max) * 100;
@@ -158,7 +166,7 @@ export function TeamBars({ rows }: { rows: TeamBarRow[] }) {
                   key={s}
                   className="grid place-items-center min-w-1.5 cursor-pointer"
                   style={{ width: `${pct}%`, background: STATUS_META[s].chartVar }}
-                  data-tt={`${r.emoji} ${r.label}|${STATUS_META[s].icon} ${t(STATUS_META[s].labelKey)}: ${r.stats[s]}`}
+                  data-tt={`${r.label}|${t(STATUS_META[s].labelKey)}: ${r.stats[s]}`}
                 >
                   {pct > 9 && (
                     <span className="text-[0.68rem] font-bold text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.45)]">{r.stats[s]}</span>
@@ -183,7 +191,7 @@ export function TeamBarsTable({ rows }: { rows: TeamBarRow[] }) {
         <tr>
           <th className="text-start text-ink-3 text-[0.7rem] uppercase px-2.5 py-2 border-b border-line">{t("team")}</th>
           {STATUS_ORDER.map((s) => (
-            <th key={s} className="text-start text-ink-3 text-[0.7rem] px-2.5 py-2 border-b border-line flex items-center gap-1.5"><Icon name={STATUS_META[s].icon} size={14} /> {t(STATUS_META[s].labelKey)}</th>
+            <th key={s} className="text-start text-ink-3 text-[0.7rem] px-2.5 py-2 border-b border-line">{t(STATUS_META[s].labelKey)}</th>
           ))}
         </tr>
       </thead>
@@ -235,7 +243,7 @@ export function MiniBars({ stats, label }: { stats: StatusCounts; label: string 
           <span
             key={s}
             style={{ width: `${(stats[s] / stats.total) * 100}%`, background: STATUS_META[s].chartVar }}
-            data-tt={`${label}|${STATUS_META[s].icon} ${t(STATUS_META[s].labelKey)}: ${stats[s]}`}
+            data-tt={`${label}|${t(STATUS_META[s].labelKey)}: ${stats[s]}`}
           />
         ))
       )}

@@ -1,11 +1,12 @@
 "use client";
 
-/* Podcast player — speaks the server-generated script with the Web Speech
+/* Podcast player — speaks the server-generated narrative with the Web Speech
    synthesis API, highlighting the transcript line being read. */
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "./providers";
+import { Icon } from "./icons";
 
 export function PodcastPlayer({ lines, scopeOptions, scope }: {
   lines: string[];
@@ -75,36 +76,36 @@ export function PodcastPlayer({ lines, scopeOptions, scope }: {
   return (
     <>
       <div
-        className="rounded-2xl p-7 flex gap-5 items-center flex-wrap text-[#eafcff] shadow-xl"
-        style={{ background: "linear-gradient(135deg, #083344, #155e75 55%, #0e7490)" }}
+        className="rounded-2xl p-7 flex gap-6 items-center flex-wrap shadow-xl"
+        style={{ background: "linear-gradient(135deg, #061b18, #0f2e29 55%, #14453c)", color: "#d9efe9" }}
       >
         <div
-          className="w-28 h-28 rounded-2xl grid place-items-center text-5xl shrink-0 shadow-lg"
-          style={{ background: "linear-gradient(135deg, #06b6d4, #22d3ee)" }}
+          className="w-24 h-24 rounded-2xl grid place-items-center shrink-0 shadow-lg text-white"
+          style={{ background: "linear-gradient(135deg, #2596be, #46c7b4)" }}
         >
-          🎙️
+          <Icon name="headphones" size={40} strokeWidth={1.6} />
         </div>
         <div className="flex-1 min-w-64">
-          <h3 className="m-0 mb-1 text-xl font-extrabold text-white">{t("podcast_title")}</h3>
-          <p className="m-0 mb-3.5 text-sm max-w-lg text-[#b8e9f2]">{t("podcast_sub")}</p>
+          <h3 className="m-0 mb-1 text-xl font-bold text-white">{t("podcast_title")}</h3>
+          <p className="m-0 mb-4 text-sm max-w-lg" style={{ color: "#9cc4ba" }}>{t("podcast_sub")}</p>
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
-              className="w-14 h-14 rounded-full grid place-items-center text-2xl cursor-pointer transition hover:scale-105 text-[#06222b] shadow-lg"
-              style={{ background: "#22d3ee", boxShadow: "0 6px 18px rgb(34 211 238 / 0.45)" }}
+              className="w-13 h-13 rounded-full grid place-items-center cursor-pointer transition hover:scale-105 shadow-lg"
+              style={{ background: "#46c7b4", color: "#061b18", boxShadow: "0 6px 18px rgb(70 199 180 / 0.4)" }}
               onClick={toggle}
               aria-label={t("podcast_play")}
             >
-              {live ? "⏸" : "▶"}
+              <Icon name={live ? "pause" : "play"} size={22} />
             </button>
             <button
-              className="px-3.5 py-2 rounded-full font-bold text-sm text-white cursor-pointer border border-white/25 bg-white/10 hover:bg-white/20"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold text-sm text-white cursor-pointer border border-white/20 bg-white/10 hover:bg-white/20"
               onClick={stop}
             >
-              ⏹ {t("podcast_stop")}
+              <Icon name="stop" size={14} /> {t("podcast_stop")}
             </button>
             {scopeOptions && (
               <select
-                className="rounded-lg px-2.5 py-2 border border-white/25 bg-white/10 text-white [&>option]:text-ink"
+                className="rounded-xl px-2.5 py-2 text-sm border border-white/20 bg-white/10 text-white [&>option]:text-ink [&>option]:bg-surface"
                 value={scope}
                 onChange={(e) => { stop(); router.push(`/podcast?scope=${e.target.value}`); }}
               >
@@ -112,7 +113,7 @@ export function PodcastPlayer({ lines, scopeOptions, scope }: {
               </select>
             )}
             <select
-              className="rounded-lg px-2.5 py-2 border border-white/25 bg-white/10 text-white [&>option]:text-ink"
+              className="rounded-xl px-2.5 py-2 text-sm border border-white/20 bg-white/10 text-white [&>option]:text-ink [&>option]:bg-surface"
               defaultValue="1"
               onChange={(e) => { rateRef.current = Number(e.target.value); }}
             >
@@ -121,24 +122,26 @@ export function PodcastPlayer({ lines, scopeOptions, scope }: {
             {live && (
               <span className="inline-flex items-end gap-0.5 h-5.5">
                 {[0, 0.15, 0.3, 0.45].map((d) => (
-                  <span key={d} className="w-1 rounded-sm" style={{ background: "#22d3ee", animation: `eq-bounce 1s ease-in-out ${d}s infinite` }} />
+                  <span key={d} className="w-1 rounded-sm" style={{ background: "#46c7b4", animation: `eq-bounce 1s ease-in-out ${d}s infinite` }} />
                 ))}
               </span>
             )}
           </div>
-          <p className="mt-3 mb-0 text-xs opacity-75">🔒 {t("podcast_voice_note")}</p>
+          <p className="mt-3.5 mb-0 text-xs inline-flex items-center gap-1.5" style={{ color: "#7fa89e" }}>
+            <Icon name="lock" size={12} /> {t("podcast_voice_note")}
+          </p>
         </div>
       </div>
 
       <div className="card mt-4.5">
         <div className="flex items-center gap-2.5 mb-3">
-          <h3 className="m-0 text-base font-extrabold">📄 {t("transcript")}</h3>
+          <h3 className="m-0 text-base font-bold inline-flex items-center gap-2"><Icon name="file-text" size={16} className="text-ink-3" /> {t("transcript")}</h3>
           <div className="flex-1" />
-          <button className="btn-ghost btn-sm" onClick={download}>⬇️ {t("download_script")}</button>
+          <button className="btn-ghost btn-sm" onClick={download}><Icon name="download" size={13} /> {t("download_script")}</button>
         </div>
-        <div ref={transcriptRef} className="whitespace-pre-wrap text-sm text-ink-2 leading-7 max-h-104 overflow-y-auto pe-2">
+        <div ref={transcriptRef} className="text-sm text-ink-2 leading-7 max-h-104 overflow-y-auto pe-2">
           {lines.map((l, i) => (
-            <div key={i} data-line={i} className={i === lineIdx ? "text-primary font-bold" : ""}>{l}</div>
+            <p key={i} data-line={i} className={`m-0 mb-3 ${i === lineIdx ? "text-primary font-semibold" : ""}`}>{l}</p>
           ))}
         </div>
       </div>
