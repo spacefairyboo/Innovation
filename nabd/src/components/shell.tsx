@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { resetDemo, setLang, setTheme, switchUser } from "@/app/actions";
 import { useI18n, useToast } from "./providers";
 import { Avatar, Modal } from "./ui";
+import { Icon } from "./icons";
 import type { Localized, Role, Theme, User } from "@/lib/types";
 
 export interface ShellUser extends User {
@@ -28,11 +29,11 @@ export function Shell({ user, users, unreadCount, theme, children }: {
   const toast = useToast();
 
   const nav: { href: string; ico: string; label: string; badge?: number }[] = [
-    { href: "/", ico: "📊", label: t("nav_dashboard") },
-    ...(user.role !== "senior" ? [{ href: "/tasks", ico: "📝", label: t("nav_mytasks") }] : []),
-    { href: "/teams", ico: "🏢", label: t("nav_teams") },
-    { href: "/podcast", ico: "🎧", label: t("nav_podcast") },
-    { href: "/notifications", ico: "🔔", label: t("nav_notifications"), badge: unreadCount },
+    { href: "/", ico: "home", label: t("nav_dashboard") },
+    ...(user.role !== "senior" ? [{ href: "/tasks", ico: "tasks", label: t("nav_mytasks") }] : []),
+    { href: "/teams", ico: "users", label: t("nav_teams") },
+    { href: "/podcast", ico: "volume", label: t("nav_podcast") },
+    { href: "/notifications", ico: "bell", label: t("nav_notifications"), badge: unreadCount },
   ];
 
   const roleLabel = t(user.role === "senior" ? "role_senior" : user.role === "manager" ? "role_manager" : "role_employee");
@@ -46,7 +47,7 @@ export function Shell({ user, users, unreadCount, theme, children }: {
         ${mobile ? "flex-col !gap-0.5 !px-2.5 !py-1.5 text-[0.65rem]" : "w-full"}
         ${isActive(item.href) ? "bg-accent-soft text-primary-strong dark:text-accent" : "text-ink-2 hover:bg-surface-2 hover:text-ink"}`}
     >
-      <span className={mobile ? "text-xl" : ""}>{item.ico}</span>
+      <Icon name={item.ico} size={mobile ? 20 : 18} />
       {item.label}
       {!mobile && !!item.badge && (
         <span className="ms-auto min-w-5 h-5 rounded-full grid place-items-center px-1.5 text-[0.7rem] font-bold text-white" style={{ background: "var(--st-blocked)" }}>
@@ -60,14 +61,14 @@ export function Shell({ user, users, unreadCount, theme, children }: {
     <div className="flex min-h-screen">
       <aside className="hidden md:flex w-60 shrink-0 flex-col gap-1 p-4 bg-surface border-e border-line sticky top-0 h-screen">
         <div className="flex items-center gap-2.5 px-2.5 pb-4 font-extrabold text-xl">
-          <span className="w-9 h-9 rounded-xl grid place-items-center text-white shadow" style={{ background: "linear-gradient(135deg,#155e75,#06b6d4)" }}>💠</span>
+          <span className="w-9 h-9 rounded-xl grid place-items-center text-white shadow font-bold" style={{ background: "linear-gradient(135deg,#2596be,#46c7b4)" }}>N</span>
           <span>
             {t("appName")}
             <small className="block text-[0.68rem] font-semibold text-ink-3 tracking-wide">{t("appTag")}</small>
           </span>
         </div>
         {nav.map((i) => navBtn(i))}
-        <div className="mt-auto p-2.5 text-xs text-ink-3">💠 {t("appName")} · {new Date().getFullYear()}</div>
+        <div className="mt-auto p-2.5 text-xs text-ink-3">{t("appName")} · {new Date().getFullYear()}</div>
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">

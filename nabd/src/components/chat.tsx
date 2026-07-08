@@ -44,7 +44,7 @@ export function CheckinButtons({ tasks, userFirstName, doneThisWeek }: {
   return (
     <>
       <button className="btn-soft" onClick={() => setMode("chat")}>💬 {t("update_chat")}</button>
-      <button className="btn-soft" onClick={() => setMode("voice")}>🎙️ {t("update_voice")}</button>
+      <button className="btn-soft flex items-center gap-1" onClick={() => setMode("voice")}><Icon name="mic" size={16} /> {t("update_voice")}</button>
       {mode !== "closed" && (
         <ChatModal
           tasks={tasks}
@@ -148,7 +148,7 @@ function ChatModal({ tasks, userFirstName, doneThisWeek, startVoice, onClose }: 
     rec.start();
     recRef.current = rec;
     setRecording(true);
-    push({ who: "bot", text: `🎙️ ${t("voice_listening")}` });
+    push({ who: "bot", text: t("voice_listening") });
   };
 
   useEffect(() => {
