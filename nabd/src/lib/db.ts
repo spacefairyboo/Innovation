@@ -97,6 +97,17 @@ function migrate(d: DatabaseSync) {
       delivered INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_emails_user ON emails(to_user, ts DESC);
+    CREATE TABLE IF NOT EXISTS email_suggestions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      from_name TEXT NOT NULL,
+      from_email TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      snippet TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','added','dismissed'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_suggestions_user ON email_suggestions(user_id, status);
   `);
   // Databases created before the audit-log release lack task_updates.by_id.
   const cols = d.prepare("SELECT name FROM pragma_table_info('task_updates')").all() as { name: string }[];
@@ -211,11 +222,40 @@ function seed(d: DatabaseSync) {
     { text: "Confirm churn KPI formula", done: true },
     { text: "Draft dashboard wireframe", done: false },
   ]));
+
+  // Demo inbox — inbound emails the AI scanner turns into task suggestions.
+  const insSugg = d.prepare(
+    "INSERT INTO email_suggestions (user_id, from_name, from_email, subject, snippet, ts, status) VALUES (?,?,?,?,?,?,'pending')",
+  );
+  insSugg.run("e1", "Salem Al-Qahtani", "salem@acmecorp.example",
+    "Urgent: payment gateway certificate expires Friday",
+    "Hi Yousef — the TLS certificate on the payment gateway expires this week. Please renew it by Friday; this is urgent for the launch.",
+    ago(0, 2));
+  insSugg.run("e1", "Sara Nasser", "sara.nasser@nabd.example",
+    "Checkout assets ready for review",
+    "The new checkout illustrations are ready. Could you review them by Tuesday and confirm they fit the payment page?",
+    ago(0, 6));
+  insSugg.run("e2", "App Store Ops", "ops@appstore.example",
+    "Action required: push notification copy approval",
+    "Your push notification templates need copy approval before release. Please submit the final wording by Thursday.",
+    ago(1));
+  insSugg.run("m1", "Layla Al-Harbi", "layla.alharbi@nabd.example",
+    "Board asks for a hiring update by July 15",
+    "The board would like a one-page summary of the backend hiring pipeline by July 15. No need for slides.",
+    ago(0, 4));
+  insSugg.run("e8", "Gulf Retail Co.", "success@gulfretail.example",
+    "Onboarding feedback call — client wants a date",
+    "Our team enjoyed the onboarding kit. Could we schedule the feedback call sometime next Wednesday? The client is keen.",
+    ago(0, 9));
+  insSugg.run("e6", "Media Buyer", "buyer@adnetwork.example",
+    "Q3 campaign budgets due tomorrow",
+    "Reminder: the final Q3 campaign budget split is due tomorrow. Urgent — the network locks placements after that.",
+    ago(0, 1));
 }
 
 /** Test/demo helper: wipe and reseed. */
 export function resetDB() {
   const d = getDB();
-  d.exec("DELETE FROM notif_reads; DELETE FROM emails; DELETE FROM task_assignees; DELETE FROM task_notes; DELETE FROM audit_logs; DELETE FROM task_updates; DELETE FROM tasks; DELETE FROM users; DELETE FROM teams; DELETE FROM units;");
+  d.exec("DELETE FROM notif_reads; DELETE FROM email_suggestions; DELETE FROM emails; DELETE FROM task_assignees; DELETE FROM task_notes; DELETE FROM audit_logs; DELETE FROM task_updates; DELETE FROM tasks; DELETE FROM users; DELETE FROM teams; DELETE FROM units;");
   seed(d);
 }

@@ -37,12 +37,8 @@ function buildPaletteIndex(user: User, lang: Lang): PaletteItem[] {
 
   for (const task of scopeTasks(user)) {
     const eff = effStatus(task);
-    const isMine = task.assigneeIds.includes(user.id);
-    const href = isMine && user.role !== "senior"
-      ? `/tasks?q=${encodeURIComponent(task.title[lang])}`
-      : `/teams/${task.teamId}?q=${encodeURIComponent(task.title[lang])}`;
     items.push({
-      href,
+      href: `/task/${task.id}`,
       icon: STATUS_META[eff].icon,
       label: task.title[lang],
       sub: `${t(STATUS_META[eff].labelKey)} · ${task.progress}%`,

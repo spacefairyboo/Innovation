@@ -31,12 +31,13 @@ export function Avatar({ name, size = "md" }: { name: Localized; size?: "sm" | "
   );
 }
 
-export function Modal({ title, icon, onClose, children, footer }: {
+export function Modal({ title, icon, onClose, children, footer, headerAction }: {
   title: string;
   icon: string;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  headerAction?: ReactNode;
 }) {
   return (
     <div
@@ -50,7 +51,8 @@ export function Modal({ title, icon, onClose, children, footer }: {
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-line">
           {icon && <Icon name={icon} size={24} className="text-primary" />}
           <h3 className="m-0 text-base font-extrabold flex-1">{title}</h3>
-          <button className="icon-btn !w-8 !h-8" onClick={onClose} aria-label="close"><Icon name="close" size={20} /></button>
+          {headerAction}
+          <button className="icon-btn !w-8 !h-8" onClick={onClose} aria-label="close"><Icon name="x" size={18} /></button>
         </div>
         <div className="p-5 overflow-y-auto flex-1">{children}</div>
         {footer && <div className="px-5 py-3.5 border-t border-line flex gap-2.5 items-center">{footer}</div>}

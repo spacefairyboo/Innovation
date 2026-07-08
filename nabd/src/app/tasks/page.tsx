@@ -3,8 +3,10 @@
 import { StatTiles } from "@/components/charts";
 import { CheckinButtons } from "@/components/chat";
 import { Icon } from "@/components/icons";
+import { EmailSuggestions } from "@/components/inbox";
 import { NewTaskButton, TaskListSection, type AssigneeOption } from "@/components/tasks";
 import { makeT } from "@/lib/i18n";
+import { pendingSuggestions } from "@/lib/inbox";
 import { getTeam, teamMembers, userTasks } from "@/lib/repo";
 import { getSession } from "@/lib/session";
 import { countStatuses } from "@/lib/types";
@@ -49,7 +51,17 @@ export default async function MyTasksPage({ searchParams }: {
 
       <StatTiles stats={stats} />
 
-      <TaskListSection vms={tasks.map(toVM)} mine withFilters assignees={assignees} initialQuery={q} key={q ?? ""} />
+      <EmailSuggestions suggestions={pendingSuggestions(user.id)} />
+
+      <TaskListSection
+        vms={tasks.map(toVM)}
+        mine
+        withFilters
+        valueFilter={user.role === "manager"}
+        assignees={assignees}
+        initialQuery={q}
+        key={q ?? ""}
+      />
     </>
   );
 }

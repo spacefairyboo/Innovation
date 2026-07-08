@@ -2,6 +2,7 @@
 
 import { makeT } from "./i18n";
 import { getChecklist, getTeam, getUser, taskActivity } from "./repo";
+import { taskValue } from "./value";
 import type { TaskVM } from "@/components/tasks";
 import { STATUS_META, effStatus, type Lang, type Task } from "./types";
 
@@ -23,6 +24,7 @@ export function toVM(task: Task): TaskVM {
     assignees,
     activity: taskActivity(task.id),
     checklist: getChecklist(task.id),
+    value: taskValue(task),
   };
 }
 
