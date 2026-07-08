@@ -119,16 +119,18 @@ export function PodcastPlayer({ lines, scopeOptions, scope }: {
   return (
     <>
       <div
-        className="rounded-2xl p-7 flex gap-6 items-center flex-wrap shadow-xl"
-        style={{ background: "linear-gradient(135deg, #061b18, #0f2e29 55%, #14453c)", color: "#d9efe9" }}
+        className="relative overflow-hidden rounded-3xl p-7 flex gap-6 items-center flex-wrap shadow-xl"
+        style={{ background: "var(--hero-bg)", color: "#d9efe9", border: "1px solid rgb(223 245 241 / 0.08)" }}
       >
+        <span aria-hidden className="absolute -top-24 -end-16 w-72 h-72 rounded-full pointer-events-none" style={{ background: "rgb(70 199 180 / 0.2)", filter: "blur(70px)" }} />
+        <span aria-hidden className="absolute -bottom-28 start-1/3 w-80 h-80 rounded-full pointer-events-none" style={{ background: "rgb(37 150 190 / 0.14)", filter: "blur(80px)" }} />
         <div
-          className="w-24 h-24 rounded-2xl grid place-items-center shrink-0 shadow-lg text-white"
-          style={{ background: "linear-gradient(135deg, #2596be, #46c7b4)" }}
+          className="relative w-24 h-24 rounded-3xl grid place-items-center shrink-0 shadow-lg text-white"
+          style={{ background: "linear-gradient(135deg, #2a9686, #46c7b4)" }}
         >
           <Icon name="headphones" size={40} strokeWidth={1.6} />
         </div>
-        <div className="flex-1 min-w-64">
+        <div className="relative flex-1 min-w-64">
           <h3 className="m-0 mb-1 text-xl font-bold text-white">{t("podcast_title")}</h3>
           <p className="m-0 mb-4 text-sm max-w-lg" style={{ color: "#9cc4ba" }}>{t("podcast_sub")}</p>
           <div className="flex items-center gap-2.5 flex-wrap">

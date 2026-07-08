@@ -43,15 +43,15 @@ export function Shell({ user, users, unreadCount, theme, children }: {
 
   return (
     <div className="flex min-h-screen">
-      {/* Sidebar — deep brand green in both themes */}
+      {/* Sidebar — floating glass panel on the deep-green gradient */}
       <aside
-        className="hidden md:flex w-60 shrink-0 flex-col gap-1 p-4 sticky top-0 h-screen"
-        style={{ background: "var(--side-bg)" }}
+        className="hidden md:flex w-60 shrink-0 flex-col gap-1.5 p-4 sticky top-3 ms-3 my-3 rounded-3xl h-[calc(100vh-1.5rem)] shadow-2xl backdrop-blur-xl"
+        style={{ background: "var(--side-bg)", border: "1px solid rgb(223 245 241 / 0.08)" }}
       >
         <div className="flex items-center gap-3 px-2 pb-5 pt-1">
           <span
-            className="w-9 h-9 rounded-xl grid place-items-center text-white font-bold text-base shadow-md"
-            style={{ background: "linear-gradient(135deg, #2596be, #46c7b4)" }}
+            className="w-9 h-9 rounded-2xl grid place-items-center text-white font-bold text-base shadow-md"
+            style={{ background: "linear-gradient(135deg, #2a9686, #46c7b4)" }}
           >
             N
           </span>
@@ -69,9 +69,9 @@ export function Shell({ user, users, unreadCount, theme, children }: {
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition"
+              className={`flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition ${active ? "shadow-lg" : "hover:bg-white/10"}`}
               style={active
-                ? { background: "var(--side-active-bg)", color: "var(--side-active-ink)" }
+                ? { background: "rgb(255 255 255 / 0.94)", color: "#0f2e29" }
                 : { color: "var(--side-ink)" }}
             >
               <Icon name={item.ico} size={17} />
@@ -87,7 +87,7 @@ export function Shell({ user, users, unreadCount, theme, children }: {
 
         <div className="mt-auto pt-3" style={{ borderTop: "1px solid var(--side-line)" }}>
           <button
-            className="w-full flex items-center gap-3 rounded-xl px-2 py-2 cursor-pointer transition hover:brightness-110 text-start"
+            className="w-full flex items-center gap-3 rounded-full px-2.5 py-2 cursor-pointer transition hover:bg-white/10 text-start"
             style={{ color: "var(--side-ink)" }}
             onClick={() => setSwitcherOpen(true)}
             title={t("switch_user")}
@@ -103,7 +103,7 @@ export function Shell({ user, users, unreadCount, theme, children }: {
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="flex items-center gap-2.5 px-4 md:px-7 py-3 bg-surface border-b border-line sticky top-0 z-40">
+        <header className="glass-bar flex items-center gap-2.5 px-4 md:px-7 py-3 sticky top-0 z-40">
           <div className="min-w-0">
             <h1 className="m-0 text-base font-bold truncate">{nav.find((i) => isActive(i.href))?.label ?? t("appName")}</h1>
             <p className="m-0 text-[0.72rem] text-ink-3 truncate">
@@ -135,14 +135,14 @@ export function Shell({ user, users, unreadCount, theme, children }: {
             )}
           </Link>
           <button
-            className="flex items-center gap-2.5 border border-line rounded-xl py-1 ps-1 pe-3 bg-surface-2 cursor-pointer hover:border-accent md:hidden"
+            className="flex items-center gap-2.5 rounded-full py-1 ps-1 pe-3 cursor-pointer border border-line bg-surface-2 hover:border-accent md:hidden"
             onClick={() => setSwitcherOpen(true)}
             title={t("switch_user")}
           >
             <Avatar name={user.name} size="sm" />
           </button>
           <button
-            className="hidden md:flex items-center gap-2.5 border border-line rounded-xl py-1.5 ps-1.5 pe-3 bg-surface-2 cursor-pointer hover:border-accent"
+            className="hidden md:flex items-center gap-2.5 rounded-full py-1.5 ps-1.5 pe-4 cursor-pointer border border-line bg-surface-2 hover:border-accent"
             onClick={() => setSwitcherOpen(true)}
             title={t("switch_user")}
           >
@@ -153,26 +153,33 @@ export function Shell({ user, users, unreadCount, theme, children }: {
           </button>
         </header>
 
-        <main className="p-4 md:p-7 max-w-7xl w-full mx-auto pb-24 md:pb-8">{children}</main>
+        <main className="p-4 md:p-7 max-w-7xl w-full mx-auto pb-28 md:pb-8">{children}</main>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 flex justify-around bg-surface border-t border-line px-1 pt-1.5 pb-[calc(6px+env(safe-area-inset-bottom))]">
-        {nav.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex flex-col items-center gap-0.5 rounded-xl px-2.5 py-1.5 text-[0.62rem] font-semibold relative
-              ${isActive(item.href) ? "text-primary" : "text-ink-3"}`}
-          >
-            <Icon name={item.ico} size={19} />
-            {item.label}
-            {!!item.badge && (
-              <span className="absolute top-0 end-0.5 min-w-4 h-4 rounded-full grid place-items-center px-1 text-[0.58rem] font-bold text-white" style={{ background: "#d24a4a" }}>
-                {item.badge}
-              </span>
-            )}
-          </Link>
-        ))}
+      <nav
+        className="md:hidden fixed bottom-3 inset-x-3 z-50 flex justify-around rounded-full px-2 py-1.5 shadow-2xl backdrop-blur-xl"
+        style={{ background: "var(--side-bg)", border: "1px solid rgb(223 245 241 / 0.1)" }}
+      >
+        {nav.map((item) => {
+          const active = isActive(item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-label={item.label}
+              title={item.label}
+              className="grid place-items-center w-11 h-11 rounded-full relative transition shrink-0"
+              style={active ? { background: "rgb(255 255 255 / 0.94)", color: "#0f2e29" } : { color: "var(--side-ink)" }}
+            >
+              <Icon name={item.ico} size={20} />
+              {!!item.badge && (
+                <span className="absolute top-0.5 end-0.5 min-w-4 h-4 rounded-full grid place-items-center px-1 text-[0.58rem] font-bold text-white" style={{ background: "#d24a4a" }}>
+                  {item.badge}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
       {switcherOpen && (

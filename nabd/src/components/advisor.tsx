@@ -1,8 +1,11 @@
 "use client";
 
-/* Advisor action cards: prioritized guidance with prepared email drafts. */
+/* Advisor action cards: prioritized guidance with real action buttons —
+   compose the prepared email, open it populated in Outlook (web) or the
+   default mail app, copy it, or jump straight to where the work happens. */
 
 import { useState } from "react";
+import Link from "next/link";
 import { useI18n, useToast } from "./providers";
 import { Icon } from "./icons";
 import type { AdvisorAction } from "@/lib/advisor";
@@ -12,6 +15,13 @@ const URGENCY_STYLE: Record<AdvisorAction["urgency"], { labelKey: string; color:
   high: { labelKey: "urgency_high", color: "var(--st-delayed)", bg: "var(--st-delayed-bg)" },
   normal: { labelKey: "urgency_normal", color: "var(--st-ontrack)", bg: "var(--st-ontrack-bg)" },
 };
+
+/** Outlook on the web compose deep link, fully populated. */
+const outlookHref = (e: { toEmail: string; subject: string; body: string }) =>
+  `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(e.toEmail)}&subject=${encodeURIComponent(e.subject)}&body=${encodeURIComponent(e.body)}`;
+
+const mailtoHref = (e: { toEmail: string; subject: string; body: string }) =>
+  `mailto:${e.toEmail}?subject=${encodeURIComponent(e.subject)}&body=${encodeURIComponent(e.body)}`;
 
 export function AdvisorActionCard({ action, index }: { action: AdvisorAction; index: number }) {
   const { t } = useI18n();
@@ -27,7 +37,7 @@ export function AdvisorActionCard({ action, index }: { action: AdvisorAction; in
 
   return (
     <div className="card !p-0 overflow-hidden">
-      <div className="flex items-start gap-3.5 p-5">
+      <div className="flex items-start gap-3.5 p-5 pb-0">
         <span className="w-9 h-9 rounded-xl grid place-items-center shrink-0" style={{ background: u.bg, color: u.color }}>
           <Icon name={action.icon} size={17} />
         </span>
@@ -47,36 +57,50 @@ export function AdvisorActionCard({ action, index }: { action: AdvisorAction; in
               </li>
             ))}
           </ol>
-
-          {action.email && (
-            <div className="mt-3.5">
-              <button className="btn-soft btn-sm" onClick={() => setEmailOpen(!emailOpen)}>
-                <Icon name="send" size={13} /> {t(emailOpen ? "email_hide" : "email_show")}
-              </button>
-              {emailOpen && (
-                <div className="mt-2.5 border border-line rounded-xl bg-surface-2 text-sm overflow-hidden">
-                  <div className="px-4 py-2.5 border-b border-line flex flex-col gap-0.5">
-                    <span className="text-xs text-ink-3">{t("email_to")}: <b className="text-ink-2">{action.email.toName} &lt;{action.email.toEmail}&gt;</b></span>
-                    <span className="text-xs text-ink-3">{t("email_subject")}: <b className="text-ink-2">{action.email.subject}</b></span>
-                  </div>
-                  <p className="m-0 px-4 py-3 whitespace-pre-line text-ink-2 text-[0.85rem] leading-6">{action.email.body}</p>
-                  <div className="px-4 py-2.5 border-t border-line flex gap-2">
-                    <button className="btn-ghost btn-sm" onClick={copyEmail}>
-                      <Icon name="file-text" size={13} /> {t("email_copy")}
-                    </button>
-                    <a
-                      className="btn-primary btn-sm no-underline"
-                      href={`mailto:${action.email.toEmail}?subject=${encodeURIComponent(action.email.subject)}&body=${encodeURIComponent(action.email.body)}`}
-                    >
-                      <Icon name="send" size={13} /> {t("email_open")}
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Action bar — the buttons that actually do things */}
+      <div className="flex items-center gap-2 flex-wrap px-5 py-3.5 mt-4 border-t border-grid bg-surface-2/50">
+        {action.email && (
+          <button className="btn-primary btn-sm" onClick={() => setEmailOpen(!emailOpen)} aria-expanded={emailOpen}>
+            <Icon name="send" size={13} /> {t("email_compose")}
+            <Icon name={emailOpen ? "chevron-left" : "chevron-right"} size={12} className="rtl:-scale-x-100" />
+          </button>
+        )}
+        {action.links?.map((l) => (
+          <Link key={l.href} href={l.href} className="btn-ghost btn-sm no-underline">
+            <Icon name={l.icon} size={13} /> {l.label}
+          </Link>
+        ))}
+      </div>
+
+      {/* The compiled email: subject + body, then one-click compose */}
+      {action.email && emailOpen && (
+        <div className="mx-5 mb-5 border border-line rounded-xl bg-surface-2 text-sm overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-line flex flex-col gap-0.5">
+            <span className="text-xs text-ink-3">{t("email_to")}: <b className="text-ink-2">{action.email.toName} &lt;{action.email.toEmail}&gt;</b></span>
+            <span className="text-xs text-ink-3">{t("email_subject")}: <b className="text-ink-2">{action.email.subject}</b></span>
+          </div>
+          <p className="m-0 px-4 py-3 whitespace-pre-line text-ink-2 text-[0.85rem] leading-6">{action.email.body}</p>
+          <div className="px-4 py-2.5 border-t border-line flex gap-2 flex-wrap">
+            <a
+              className="btn-primary btn-sm no-underline"
+              href={outlookHref(action.email)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Icon name="send" size={13} /> {t("email_outlook")}
+            </a>
+            <a className="btn-ghost btn-sm no-underline" href={mailtoHref(action.email)}>
+              <Icon name="send" size={13} /> {t("email_open")}
+            </a>
+            <button className="btn-ghost btn-sm" onClick={copyEmail}>
+              <Icon name="file-text" size={13} /> {t("email_copy")}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

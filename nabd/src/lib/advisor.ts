@@ -30,6 +30,8 @@ export interface AdvisorAction {
   reason: string;
   steps: string[];
   email?: EmailDraft;
+  /** In-app shortcuts rendered as action buttons (labels pre-localized). */
+  links?: { label: string; href: string; icon: string }[];
 }
 
 export interface AdvisorPlan {
@@ -335,6 +337,10 @@ function seniorPlan(user: User, lang: Lang): AdvisorAction[] {
           "Attack the oldest blocker first — it usually frees the rest.",
           "Ask: what decision do you need from me right now?",
         ],
+        links: [
+          { label: ar ? "فتح الفريق" : "Open team", href: `/teams/${team.id}`, icon: "users" },
+          { label: ar ? "استمع إلى ملخص الفريق" : "Listen to team briefing", href: `/podcast?scope=${team.id}`, icon: "headphones" },
+        ],
         email: manager.email ? {
           toName: manager.name[lang], toEmail: manager.email,
           subject: ar ? `لقاء سريع بخصوص فريق ${team.name.ar}` : `Quick sync on the ${team.name.en} team`,
@@ -357,6 +363,10 @@ function seniorPlan(user: User, lang: Lang): AdvisorAction[] {
           `Ask ${manager.name.en} for a three-line summary.`,
           "Listen to the audio briefing scoped to this team before you meet.",
         ],
+        links: [
+          { label: ar ? "فتح الفريق" : "Open team", href: `/teams/${team.id}`, icon: "users" },
+          { label: ar ? "استمع إلى ملخص الفريق" : "Listen to team briefing", href: `/podcast?scope=${team.id}`, icon: "headphones" },
+        ],
       });
     }
   }
@@ -376,6 +386,7 @@ function seniorPlan(user: User, lang: Lang): AdvisorAction[] {
         : `Your strongest completion rate (${Math.round((best.stats.done / best.stats.total) * 100)}%). Public recognition lifts everyone's bar.`,
       steps: ar ? ["أرسل الرسالة المجهزة أدناه أو اذكرهم في اجتماع الإدارة القادم."]
         : ["Send the prepared note below, or call it out in the next leadership meeting."],
+      links: [{ label: ar ? "فتح الفريق" : "Open team", href: `/teams/${best.team.id}`, icon: "users" }],
       email: manager.email ? {
         toName: manager.name[lang], toEmail: manager.email,
         subject: ar ? `شكرًا لفريق ${best.team.name.ar}` : `Kudos to the ${best.team.name.en} team`,
@@ -401,6 +412,16 @@ export function buildAdvisorPlan(user: User, lang: Lang): AdvisorPlan {
   if (user.role === "employee") actions = employeePlan(user, lang, tasks);
   else if (user.role === "manager") actions = managerPlan(user, lang);
   else actions = seniorPlan(user, lang);
+
+  // Every action gets an in-app shortcut where the work actually happens.
+  const defaultLink = user.role === "employee"
+    ? { label: ar ? "فتح مهامي" : "Open My Tasks", href: "/tasks", icon: "clipboard-list" }
+    : user.role === "manager" && user.teamId
+      ? { label: ar ? "فتح الفريق" : "Open team", href: `/teams/${user.teamId}`, icon: "users" }
+      : null;
+  if (defaultLink) {
+    for (const a of actions) if (!a.links?.length) a.links = [defaultLink];
+  }
 
   const firstName = user.name[lang].split(" ")[0];
   const intro = actions.length === 0
