@@ -37,7 +37,8 @@ function migrate(d: DatabaseSync) {
       id TEXT PRIMARY KEY, role TEXT NOT NULL CHECK (role IN ('senior','manager','employee')),
       team_id TEXT REFERENCES teams(id),
       name_en TEXT NOT NULL, name_ar TEXT NOT NULL,
-      streak INTEGER NOT NULL DEFAULT 0
+      streak INTEGER NOT NULL DEFAULT 0,
+      email TEXT
     );
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
@@ -78,12 +79,40 @@ function migrate(d: DatabaseSync) {
       user_id TEXT NOT NULL, notif_id TEXT NOT NULL,
       PRIMARY KEY (user_id, notif_id)
     );
+    CREATE TABLE IF NOT EXISTS task_assignees (
+      task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      PRIMARY KEY (task_id, user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_assignees_user ON task_assignees(user_id);
+    CREATE TABLE IF NOT EXISTS emails (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      to_user TEXT NOT NULL REFERENCES users(id),
+      to_email TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      task_id TEXT,
+      subject TEXT NOT NULL,
+      body TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      delivered INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_emails_user ON emails(to_user, ts DESC);
   `);
   // Databases created before the audit-log release lack task_updates.by_id.
   const cols = d.prepare("SELECT name FROM pragma_table_info('task_updates')").all() as { name: string }[];
   if (!cols.some((c) => c.name === "by_id")) {
     d.exec("ALTER TABLE task_updates ADD COLUMN by_id TEXT");
   }
+  // Databases created before the email release lack users.email.
+  const userCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];
+  if (!userCols.some((c) => c.name === "email")) {
+    d.exec("ALTER TABLE users ADD COLUMN email TEXT");
+  }
+  // Backfill: tasks created before multi-assignee support get their owner as assignee.
+  d.exec(`
+    INSERT OR IGNORE INTO task_assignees (task_id, user_id)
+    SELECT id, owner_id FROM tasks;
+  `);
 }
 
 function isEmpty(d: DatabaseSync): boolean {
@@ -105,21 +134,22 @@ function seed(d: DatabaseSync) {
   insTeam.run("t3", "u2", "M", "m3", "Marketing", "التسويق");
   insTeam.run("t4", "u2", "C", "m4", "Customer Success", "نجاح العملاء");
 
-  const insUser = d.prepare("INSERT INTO users VALUES (?,?,?,?,?,?)");
-  insUser.run("s1", "senior", null, "Layla Al-Harbi", "ليلى الحربي", 0);
-  insUser.run("m1", "manager", "t1", "Omar Hassan", "عمر حسن", 4);
-  insUser.run("m2", "manager", "t2", "Sara Nasser", "سارة ناصر", 6);
-  insUser.run("m3", "manager", "t3", "Khalid Amin", "خالد أمين", 2);
-  insUser.run("m4", "manager", "t4", "Noura Saleh", "نورة صالح", 8);
-  insUser.run("e1", "employee", "t1", "Yousef Adel", "يوسف عادل", 5);
-  insUser.run("e2", "employee", "t1", "Maha Tariq", "مها طارق", 3);
-  insUser.run("e3", "employee", "t1", "Fahad Zaki", "فهد زكي", 0);
-  insUser.run("e4", "employee", "t2", "Reem Kamal", "ريم كمال", 7);
-  insUser.run("e5", "employee", "t2", "Ali Mansour", "علي منصور", 1);
-  insUser.run("e6", "employee", "t3", "Dana Fares", "دانة فارس", 4);
-  insUser.run("e7", "employee", "t3", "Hassan Nabil", "حسن نبيل", 2);
-  insUser.run("e8", "employee", "t4", "Amal Rashid", "أمل راشد", 9);
-  insUser.run("e9", "employee", "t4", "Ziad Karim", "زياد كريم", 0);
+  const insUser = d.prepare("INSERT INTO users (id, role, team_id, name_en, name_ar, streak, email) VALUES (?,?,?,?,?,?,?)");
+  const mail = (en: string) => `${en.toLowerCase().replace(/[^a-z ]/g, "").trim().replace(/ +/g, ".")}@nabd.example`;
+  insUser.run("s1", "senior", null, "Layla Al-Harbi", "ليلى الحربي", 0, mail("Layla Al-Harbi"));
+  insUser.run("m1", "manager", "t1", "Omar Hassan", "عمر حسن", 4, mail("Omar Hassan"));
+  insUser.run("m2", "manager", "t2", "Sara Nasser", "سارة ناصر", 6, mail("Sara Nasser"));
+  insUser.run("m3", "manager", "t3", "Khalid Amin", "خالد أمين", 2, mail("Khalid Amin"));
+  insUser.run("m4", "manager", "t4", "Noura Saleh", "نورة صالح", 8, mail("Noura Saleh"));
+  insUser.run("e1", "employee", "t1", "Yousef Adel", "يوسف عادل", 5, mail("Yousef Adel"));
+  insUser.run("e2", "employee", "t1", "Maha Tariq", "مها طارق", 3, mail("Maha Tariq"));
+  insUser.run("e3", "employee", "t1", "Fahad Zaki", "فهد زكي", 0, mail("Fahad Zaki"));
+  insUser.run("e4", "employee", "t2", "Reem Kamal", "ريم كمال", 7, mail("Reem Kamal"));
+  insUser.run("e5", "employee", "t2", "Ali Mansour", "علي منصور", 1, mail("Ali Mansour"));
+  insUser.run("e6", "employee", "t3", "Dana Fares", "دانة فارس", 4, mail("Dana Fares"));
+  insUser.run("e7", "employee", "t3", "Hassan Nabil", "حسن نبيل", 2, mail("Hassan Nabil"));
+  insUser.run("e8", "employee", "t4", "Amal Rashid", "أمل راشد", 9, mail("Amal Rashid"));
+  insUser.run("e9", "employee", "t4", "Ziad Karim", "زياد كريم", 0, mail("Ziad Karim"));
 
   const insTask = d.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?)");
   const insUpd = d.prepare("INSERT INTO task_updates (task_id, ts, by_id, text_en, text_ar, status, progress) VALUES (?,?,?,?,?,?,?)");
@@ -149,10 +179,17 @@ function seed(d: DatabaseSync) {
     ["k19", "m1", "t1", "ontrack", 50, "med", "Hiring: senior backend engineer", "توظيف مهندس خلفية أول", inDays(15), ago(1), "4 candidates in final round", "٤ مرشحين في الجولة النهائية"],
     ["k20", "m3", "t3", "done", 100, "low", "Marketing budget review", "مراجعة ميزانية التسويق", inDays(-4), ago(2), "Approved by finance", "اعتمدتها المالية"],
   ];
+  const insAssignee = d.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
   for (const [id, owner, team, status, progress, prio, en, arTitle, due, updatedAt, noteEn, noteAr] of rows) {
     insTask.run(id, owner, team, status, progress, prio, en, arTitle, due, updatedAt);
     insUpd.run(id, updatedAt, owner, noteEn, noteAr, status, progress);
+    insAssignee.run(id, owner);
   }
+  // A few tasks are shared between colleagues to demo multi-assignee support.
+  insAssignee.run("k1", "e2");
+  insAssignee.run("k6", "e1");
+  insAssignee.run("k11", "e7");
+  insAssignee.run("k16", "e9");
 
   // Seed audit trail so the activity log has real, attributable history.
   insAudit.run("k4", "e2", ago(1), "status", "ontrack", "done");
@@ -179,6 +216,6 @@ function seed(d: DatabaseSync) {
 /** Test/demo helper: wipe and reseed. */
 export function resetDB() {
   const d = getDB();
-  d.exec("DELETE FROM notif_reads; DELETE FROM task_notes; DELETE FROM audit_logs; DELETE FROM task_updates; DELETE FROM tasks; DELETE FROM users; DELETE FROM teams; DELETE FROM units;");
+  d.exec("DELETE FROM notif_reads; DELETE FROM emails; DELETE FROM task_assignees; DELETE FROM task_notes; DELETE FROM audit_logs; DELETE FROM task_updates; DELETE FROM tasks; DELETE FROM users; DELETE FROM teams; DELETE FROM units;");
   seed(d);
 }

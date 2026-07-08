@@ -20,6 +20,7 @@ const mapTeam = (r: any): Team => ({
 const mapUser = (r: any): User => ({
   id: r.id, role: r.role, teamId: r.team_id ?? null,
   name: { en: r.name_en, ar: r.name_ar }, streak: Number(r.streak),
+  email: r.email ?? null,
 });
 const mapUpdate = (r: any): TaskUpdate => ({
   ts: Number(r.ts), byId: r.by_id ?? null, text: { en: r.text_en, ar: r.text_ar },
@@ -27,9 +28,12 @@ const mapUpdate = (r: any): TaskUpdate => ({
 });
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-function mapTask(r: Record<string, unknown>, history: TaskUpdate[]): Task {
+function mapTask(r: Record<string, unknown>, history: TaskUpdate[], assigneeIds: string[]): Task {
+  const owner = r.owner_id as string;
   return {
-    id: r.id as string, ownerId: r.owner_id as string, teamId: r.team_id as string,
+    id: r.id as string, ownerId: owner,
+    assigneeIds: assigneeIds.length ? assigneeIds : [owner],
+    teamId: r.team_id as string,
     status: r.status as TaskStatus, progress: Number(r.progress),
     priority: r.priority as Priority,
     title: { en: r.title_en as string, ar: r.title_ar as string },
@@ -52,7 +56,22 @@ function tasksFromRows(rows: Record<string, unknown>[]): Task[] {
     if (!byTask.has(k)) byTask.set(k, []);
     byTask.get(k)!.push(mapUpdate(u));
   }
-  return rows.map((r) => mapTask(r, byTask.get(r.id as string) ?? []));
+  const asgRows = db.prepare(
+    `SELECT task_id, user_id FROM task_assignees WHERE task_id IN (${placeholders})`,
+  ).all(...ids) as { task_id: string; user_id: string }[];
+  const asgByTask = new Map<string, string[]>();
+  for (const a of asgRows) {
+    if (!asgByTask.has(a.task_id)) asgByTask.set(a.task_id, []);
+    asgByTask.get(a.task_id)!.push(a.user_id);
+  }
+  return rows.map((r) => {
+    const id = r.id as string;
+    // Owner listed first so ownerId === assigneeIds[0].
+    const asg = asgByTask.get(id) ?? [];
+    const owner = r.owner_id as string;
+    const ordered = [owner, ...asg.filter((x) => x !== owner)];
+    return mapTask(r, byTask.get(id) ?? [], ordered);
+  });
 }
 
 /* ---------- reads ---------- */
@@ -89,7 +108,12 @@ export const teamMembers = (teamId: string): User[] =>
   (getDB().prepare("SELECT * FROM users WHERE team_id = ?").all(teamId) as Record<string, unknown>[]).map(mapUser);
 
 export const userTasks = (userId: string): Task[] =>
-  tasksFromRows(getDB().prepare("SELECT * FROM tasks WHERE owner_id = ? ORDER BY updated_at DESC").all(userId) as Record<string, unknown>[]);
+  tasksFromRows(getDB().prepare(`
+    SELECT DISTINCT t.* FROM tasks t
+    LEFT JOIN task_assignees a ON a.task_id = t.id
+    WHERE t.owner_id = ? OR a.user_id = ?
+    ORDER BY t.updated_at DESC
+  `).all(userId, userId) as Record<string, unknown>[]);
 
 export const teamTasks = (teamId: string): Task[] =>
   tasksFromRows(getDB().prepare("SELECT * FROM tasks WHERE team_id = ? ORDER BY updated_at DESC").all(teamId) as Record<string, unknown>[]);
@@ -141,8 +165,14 @@ export function taskActivity(taskId: string): ActivityEvent[] {
     const to = (r.new_value as string) ?? null;
     const change: FieldChange = { field, from, to };
     if (field === "assignee") {
-      change.fromLabel = from ? getUser(from)?.name ?? null : null;
-      change.toLabel = to ? getUser(to)?.name ?? null : null;
+      const nameList = (ids: string | null) => {
+        if (!ids) return null;
+        const users = ids.split(",").map((id) => getUser(id)).filter((u) => u !== null);
+        if (!users.length) return null;
+        return { en: users.map((u) => u!.name.en).join(", "), ar: users.map((u) => u!.name.ar).join("، ") };
+      };
+      change.fromLabel = nameList(from);
+      change.toLabel = nameList(to);
     }
     eventFor(Number(r.ts), (r.changed_by as string) ?? null).changes.push(change);
   }
@@ -173,7 +203,7 @@ export function saveChecklist(taskId: string, items: ChecklistItem[]): void {
 /* ---------- writes ---------- */
 export function updateTask(
   taskId: string,
-  patch: Partial<Pick<Task, "status" | "progress" | "priority" | "due">> & { title?: string; ownerId?: string },
+  patch: Partial<Pick<Task, "status" | "progress" | "priority" | "due">> & { title?: string; assigneeIds?: string[] },
   note: { en: string; ar: string } | null,
   changedBy: string,
 ): Task | null {
@@ -184,11 +214,16 @@ export function updateTask(
 
   let ownerId = existing.ownerId;
   let teamId = existing.teamId;
-  if (patch.ownerId && patch.ownerId !== existing.ownerId) {
-    const newOwner = getUser(patch.ownerId);
-    if (!newOwner?.teamId) throw new Error("Assignee must belong to a team");
-    ownerId = newOwner.id;
-    teamId = newOwner.teamId;
+  let nextAssignees: string[] | null = null;
+  if (patch.assigneeIds?.length) {
+    const wanted = [...new Set(patch.assigneeIds)];
+    if (wanted.join(",") !== existing.assigneeIds.join(",")) {
+      const primary = getUser(wanted[0]);
+      if (!primary?.teamId) throw new Error("Assignee must belong to a team");
+      nextAssignees = wanted;
+      ownerId = primary.id;
+      teamId = primary.teamId;
+    }
   }
 
   const next = {
@@ -210,12 +245,18 @@ export function updateTask(
   if (patch.title && patch.title !== existing.title.en && patch.title !== existing.title.ar) {
     changes.push({ field: "title", from: existing.title.en, to: patch.title });
   }
-  if (ownerId !== existing.ownerId) changes.push({ field: "assignee", from: existing.ownerId, to: ownerId });
+  if (nextAssignees) changes.push({ field: "assignee", from: existing.assigneeIds.join(","), to: nextAssignees.join(",") });
   for (const c of changes) logAudit(taskId, changedBy, now, c);
 
   db.prepare(
     "UPDATE tasks SET owner_id=?, team_id=?, status=?, progress=?, priority=?, due=?, title_en=?, title_ar=?, updated_at=? WHERE id=?",
   ).run(ownerId, teamId, next.status, next.progress, next.priority, next.due, next.title_en, next.title_ar, now, taskId);
+
+  if (nextAssignees) {
+    db.prepare("DELETE FROM task_assignees WHERE task_id = ?").run(taskId);
+    const ins = db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
+    for (const uid of nextAssignees) ins.run(taskId, uid);
+  }
 
   if (note || changes.length) {
     const text = note ?? { en: "", ar: "" };
@@ -227,17 +268,20 @@ export function updateTask(
 }
 
 export function createTask(input: {
-  title: string; ownerId: string; due: string | null; priority: Priority; createdBy: string;
+  title: string; assigneeIds: string[]; due: string | null; priority: Priority; createdBy: string;
 }): Task {
   const db = getDB();
-  const owner = getUser(input.ownerId);
+  const assignees = [...new Set(input.assigneeIds)];
+  const owner = getUser(assignees[0]);
   if (!owner?.teamId) throw new Error("Assignee must belong to a team");
   const id = "k" + Math.random().toString(36).slice(2, 10);
   const now = Date.now();
   db.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?)").run(
-    id, input.ownerId, owner.teamId, "pending", 0, input.priority,
+    id, owner.id, owner.teamId, "pending", 0, input.priority,
     input.title, input.title, input.due, now,
   );
+  const ins = db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
+  for (const uid of assignees) ins.run(id, uid);
   db.prepare(
     "INSERT INTO task_updates (task_id, ts, by_id, text_en, text_ar, status, progress) VALUES (?,?,?,?,?,?,?)",
   ).run(id, now, input.createdBy, "Task created", "أُنشئت المهمة", "pending", 0);
@@ -249,6 +293,7 @@ export function deleteTask(taskId: string): void {
   db.prepare("DELETE FROM task_updates WHERE task_id = ?").run(taskId);
   db.prepare("DELETE FROM audit_logs WHERE task_id = ?").run(taskId);
   db.prepare("DELETE FROM task_notes WHERE task_id = ?").run(taskId);
+  db.prepare("DELETE FROM task_assignees WHERE task_id = ?").run(taskId);
   db.prepare("DELETE FROM tasks WHERE id = ?").run(taskId);
 }
 

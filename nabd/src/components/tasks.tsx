@@ -21,6 +21,7 @@ export interface TaskVM {
   task: Task;
   ownerName: Localized;
   teamName: Localized;
+  assignees: { id: string; name: Localized; managerName: Localized | null }[];
   activity: ActivityEvent[];
   checklist: ChecklistItem[];
 }
@@ -33,12 +34,11 @@ const PRIO_META: Record<Priority, { labelKey: string; cls: string }> = {
   low: { labelKey: "prio_low", cls: "text-ink-3" },
 };
 
-export function TaskRow({ vm, mine, canEdit, canNudge, showOwner, showTeam, onOpen }: {
+export function TaskRow({ vm, mine, canEdit, canNudge, showTeam, onOpen }: {
   vm: TaskVM;
   mine?: boolean;
   canEdit?: boolean;
   canNudge?: boolean;
-  showOwner?: boolean;
   showTeam?: boolean;
   onOpen?: (vm: TaskVM) => void;
 }) {
@@ -71,7 +71,12 @@ export function TaskRow({ vm, mine, canEdit, canNudge, showOwner, showTeam, onOp
           </span>
         </div>
         <div className="text-xs text-ink-3 mt-1 flex items-center gap-x-3 gap-y-1 flex-wrap">
-          {showOwner && <span className="inline-flex items-center gap-1"><Icon name="user" size={12} /> {vm.ownerName[lang]}</span>}
+          <span className="inline-flex items-center gap-1">
+            <Icon name="user" size={12} /> {vm.assignees.map((a) => a.name[lang]).join(lang === "ar" ? "، " : ", ")}
+            {vm.assignees[0]?.managerName && (
+              <span className="text-ink-3"> · {t("line_manager")}: {vm.assignees[0].managerName[lang]}</span>
+            )}
+          </span>
           {showTeam && <span>{vm.teamName[lang]}</span>}
           {due.text && (
             <span className={`inline-flex items-center gap-1 ${due.overdue ? "text-[var(--st-delayed)] font-semibold" : ""}`}>
@@ -130,12 +135,11 @@ export function TaskRow({ vm, mine, canEdit, canNudge, showOwner, showTeam, onOp
 type SortKey = "due" | "priority" | "updated";
 const PRIO_RANK: Record<Priority, number> = { high: 0, med: 1, low: 2 };
 
-export function TaskListSection({ vms, mine, canEdit, canNudge, showOwner, showTeam, withFilters, assignees }: {
+export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFilters, assignees }: {
   vms: TaskVM[];
   mine?: boolean;
   canEdit?: boolean;
   canNudge?: boolean;
-  showOwner?: boolean;
   showTeam?: boolean;
   withFilters?: boolean;
   assignees?: AssigneeOption[];
@@ -190,7 +194,7 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showOwner, showT
           <TaskRow
             key={vm.task.id} vm={vm}
             mine={mine} canEdit={canEdit} canNudge={canNudge}
-            showOwner={showOwner} showTeam={showTeam}
+            showTeam={showTeam}
             onOpen={setEditing}
           />
         ))
@@ -329,9 +333,16 @@ function TaskModal({ vm, assignees, onClose }: {
   const [priority, setPriority] = useState<Priority>(task?.priority ?? "med");
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? "pending");
   const [progress, setProgress] = useState(task?.progress ?? 0);
-  const [ownerId, setOwnerId] = useState(task?.ownerId ?? assignees?.[0]?.id ?? "");
+  const [assigneeIds, setAssigneeIds] = useState<string[]>(
+    task?.assigneeIds ?? (assignees?.length ? [assignees[0].id] : []),
+  );
   const [note, setNote] = useState("");
   const [checklist, setChecklist] = useState<ChecklistItem[]>(vm?.checklist ?? []);
+
+  const toggleAssignee = (id: string) =>
+    setAssigneeIds((ids) => ids.includes(id)
+      ? (ids.length > 1 ? ids.filter((x) => x !== id) : ids) // at least one assignee stays
+      : [...ids, id]);
 
   const submit = () => {
     if (!title.trim()) return;
@@ -340,7 +351,7 @@ function TaskModal({ vm, assignees, onClose }: {
         id: task?.id, title, due: due || null, priority,
         status: task ? status : undefined,
         progress: task ? progress : undefined,
-        ownerId: ownerId || undefined,
+        assigneeIds: assigneeIds.length ? assigneeIds : undefined,
         note: note || undefined,
         checklist,
       });
@@ -410,7 +421,7 @@ function TaskModal({ vm, assignees, onClose }: {
           </Field>
         )}
 
-        <div className={`grid gap-3 ${assignees && assignees.length ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t("due_date")}>
             <input type="date" className="field-input" value={due} onChange={(e) => setDue(e.target.value)} />
           </Field>
@@ -421,16 +432,31 @@ function TaskModal({ vm, assignees, onClose }: {
               <option value="low">{t("prio_low")}</option>
             </select>
           </Field>
-          {assignees && assignees.length > 0 && (
-            <Field label={t("field_assignee")}>
-              <select className="field-input" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
-                {assignees.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name[lang]}</option>
-                ))}
-              </select>
-            </Field>
-          )}
         </div>
+
+        {assignees && assignees.length > 0 && (
+          <div>
+            <div className="text-xs font-semibold text-ink-2 mb-1">{t("assignees")}</div>
+            <p className="m-0 mb-2 text-xs text-ink-3">{t("assignees_sub")}</p>
+            <div className="border border-line rounded-xl p-2 bg-surface-2 grid sm:grid-cols-2 gap-0.5">
+              {assignees.map((a) => (
+                <label
+                  key={a.id}
+                  className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm cursor-pointer transition
+                    ${assigneeIds.includes(a.id) ? "bg-accent-soft" : "hover:bg-surface"}`}
+                >
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 accent-[var(--primary)] cursor-pointer"
+                    checked={assigneeIds.includes(a.id)}
+                    onChange={() => toggleAssignee(a.id)}
+                  />
+                  {a.name[lang]}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
 
         {task && (
           <Field label={t("update_note")}>

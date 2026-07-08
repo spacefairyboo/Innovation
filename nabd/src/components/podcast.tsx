@@ -8,6 +8,26 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "./providers";
 import { Icon } from "./icons";
 
+/* ---- voice classification: prefer natural-sounding voices, group by gender ---- */
+const FEMALE_MARKERS = ["female", "woman", "zira", "susan", "samantha", "victoria", "karen", "moira", "tessa",
+  "fiona", "veena", "salma", "laila", "hoda", "amira", "sara", "hala", "zariyah", "aria", "jenny", "michelle",
+  "emma", "ava", "sonia", "natasha", "salli", "joanna", "kendra", "kimberly", "ivy", "amy", "nicole", "raveena",
+  "zeina", "layla", "mona", "catherine", "libby", "clara", "olivia"];
+const MALE_MARKERS = ["male", " man", "david", "mark", "daniel", "alex", "fred", "thomas", "naayf", "maged",
+  "hamed", "guy", "brandon", "christopher", "eric", "andrew", "ryan", "matthew", "joey", "justin", "kevin",
+  "tarik", "hasan", "william", "james", "george", "liam"];
+const NATURAL_MARKERS = ["natural", "neural", "premium", "enhanced", "online", "google"];
+
+function voiceGender(v: SpeechSynthesisVoice): "female" | "male" | "other" {
+  const n = v.name.toLowerCase();
+  if (FEMALE_MARKERS.some((m) => n.includes(m))) return "female";
+  if (MALE_MARKERS.some((m) => n.includes(m))) return "male";
+  return "other";
+}
+
+const naturalScore = (v: SpeechSynthesisVoice): number =>
+  NATURAL_MARKERS.some((m) => v.name.toLowerCase().includes(m)) ? 0 : 1;
+
 export function PodcastPlayer({ lines, scopeOptions, scope }: {
   lines: string[];
   scopeOptions: { value: string; label: string }[] | null;
@@ -18,10 +38,35 @@ export function PodcastPlayer({ lines, scopeOptions, scope }: {
   const [playing, setPlaying] = useState(false);
   const [paused, setPaused] = useState(false);
   const [lineIdx, setLineIdx] = useState(-1);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [voiceURI, setVoiceURI] = useState("");
   const rateRef = useRef(1);
   const transcriptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => () => window.speechSynthesis?.cancel(), []);
+
+  // Load the voice list (it can arrive asynchronously) and restore the choice.
+  useEffect(() => {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    const prefix = lang === "ar" ? "ar" : "en";
+    const load = () => {
+      const forLang = synth.getVoices()
+        .filter((v) => v.lang.toLowerCase().startsWith(prefix))
+        .sort((a, b) => naturalScore(a) - naturalScore(b) || a.name.localeCompare(b.name));
+      setVoices(forLang);
+      const saved = localStorage.getItem(`nabd-voice-${prefix}`);
+      setVoiceURI(saved && forLang.some((v) => v.voiceURI === saved) ? saved : (forLang[0]?.voiceURI ?? ""));
+    };
+    load();
+    synth.addEventListener("voiceschanged", load);
+    return () => synth.removeEventListener("voiceschanged", load);
+  }, [lang]);
+
+  const pickVoice = (uri: string) => {
+    setVoiceURI(uri);
+    localStorage.setItem(`nabd-voice-${lang === "ar" ? "ar" : "en"}`, uri);
+  };
 
   useEffect(() => {
     const el = transcriptRef.current?.querySelector<HTMLElement>(`[data-line="${lineIdx}"]`);
@@ -34,9 +79,7 @@ export function PodcastPlayer({ lines, scopeOptions, scope }: {
     synth.cancel();
     setPlaying(true);
     setPaused(false);
-    const prefix = lang === "ar" ? "ar" : "en";
-    const voices = synth.getVoices();
-    const voice = voices.find((v) => v.lang.startsWith(`${prefix}-`)) ?? voices.find((v) => v.lang.startsWith(prefix));
+    const voice = voices.find((v) => v.voiceURI === voiceURI) ?? voices[0] ?? null;
     lines.forEach((text, i) => {
       const utt = new SpeechSynthesisUtterance(text);
       utt.lang = lang === "ar" ? "ar-SA" : "en-US";
@@ -110,6 +153,28 @@ export function PodcastPlayer({ lines, scopeOptions, scope }: {
                 onChange={(e) => { stop(); router.push(`/podcast?scope=${e.target.value}`); }}
               >
                 {scopeOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            )}
+            {voices.length > 0 && (
+              <select
+                className="rounded-xl px-2.5 py-2 text-sm border border-white/20 bg-white/10 text-white max-w-56 [&>option]:text-ink [&>option]:bg-surface [&>optgroup]:text-ink [&>optgroup]:bg-surface"
+                value={voiceURI}
+                onChange={(e) => { stop(); pickVoice(e.target.value); }}
+                title={t("voice")}
+              >
+                {(["female", "male", "other"] as const).map((g) => {
+                  const group = voices.filter((v) => voiceGender(v) === g);
+                  if (!group.length) return null;
+                  return (
+                    <optgroup key={g} label={t(g === "female" ? "voice_female" : g === "male" ? "voice_male" : "voice_other")}>
+                      {group.map((v) => (
+                        <option key={v.voiceURI} value={v.voiceURI}>
+                          {v.name.replace(/^Microsoft |^Google |\(.*\)$/g, "").trim()}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </select>
             )}
             <select

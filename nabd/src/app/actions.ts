@@ -36,10 +36,23 @@ async function assertCanEdit(taskId: string) {
   if (!task) throw new Error("Task not found");
   const allowed =
     user.role === "senior" ||
-    task.ownerId === user.id ||
+    task.assigneeIds.includes(user.id) ||
     (user.role === "manager" && user.teamId === task.teamId);
   if (!allowed) throw new Error("Not allowed");
   return { user, task };
+}
+
+/** Validates an assignee list against the editor's authority; returns clean ids. */
+function vetAssignees(editor: { id: string; role: string; teamId: string | null }, ids: string[]): string[] {
+  const clean = [...new Set(ids)].filter(Boolean);
+  if (!clean.length) throw new Error("At least one assignee required");
+  for (const id of clean) {
+    const target = repo.getUser(id);
+    if (!target) throw new Error("Unknown assignee");
+    if (editor.role === "employee" && target.id !== editor.id) throw new Error("Not allowed");
+    if (editor.role === "manager" && target.teamId !== editor.teamId) throw new Error("Not your team");
+  }
+  return clean;
 }
 
 export async function saveTask(input: {
@@ -49,7 +62,7 @@ export async function saveTask(input: {
   priority: Priority;
   status?: TaskStatus;
   progress?: number;
-  ownerId?: string;
+  assigneeIds?: string[];
   note?: string;
   checklist?: ChecklistItem[];
 }) {
@@ -58,29 +71,20 @@ export async function saveTask(input: {
   if (!title) throw new Error("Title required");
   if (input.id) {
     const { user: editor } = await assertCanEdit(input.id);
-    // Reassignment is a manager/senior action, and managers stay within their team.
-    let ownerId: string | undefined;
-    if (input.ownerId) {
-      const target = repo.getUser(input.ownerId);
-      if (!target) throw new Error("Unknown assignee");
-      if (editor.role === "employee" && target.id !== editor.id) throw new Error("Not allowed");
-      if (editor.role === "manager" && target.teamId !== editor.teamId) throw new Error("Not your team");
-      ownerId = target.id;
-    }
+    const assigneeIds = input.assigneeIds?.length ? vetAssignees(editor, input.assigneeIds) : undefined;
     const note = input.note?.trim();
     repo.updateTask(
       input.id,
-      { title, due: input.due, priority: input.priority, status: input.status, progress: input.progress, ownerId },
+      { title, due: input.due, priority: input.priority, status: input.status, progress: input.progress, assigneeIds },
       note ? { en: note, ar: note } : null,
       editor.id,
     );
     if (input.checklist) repo.saveChecklist(input.id, sanitizeChecklist(input.checklist));
   } else {
-    const ownerId = user.role === "employee" ? user.id : (input.ownerId ?? user.id);
-    const owner = repo.getUser(ownerId);
-    if (!owner) throw new Error("Unknown assignee");
-    if (user.role === "manager" && owner.teamId !== user.teamId) throw new Error("Not your team");
-    const task = repo.createTask({ title, ownerId, due: input.due, priority: input.priority, createdBy: user.id });
+    const assigneeIds = user.role === "employee"
+      ? [user.id]
+      : vetAssignees(user, input.assigneeIds?.length ? input.assigneeIds : [user.id]);
+    const task = repo.createTask({ title, assigneeIds, due: input.due, priority: input.priority, createdBy: user.id });
     if (input.checklist?.length) repo.saveChecklist(task.id, sanitizeChecklist(input.checklist));
   }
   refresh();
@@ -115,7 +119,7 @@ export async function quickDone(taskId: string) {
 export async function applyCheckin(taskId: string, patch: { status?: TaskStatus; progress?: number }, note: string) {
   const { user } = await getSession();
   const task = repo.getTask(taskId);
-  if (!task || task.ownerId !== user.id) throw new Error("Not your task");
+  if (!task || !task.assigneeIds.includes(user.id)) throw new Error("Not your task");
   const text = note.trim() ? { en: note.trim(), ar: note.trim() } : null;
   repo.updateTask(taskId, patch, text, user.id);
   repo.bumpStreak(user.id);

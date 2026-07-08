@@ -37,12 +37,13 @@
   --st-blocked: #b33636;    --st-blocked-bg: #fbe9e9;
   --st-delayed: #ad5220;    --st-delayed-bg: #faeade;
 
-  /* Chart mark fills (direct labels + table view provide contrast relief) */
-  --ch-done: #2a9686;
+  /* Chart mark fills — validated palette (2px gaps, direct labels, icons,
+     and table views provide the required secondary encoding / relief) */
+  --ch-done: #17a586;
   --ch-ontrack: #2596be;
-  --ch-pending: #e3ac2e;
+  --ch-pending: #c98f13;
   --ch-blocked: #d24a4a;
-  --ch-delayed: #e88652;
+  --ch-delayed: #e0702f;
 }
 
 [data-theme="dark"] {
@@ -70,7 +71,12 @@
   --st-blocked: #f08c8c;    --st-blocked-bg: #421a1a;
   --st-delayed: #f0a06c;    --st-delayed-bg: #3d2412;
 
-  --ch-pending: #d9a72e;
+  /* Dark-surface chart fills — validated separately against #0f2e29 */
+  --ch-done: #17a586;
+  --ch-ontrack: #2596be;
+  --ch-pending: #bd8a10;
+  --ch-blocked: #ab3838;
+  --ch-delayed: #d0501a;
 }
 
 /* Expose tokens as Tailwind color utilities (bg-surface, text-ink-2, …) */
@@ -95,6 +101,9 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
   transition: background 0.25s ease, color 0.25s ease;
 }
 

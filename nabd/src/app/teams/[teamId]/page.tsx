@@ -96,7 +96,6 @@ export default async function TeamPage({ params }: { params: Promise<{ teamId: s
       <div className="mt-5">
         <TaskListSection
           vms={tasks.map(toVM)}
-          showOwner
           canEdit={canManage}
           canNudge={canManage}
           withFilters
