@@ -7,7 +7,7 @@ import { markNotificationsRead } from "@/app/actions";
 import { useI18n, useToast } from "./providers";
 import { relTime } from "./ui";
 import { Icon } from "./icons";
-import type { NotifView } from "@/lib/briefing";
+import type { NotifView } from "@/server/services/briefing.service";
 import type { Localized } from "@/lib/types";
 
 const KIND_STYLE: Record<NotifView["kind"], { ico: string; bg: string; fg: string }> = {

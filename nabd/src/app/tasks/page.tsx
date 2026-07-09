@@ -5,13 +5,13 @@ import { CheckinButtons } from "@/components/chat";
 import { Icon } from "@/components/icons";
 import { EmailSuggestions } from "@/components/inbox";
 import { NewTaskButton, TaskTabs, type AssigneeOption } from "@/components/tasks";
-import { taskIdsDelegatedTo } from "@/lib/delegation";
+import { taskIdsDelegatedTo } from "@/server/repositories/delegation.repo";
 import { makeT } from "@/lib/i18n";
-import { pendingSuggestions } from "@/lib/inbox";
-import { getTeam, teamMembers, userTasks } from "@/lib/repo";
-import { getSession } from "@/lib/session";
+import { pendingSuggestions } from "@/server/repositories/inbox.repo";
+import { getTeam, teamMembers, userTasks } from "@/server/repositories";
+import { getSession } from "@/server/auth/session";
 import { countStatuses } from "@/lib/types";
-import { doneThisWeekCount, toVM } from "@/lib/vm";
+import { doneThisWeekCount, toVM } from "@/server/vm";
 
 export default async function MyTasksPage({ searchParams }: {
   searchParams: Promise<{ q?: string }>;

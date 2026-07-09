@@ -1,11 +1,11 @@
 /* Server-side view-model builders shared by pages. */
 
-import { taskDelegation } from "./delegation";
-import { makeT } from "./i18n";
-import { getChecklist, getTeam, getUser, taskActivity } from "./repo";
-import { taskValue } from "./value";
+import { taskDelegation } from "./repositories/delegation.repo";
+import { makeT } from "@/lib/i18n";
+import { getChecklist, getTeam, getUser, taskActivity } from "./repositories";
+import { taskValue } from "@/lib/value";
 import type { TaskVM } from "@/components/tasks";
-import { STATUS_META, effStatus, type Lang, type Task } from "./types";
+import { STATUS_META, effStatus, type Lang, type Task } from "@/lib/types";
 
 export function toVM(task: Task): TaskVM {
   const owner = getUser(task.ownerId)!;

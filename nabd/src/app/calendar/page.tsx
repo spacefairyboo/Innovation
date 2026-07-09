@@ -5,9 +5,9 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { makeT } from "@/lib/i18n";
-import { meetingsForMonth, type Meeting } from "@/lib/meetings";
-import { scopeTasks } from "@/lib/repo";
-import { getSession } from "@/lib/session";
+import { meetingsForMonth, type Meeting } from "@/server/repositories/meeting.repo";
+import { scopeTasks } from "@/server/repositories";
+import { getSession } from "@/server/auth/session";
 import { STATUS_META, effStatus, todayISO, type EffStatus, type Lang, type Task } from "@/lib/types";
 
 const pad = (n: number) => String(n).padStart(2, "0");

@@ -1,21 +1,11 @@
-/* Tasks from email — the AI mail scanner.
+/* Inbox repository — task suggestions the AI mail scanner extracted from
+   inbound email. In production the fetcher is Microsoft Graph (Outlook):
+   configure OUTLOOK_* (see server/config.ts) and poll /v1.0/users/{email}/
+   messages — each message row flows through the extractor in lib/nlp. */
 
-   Inbound messages land in the `email_suggestions` table. In production the
-   fetcher is Microsoft Graph (Outlook): set OUTLOOK_TENANT_ID /
-   OUTLOOK_CLIENT_ID / OUTLOOK_CLIENT_SECRET and poll
-   /v1.0/users/{email}/messages — each message row then flows through the
-   same extractor below. The demo seeds a realistic mailbox instead.
-
-   extractTaskFromEmail() reads a subject + snippet and derives an
-   actionable task: a cleaned title, a due date from natural-language
-   deadline phrases ("by Friday", "by July 15", "tomorrow"), and a
-   priority from urgency language. */
-
-import { getDB } from "./db";
-import { extractTitle, parseDeadline, parsePriority } from "./nlp";
-import type { Priority } from "./types";
-
-export { extractTitle, parseDeadline, parsePriority };
+import { getDB } from "../db/connection";
+import { extractTitle, parseDeadline, parsePriority } from "@/lib/nlp";
+import type { Priority } from "@/lib/types";
 
 export interface EmailSuggestion {
   id: number;

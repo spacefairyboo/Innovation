@@ -9,7 +9,7 @@ import { useTransition } from "react";
 import { addSuggestedTask, dismissSuggestion } from "@/app/actions";
 import { useI18n, useToast } from "./providers";
 import { Icon } from "./icons";
-import type { EmailSuggestion } from "@/lib/inbox";
+import type { EmailSuggestion } from "@/server/repositories/inbox.repo";
 
 export function EmailSuggestions({ suggestions }: { suggestions: EmailSuggestion[] }) {
   const { t } = useI18n();

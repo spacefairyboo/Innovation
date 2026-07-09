@@ -7,13 +7,14 @@ import { ChartCard, Donut, Sparkline, StatusTable, TeamBars, TeamBarsTable } fro
 import { AttentionList, ExportCsvButton, type AttentionItem } from "@/components/dashboard-widgets";
 import { Avatar, StatusChip } from "@/components/ui";
 import { Icon } from "@/components/icons";
-import { buildAdvisorPlan } from "@/lib/advisor";
-import { insightFor } from "@/lib/briefing";
+import { buildAdvisorPlan } from "@/server/services/advisor.service";
+import { insightFor } from "@/server/services/briefing.service";
 import { makeT } from "@/lib/i18n";
-import { getTeam, getUser, listTeams, scopeTasks, teamTasks } from "@/lib/repo";
-import { getSession } from "@/lib/session";
+import { getTeam, getUser, listTeams, overseesTeam, scopeTasks, teamMembers, teamTasks } from "@/server/repositories";
+import { getSession } from "@/server/auth/session";
 import { HEALTH_META, countStatuses, effStatus, teamHealth } from "@/lib/types";
-import { csvRows, doneThisWeekCount, greetingKey, recentActivity, weekTrend } from "@/lib/vm";
+import { csvRows, doneThisWeekCount, greetingKey, recentActivity, weekTrend } from "@/server/vm";
+import { TeamGlyph } from "@/components/team-card";
 
 function CompletionRing({ pct, label }: { pct: number; label: string }) {
   const R = 42, C = 2 * Math.PI * R;
@@ -30,20 +31,32 @@ function CompletionRing({ pct, label }: { pct: number; label: string }) {
   );
 }
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: {
+  searchParams: Promise<{ unit?: string }>;
+}) {
+  const { unit: unitParam } = await searchParams;
   const { user, lang } = await getSession();
   const t = makeT(lang);
-  const tasks = scopeTasks(user);
+
+  // Drill-down: seniors and section heads can focus the whole overview on
+  // one unit (?unit=…). Only units their role oversees are accepted.
+  const focusTeam = unitParam && (user.role === "senior" || user.role === "section") && overseesTeam(user, unitParam)
+    ? getTeam(unitParam)
+    : null;
+
+  const tasks = focusTeam ? teamTasks(focusTeam.id) : scopeTasks(user);
   const stats = countStatuses(tasks);
   const insight = insightFor(tasks, lang);
   const doneThisWeek = doneThisWeekCount(tasks);
   const greeting = t(greetingKey());
-  const scopeTitle = t(
-    user.role === "senior" ? "org_pulse"
-    : user.role === "section" ? "section_pulse"
-    : user.role === "manager" ? "team_pulse"
-    : "my_pulse",
-  );
+  const scopeTitle = focusTeam
+    ? `${t("team_pulse")} · ${focusTeam.name[lang]}`
+    : t(
+        user.role === "senior" ? "org_pulse"
+        : user.role === "section" ? "section_pulse"
+        : user.role === "manager" ? "team_pulse"
+        : "my_pulse",
+      );
   const health = HEALTH_META[teamHealth(stats)];
   const completion = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
   const dateStr = new Date().toLocaleDateString(lang === "ar" ? "ar" : "en", { weekday: "long", day: "numeric", month: "long" });
@@ -61,17 +74,33 @@ export default async function Dashboard() {
       due: x.due,
     }));
 
-  const visibleTeams = user.role === "senior"
-    ? listTeams()
-    : user.role === "section" && user.sectionId
-      ? listTeams().filter((x) => x.unitId === user.sectionId)
-      : null;
+  const visibleTeams = focusTeam
+    ? null
+    : user.role === "senior"
+      ? listTeams()
+      : user.role === "section" && user.sectionId
+        ? listTeams().filter((x) => x.unitId === user.sectionId)
+        : null;
   const teamRows = visibleTeams
     ? visibleTeams.map((team) => ({
         id: team.id, label: team.name[lang],
         stats: countStatuses(teamTasks(team.id)),
       }))
     : null;
+
+  // The clickable units strip: each card opens that unit's overview.
+  const unitCards = visibleTeams?.map((team) => {
+    const ts = countStatuses(teamTasks(team.id));
+    const head = getUser(team.managerId);
+    return {
+      id: team.id,
+      name: team.name[lang],
+      headName: head?.name[lang] ?? "",
+      members: teamMembers(team.id).length,
+      open: ts.total - ts.done,
+      health: HEALTH_META[teamHealth(ts)],
+    };
+  }) ?? null;
 
   const activity = recentActivity(tasks, 5);
 
@@ -96,8 +125,20 @@ export default async function Dashboard() {
         <span aria-hidden className="absolute -top-24 -end-16 w-72 h-72 rounded-full pointer-events-none" style={{ background: "rgb(70 199 180 / 0.22)", filter: "blur(70px)" }} />
         <span aria-hidden className="absolute -bottom-28 start-1/3 w-80 h-80 rounded-full pointer-events-none" style={{ background: "rgb(37 150 190 / 0.16)", filter: "blur(80px)" }} />
         <div className="flex-1 min-w-64 relative">
-          <div className="text-xs font-medium" style={{ color: "#7fa89e" }}>{dateStr} · {scopeTitle}</div>
-          <h2 className="m-0 mt-1 text-2xl font-bold text-white">{greeting}, {user.name[lang].split(" ")[0]}</h2>
+          <div className="text-xs font-medium flex items-center gap-2 flex-wrap" style={{ color: "#7fa89e" }}>
+            {dateStr} · {scopeTitle}
+            {focusTeam && (
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.7rem] font-semibold no-underline text-white border border-white/20 bg-white/10 hover:bg-white/20 transition"
+              >
+                <Icon name={lang === "ar" ? "chevron-right" : "chevron-left"} size={11} /> {t("back_overview")}
+              </Link>
+            )}
+          </div>
+          <h2 className="m-0 mt-1 text-2xl font-bold text-white">
+            {focusTeam ? focusTeam.name[lang] : `${greeting}, ${user.name[lang].split(" ")[0]}`}
+          </h2>
           <p className="m-0 mt-2.5 text-sm leading-6 flex items-start gap-2 max-w-xl" style={{ color: "#b7d9d0" }}>
             <Icon name={insight.icon} size={16} className="mt-1" />
             <span>{insight.text}</span>
@@ -110,7 +151,15 @@ export default async function Dashboard() {
             >
               <Icon name="lightbulb" size={16} /> {t("advisor_open")}
             </Link>
-            {user.role === "senior" && (
+            {focusTeam && (
+              <Link
+                href={`/teams/${focusTeam.id}`}
+                className="inline-flex items-center gap-2 rounded-full px-4.5 py-2.5 text-sm font-semibold no-underline text-white border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition"
+              >
+                <Icon name="users" size={16} /> {t("open_team")}
+              </Link>
+            )}
+            {user.role === "senior" && !focusTeam && (
               <Link
                 href="/podcast"
                 className="inline-flex items-center gap-2 rounded-full px-4.5 py-2.5 text-sm font-semibold no-underline text-white border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition"
@@ -154,6 +203,37 @@ export default async function Dashboard() {
           </div>
         ))}
       </div>
+
+      {/* ---- Units at a glance: click through to a unit's overview ---- */}
+      {unitCards && unitCards.length > 0 && (
+        <div className="card mb-5">
+          <div className="mb-3">
+            <h3 className="m-0 text-base font-bold">{t("units_glance")}</h3>
+            <p className="m-0 text-xs text-ink-3">{t("units_glance_sub")}</p>
+          </div>
+          <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+            {unitCards.map((u) => (
+              <Link
+                key={u.id}
+                href={`/?unit=${u.id}`}
+                className="rounded-2xl border border-line bg-surface-2 p-4 no-underline flex items-center gap-3 transition hover:border-accent group"
+              >
+                <TeamGlyph name={u.name} />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-bold text-ink truncate group-hover:text-primary transition">{u.name}</span>
+                  <span className="block text-xs text-ink-3 truncate">
+                    {u.headName} · {u.members} {t("members")} · {u.open} {t("active_tasks")}
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-1 text-xs font-bold shrink-0" style={{ color: u.health.color }}>
+                  <Icon name={u.health.icon} size={13} /> {t(u.health.labelKey)}
+                </span>
+                <Icon name={lang === "ar" ? "chevron-left" : "chevron-right"} size={15} className="text-ink-3 shrink-0" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ---- Main grid ---- */}
       <div className="grid gap-5 lg:[grid-template-columns:1.55fr_1fr] items-start">

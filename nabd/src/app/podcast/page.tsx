@@ -4,10 +4,10 @@
 import { notFound } from "next/navigation";
 import { EmailBriefingButton } from "@/components/digest";
 import { PodcastPlayer } from "@/components/podcast";
-import { buildPodcastScript } from "@/lib/briefing";
+import { buildPodcastScript } from "@/server/services/briefing.service";
 import { makeT } from "@/lib/i18n";
-import { allTasks, listTeams, listUnits, teamTasks } from "@/lib/repo";
-import { getSession } from "@/lib/session";
+import { allTasks, listTeams, listUnits, teamTasks } from "@/server/repositories";
+import { getSession } from "@/server/auth/session";
 import type { Task } from "@/lib/types";
 
 export default async function PodcastPage({ searchParams }: {

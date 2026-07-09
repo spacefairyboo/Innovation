@@ -1,11 +1,11 @@
 /* Server-side builders for the smart-insight line and the podcast narrative. */
 
-import { buildNotifications, getTeam, getUser, listTeams, scopeTasks, teamTasks } from "./repo";
-import { makeT } from "./i18n";
+import { buildNotifications, getTeam, getUser, listTeams, scopeTasks, teamTasks } from "../repositories";
+import { makeT } from "@/lib/i18n";
 import {
   DAY_MS, type Lang, type Task, type User,
   countStatuses, effStatus, isStale, teamHealth, todayISO,
-} from "./types";
+} from "@/lib/types";
 
 export interface Insight { icon: string; text: string }
 
