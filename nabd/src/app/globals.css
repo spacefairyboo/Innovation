@@ -278,6 +278,16 @@ body::after {
   0%, 100% { opacity: 0.35; transform: translateX(0); }
   50% { opacity: 0.75; transform: translateX(3px); }
 }
+@keyframes face-jaw {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(1.8px); }
+  60% { transform: translateY(0.6px); }
+  80% { transform: translateY(1.4px); }
+}
+@keyframes face-drift {
+  0%, 100% { transform: translateX(0); opacity: 0.55; }
+  50% { transform: translateX(6px); opacity: 0.95; }
+}
 @media (prefers-reduced-motion: reduce) {
   .presenter-face * { animation: none !important; }
 }
