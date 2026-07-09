@@ -28,6 +28,88 @@ function voiceGender(v: SpeechSynthesisVoice): "female" | "male" | "other" {
 const naturalScore = (v: SpeechSynthesisVoice): number =>
   NATURAL_MARKERS.some((m) => v.name.toLowerCase().includes(m)) ? 0 : 1;
 
+/* The briefing presenter — a stylized animated face in the brand palette.
+   Idle: gentle float, periodic blinks, calm smile. Speaking: the mouth
+   moves, the aura pulses faster, and sound waves ripple outward. Purely
+   decorative (aria-hidden); honors prefers-reduced-motion. */
+function PresenterFace({ speaking }: { speaking: boolean }) {
+  const blink = { animation: "face-blink 5.2s infinite", transformBox: "fill-box", transformOrigin: "center" } as const;
+  return (
+    <div className="presenter-face relative w-32 h-32 md:w-36 md:h-36 shrink-0 select-none" aria-hidden>
+      <span
+        className="absolute inset-1 rounded-full pointer-events-none"
+        style={{
+          background: "radial-gradient(circle, rgb(70 199 180 / 0.55), transparent 70%)",
+          filter: "blur(14px)",
+          animation: `face-aura ${speaking ? 1.4 : 4.5}s ease-in-out infinite`,
+        }}
+      />
+      <svg viewBox="0 0 120 120" className="relative w-full h-full" style={{ animation: "face-float 5s ease-in-out infinite" }}>
+        <defs>
+          <linearGradient id="pf-skin" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#eafaf5" />
+            <stop offset="1" stopColor="#bfe6da" />
+          </linearGradient>
+          <linearGradient id="pf-hair" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#123c35" />
+            <stop offset="1" stopColor="#2a9686" />
+          </linearGradient>
+          <linearGradient id="pf-shine" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#46c7b4" stopOpacity="0" />
+            <stop offset="0.5" stopColor="#7fd8ff" stopOpacity="0.85" />
+            <stop offset="1" stopColor="#c9a7ff" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {/* low bun, tucked behind the head */}
+        <circle cx="87" cy="36" r="8" fill="url(#pf-hair)" />
+        {/* neck & shoulders */}
+        <path d="M52 82h16v8c10 1 17 5 19 13H33c2-8 9-12 19-13z" fill="url(#pf-skin)" opacity="0.92" />
+        {/* iridescent light across the collar */}
+        <rect x="42" y="94" width="36" height="5" rx="2.5" fill="url(#pf-shine)" style={{ animation: "face-shimmer 3.2s ease-in-out infinite" }} />
+        {/* head */}
+        <ellipse cx="60" cy="56" rx="27" ry="30" fill="url(#pf-skin)" />
+        {/* swept-back hair */}
+        <path d="M33 56 C31 30 44 21 60 21 C76 21 89 30 87 56 C87 43 79 33 60 33 C41 33 33 43 33 56 Z" fill="url(#pf-hair)" />
+        {/* brows */}
+        <path d="M44 47q5-3 10 0" stroke="#1c4f46" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+        <path d="M66 47q5-3 10 0" stroke="#1c4f46" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+        {/* eyes (they blink) */}
+        <g style={blink}>
+          <ellipse cx="49" cy="55" rx="3.2" ry="3.9" fill="#123c35" />
+          <circle cx="50" cy="53.6" r="1" fill="#eafaf5" />
+        </g>
+        <g style={blink}>
+          <ellipse cx="71" cy="55" rx="3.2" ry="3.9" fill="#123c35" />
+          <circle cx="72" cy="53.6" r="1" fill="#eafaf5" />
+        </g>
+        {/* nose */}
+        <path d="M60 58q-1.5 6 0 8" stroke="#9ccabb" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+        {/* mouth — calm smile idle, moving while the briefing plays */}
+        {speaking ? (
+          <ellipse
+            cx="60" cy="75.5" rx="5" ry="3.4" fill="#164a41"
+            style={{ animation: "face-mouth-talk 0.42s ease-in-out infinite", transformBox: "fill-box", transformOrigin: "center" }}
+          />
+        ) : (
+          <path d="M54 74.5q6 5 12 0" stroke="#164a41" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+        )}
+        {/* holographic earpiece */}
+        <path d="M85 54a10 10 0 0 1-5 13" stroke="#7fd8ff" strokeWidth="1.6" fill="none" strokeLinecap="round" opacity="0.9" />
+        <circle cx="84.5" cy="59" r="2.2" fill="#7fd8ff" />
+        {/* sound waves while speaking */}
+        {speaking && (
+          <g stroke="#46c7b4" strokeWidth="1.8" fill="none" strokeLinecap="round">
+            <path d="M94 68a9 9 0 0 1 0 13" style={{ animation: "face-wave 1s ease-in-out infinite" }} />
+            <path d="M100 64a16 16 0 0 1 0 21" style={{ animation: "face-wave 1s ease-in-out 0.25s infinite" }} />
+            <path d="M26 68a9 9 0 0 0 0 13" style={{ animation: "face-wave 1s ease-in-out 0.5s infinite" }} />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
 export function PodcastPlayer({ lines, scopeOptions, scope }: {
   lines: string[];
   scopeOptions: { value: string; label: string }[] | null;
@@ -124,12 +206,7 @@ export function PodcastPlayer({ lines, scopeOptions, scope }: {
       >
         <span aria-hidden className="absolute -top-24 -end-16 w-72 h-72 rounded-full pointer-events-none" style={{ background: "rgb(70 199 180 / 0.2)", filter: "blur(70px)" }} />
         <span aria-hidden className="absolute -bottom-28 start-1/3 w-80 h-80 rounded-full pointer-events-none" style={{ background: "rgb(37 150 190 / 0.14)", filter: "blur(80px)" }} />
-        <div
-          className="relative w-24 h-24 rounded-3xl grid place-items-center shrink-0 shadow-lg text-white"
-          style={{ background: "linear-gradient(135deg, #2a9686, #46c7b4)" }}
-        >
-          <Icon name="headphones" size={40} strokeWidth={1.6} />
-        </div>
+        <PresenterFace speaking={live} />
         <div className="relative flex-1 min-w-64">
           <h3 className="m-0 mb-1 text-xl font-bold text-white">{t("podcast_title")}</h3>
           <p className="m-0 mb-4 text-sm max-w-lg" style={{ color: "#9cc4ba" }}>{t("podcast_sub")}</p>
