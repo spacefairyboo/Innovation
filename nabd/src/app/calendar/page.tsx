@@ -1,14 +1,25 @@
-/* Calendar — the user's scoped tasks laid out by due date, month by month. */
+/* Calendar — the user's scoped tasks laid out by due date, month by month,
+   alongside their Outlook meetings (hover a meeting for time & place;
+   click it for the full details). */
 
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { makeT } from "@/lib/i18n";
+import { meetingsForMonth, type Meeting } from "@/lib/meetings";
 import { scopeTasks } from "@/lib/repo";
 import { getSession } from "@/lib/session";
-import { STATUS_META, effStatus, todayISO, type EffStatus, type Task } from "@/lib/types";
+import { STATUS_META, effStatus, todayISO, type EffStatus, type Lang, type Task } from "@/lib/types";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const monthKey = (y: number, m: number) => `${y}-${pad(m + 1)}`;
+const dateKey = (ts: number) => {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+function fmtTime(ts: number, lang: Lang): string {
+  return new Date(ts).toLocaleTimeString(lang === "ar" ? "ar" : "en", { hour: "numeric", minute: "2-digit" });
+}
 
 export default async function CalendarPage({ searchParams }: {
   searchParams: Promise<{ m?: string }>;
@@ -36,6 +47,14 @@ export default async function CalendarPage({ searchParams }: {
     byDue.get(task.due)!.push(task);
   }
 
+  // The user's Outlook meetings for this month, grouped by day.
+  const meetingsByDay = new Map<string, Meeting[]>();
+  for (const m of meetingsForMonth(user.id, year, month)) {
+    const k = dateKey(m.startTs);
+    if (!meetingsByDay.has(k)) meetingsByDay.set(k, []);
+    meetingsByDay.get(k)!.push(m);
+  }
+
   // Build the week rows (weeks start on Monday).
   const first = new Date(year, month, 1);
   const startOffset = (first.getDay() + 6) % 7;
@@ -51,6 +70,35 @@ export default async function CalendarPage({ searchParams }: {
     new Date(2024, 0, i + 1).toLocaleDateString(lang === "ar" ? "ar" : "en", { weekday: "short" })); // 2024-01-01 is a Monday
 
   const chipHref = (task: Task) => `/task/${task.id}`;
+
+  /* A meeting chip: hover shows time & place, click opens the meeting page. */
+  const meetingChip = (m: Meeting) => (
+    <div key={`m${m.id}`} className="relative group">
+      <Link
+        href={`/meeting/${m.id}`}
+        className="flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[0.68rem] font-semibold no-underline truncate transition hover:brightness-95 dark:hover:brightness-110 w-full bg-accent-soft text-primary"
+      >
+        <Icon name={m.onlineUrl ? "video" : "map-pin"} size={10} />
+        <span className="truncate">{fmtTime(m.startTs, lang)} · {m.subject}</span>
+      </Link>
+      <div
+        className="hidden group-hover:block absolute z-50 top-full mt-1 start-0 w-60 rounded-xl border border-line bg-surface p-3 shadow-xl text-start pointer-events-none"
+        role="tooltip"
+      >
+        <div className="text-xs font-bold mb-1.5">{m.subject}</div>
+        <div className="text-[0.7rem] text-ink-2 flex items-center gap-1.5">
+          <Icon name="clock" size={11} /> {fmtTime(m.startTs, lang)} – {fmtTime(m.endTs, lang)}
+        </div>
+        <div className="text-[0.7rem] text-ink-2 flex items-center gap-1.5 mt-1">
+          <Icon name={m.onlineUrl ? "video" : "map-pin"} size={11} />
+          <span className="truncate">{m.onlineUrl ? t("meeting_online") : m.location}</span>
+        </div>
+        <div className="text-[0.7rem] text-ink-3 flex items-center gap-1.5 mt-1">
+          <Icon name="user" size={11} /> {m.organizerName}
+        </div>
+      </div>
+    </div>
+  );
 
   const chip = (task: Task) => {
     const eff: EffStatus = effStatus(task);
@@ -97,7 +145,9 @@ export default async function CalendarPage({ searchParams }: {
           {cells.map((date, i) => {
             if (!date) return <div key={`x${i}`} className="rounded-xl min-h-24 bg-transparent" />;
             const dayTasks = byDue.get(date) ?? [];
+            const dayMeetings = meetingsByDay.get(date) ?? [];
             const isToday = date === today;
+            const taskLimit = dayMeetings.length ? 2 : 3;
             return (
               <div
                 key={date}
@@ -110,9 +160,13 @@ export default async function CalendarPage({ searchParams }: {
                 <span className={`text-[0.7rem] font-bold ${isToday ? "text-primary" : "text-ink-3"}`}>
                   {Number(date.slice(8, 10))}
                 </span>
-                {dayTasks.slice(0, 3).map(chip)}
-                {dayTasks.length > 3 && (
-                  <span className="text-[0.62rem] text-ink-3 font-semibold px-1">+{dayTasks.length - 3}</span>
+                {dayMeetings.slice(0, 2).map(meetingChip)}
+                {dayMeetings.length > 2 && (
+                  <span className="text-[0.62rem] text-ink-3 font-semibold px-1">+{dayMeetings.length - 2}</span>
+                )}
+                {dayTasks.slice(0, taskLimit).map(chip)}
+                {dayTasks.length > taskLimit && (
+                  <span className="text-[0.62rem] text-ink-3 font-semibold px-1">+{dayTasks.length - taskLimit}</span>
                 )}
               </div>
             );

@@ -53,6 +53,7 @@ export function Shell({ user, users, unreadCount, theme, palette, children }: {
     { href: "/teams", ico: "users", label: t("nav_teams") },
     { href: "/podcast", ico: "headphones", label: t("nav_podcast") },
     { href: "/notifications", ico: "bell", label: t("nav_notifications"), badge: unreadCount },
+    { href: "/profile", ico: "user", label: t("nav_profile") },
   ];
 
   const roleLabel = t(user.role === "senior" ? "role_senior" : user.role === "manager" ? "role_manager" : "role_employee");

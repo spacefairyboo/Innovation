@@ -108,7 +108,43 @@ function migrate(d: DatabaseSync) {
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','added','dismissed'))
     );
     CREATE INDEX IF NOT EXISTS idx_suggestions_user ON email_suggestions(user_id, status);
+    CREATE TABLE IF NOT EXISTS meetings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      subject TEXT NOT NULL,
+      location TEXT NOT NULL DEFAULT '',
+      online_url TEXT,
+      organizer_name TEXT NOT NULL,
+      organizer_email TEXT NOT NULL,
+      start_ts INTEGER NOT NULL,
+      end_ts INTEGER NOT NULL,
+      body TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_meetings_user ON meetings(user_id, start_ts);
+    CREATE TABLE IF NOT EXISTS delegations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      from_user TEXT NOT NULL REFERENCES users(id),
+      to_user TEXT NOT NULL REFERENCES users(id),
+      start_ts INTEGER NOT NULL,
+      end_date TEXT,
+      active INTEGER NOT NULL DEFAULT 1
+    );
+    CREATE INDEX IF NOT EXISTS idx_delegations_from ON delegations(from_user, active);
+    CREATE TABLE IF NOT EXISTS delegation_tasks (
+      delegation_id INTEGER NOT NULL REFERENCES delegations(id) ON DELETE CASCADE,
+      task_id TEXT NOT NULL,
+      was_owner INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (delegation_id, task_id)
+    );
   `);
+  // Databases created before the profile release lack user preference columns.
+  const prefCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];
+  if (!prefCols.some((c) => c.name === "pref_lang")) d.exec("ALTER TABLE users ADD COLUMN pref_lang TEXT");
+  if (!prefCols.some((c) => c.name === "pref_theme")) d.exec("ALTER TABLE users ADD COLUMN pref_theme TEXT");
+  // Databases created before the Outlook-meetings release have an empty meetings table.
+  const meetingCount = d.prepare("SELECT COUNT(*) AS c FROM meetings").get() as { c: number };
+  const userCount = d.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number };
+  if (meetingCount.c === 0 && userCount.c > 0) seedMeetings(d);
   // Databases created before the audit-log release lack task_updates.by_id.
   const cols = d.prepare("SELECT name FROM pragma_table_info('task_updates')").all() as { name: string }[];
   if (!cols.some((c) => c.name === "by_id")) {
@@ -118,6 +154,13 @@ function migrate(d: DatabaseSync) {
   const userCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];
   if (!userCols.some((c) => c.name === "email")) {
     d.exec("ALTER TABLE users ADD COLUMN email TEXT");
+  }
+  // Backfill: users migrated from pre-email databases get a derived address,
+  // otherwise email-dependent features (reminders, advisor drafts) silently vanish.
+  const noEmail = d.prepare("SELECT id, name_en FROM users WHERE email IS NULL OR email = ''").all() as { id: string; name_en: string }[];
+  if (noEmail.length) {
+    const upd = d.prepare("UPDATE users SET email = ? WHERE id = ?");
+    for (const u of noEmail) upd.run(deriveEmail(u.name_en), u.id);
   }
   // Backfill: tasks created before multi-assignee support get their owner as assignee.
   d.exec(`
@@ -133,6 +176,7 @@ function isEmpty(d: DatabaseSync): boolean {
 
 const ago = (days: number, hours = 0) => Date.now() - days * DAY_MS - hours * 3_600_000;
 const inDays = (n: number) => new Date(Date.now() + n * DAY_MS).toISOString().slice(0, 10);
+const deriveEmail = (en: string) => `${en.toLowerCase().replace(/[^a-z ]/g, "").trim().replace(/ +/g, ".")}@nabd.example`;
 
 function seed(d: DatabaseSync) {
   const insUnit = d.prepare("INSERT INTO units VALUES (?,?,?,?)");
@@ -146,7 +190,7 @@ function seed(d: DatabaseSync) {
   insTeam.run("t4", "u2", "C", "m4", "Customer Success", "نجاح العملاء");
 
   const insUser = d.prepare("INSERT INTO users (id, role, team_id, name_en, name_ar, streak, email) VALUES (?,?,?,?,?,?,?)");
-  const mail = (en: string) => `${en.toLowerCase().replace(/[^a-z ]/g, "").trim().replace(/ +/g, ".")}@nabd.example`;
+  const mail = deriveEmail;
   insUser.run("s1", "senior", null, "Layla Al-Harbi", "ليلى الحربي", 0, mail("Layla Al-Harbi"));
   insUser.run("m1", "manager", "t1", "Omar Hassan", "عمر حسن", 4, mail("Omar Hassan"));
   insUser.run("m2", "manager", "t2", "Sara Nasser", "سارة ناصر", 6, mail("Sara Nasser"));
@@ -251,11 +295,58 @@ function seed(d: DatabaseSync) {
     "Q3 campaign budgets due tomorrow",
     "Reminder: the final Q3 campaign budget split is due tomorrow. Urgent — the network locks placements after that.",
     ago(0, 1));
+
+  seedMeetings(d);
+}
+
+/* Demo Outlook calendar — meetings the Graph sync would pull from each
+   user's mailbox. Times are relative to "now" so the current month is
+   always populated. */
+function seedMeetings(d: DatabaseSync) {
+  const at = (dayOffset: number, hour: number, durMin = 60) => {
+    const start = new Date();
+    start.setDate(start.getDate() + dayOffset);
+    start.setHours(hour, 0, 0, 0);
+    return [start.getTime(), start.getTime() + durMin * 60_000] as const;
+  };
+  const ins = d.prepare(
+    "INSERT INTO meetings (user_id, subject, location, online_url, organizer_name, organizer_email, start_ts, end_ts, body) VALUES (?,?,?,?,?,?,?,?,?)",
+  );
+  const teams = "https://teams.microsoft.com/l/meetup-join/demo";
+  type M = [user: string, subject: string, location: string, url: string | null,
+    orgName: string, orgEmail: string, start: number, end: number, body: string];
+  const rows: M[] = [
+    ["e1", "Sprint planning — Development", "Room 2A, Tech floor", null,
+      "Omar Hassan", "omar.hassan@nabd.example", ...at(0, 10), "Planning for the next sprint. Bring your estimates for the payment page work."],
+    ["e1", "Payment gateway vendor call", "Microsoft Teams", teams,
+      "Salem Al-Qahtani", "salem@acmecorp.example", ...at(1, 14), "Walkthrough of the certificate renewal process with the vendor's security team."],
+    ["e1", "1:1 with Omar", "Omar's office", null,
+      "Omar Hassan", "omar.hassan@nabd.example", ...at(3, 9, 30), "Monthly one-to-one. Agenda: growth plan, API security review status."],
+    ["e1", "Tech all-hands", "Auditorium", null,
+      "Layla Al-Harbi", "layla.alharbi@nabd.example", ...at(8, 11, 90), "Quarterly all-hands for the Technology unit."],
+    ["m1", "Sprint planning — Development", "Room 2A, Tech floor", null,
+      "Omar Hassan", "omar.hassan@nabd.example", ...at(0, 10), "Planning for the next sprint."],
+    ["m1", "Hiring panel — senior backend engineer", "Microsoft Teams", teams,
+      "HR Team", "hr@nabd.example", ...at(2, 13, 90), "Final-round interviews. Review the four candidate scorecards beforehand."],
+    ["m1", "Leadership sync", "Boardroom", null,
+      "Layla Al-Harbi", "layla.alharbi@nabd.example", ...at(4, 15), "Weekly managers' sync with the senior leadership."],
+    ["s1", "Leadership sync", "Boardroom", null,
+      "Layla Al-Harbi", "layla.alharbi@nabd.example", ...at(4, 15), "Weekly managers' sync. Review team health across all units."],
+    ["s1", "Board review — Q3 outlook", "Executive briefing room", null,
+      "Board Office", "board@nabd.example", ...at(6, 9, 120), "Quarterly review with the board. Hiring update and Q3 campaign figures on the agenda."],
+    ["s1", "Enterprise client visit — Gulf Retail Co.", "Client HQ, King Fahd Rd", null,
+      "Gulf Retail Co.", "success@gulfretail.example", ...at(9, 12, 120), "On-site visit to review the onboarding rollout."],
+    ["e6", "Q3 campaign kickoff", "Marketing studio", null,
+      "Khalid Amin", "khalid.amin@nabd.example", ...at(1, 11), "Kickoff for the Q3 campaign launch. Creatives and budget split review."],
+    ["e8", "Onboarding feedback call — Gulf Retail", "Microsoft Teams", teams,
+      "Gulf Retail Co.", "success@gulfretail.example", ...at(5, 13), "Feedback call on the enterprise onboarding kit."],
+  ];
+  for (const r of rows) ins.run(...r);
 }
 
 /** Test/demo helper: wipe and reseed. */
 export function resetDB() {
   const d = getDB();
-  d.exec("DELETE FROM notif_reads; DELETE FROM email_suggestions; DELETE FROM emails; DELETE FROM task_assignees; DELETE FROM task_notes; DELETE FROM audit_logs; DELETE FROM task_updates; DELETE FROM tasks; DELETE FROM users; DELETE FROM teams; DELETE FROM units;");
+  d.exec("DELETE FROM notif_reads; DELETE FROM email_suggestions; DELETE FROM meetings; DELETE FROM delegation_tasks; DELETE FROM delegations; DELETE FROM emails; DELETE FROM task_assignees; DELETE FROM task_notes; DELETE FROM audit_logs; DELETE FROM task_updates; DELETE FROM tasks; DELETE FROM users; DELETE FROM teams; DELETE FROM units;");
   seed(d);
 }

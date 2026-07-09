@@ -5,6 +5,7 @@ import { Shell, type ShellUser } from "@/components/shell";
 import type { PaletteItem } from "@/components/palette";
 import { getSession } from "@/lib/session";
 import { makeT } from "@/lib/i18n";
+import { runDelegationSweep } from "@/lib/delegation";
 import { runReminderSweep } from "@/lib/mailer";
 import { getTeam, listTeams, listUsers, scopeTasks, unreadCount } from "@/lib/repo";
 import { STATUS_META, effStatus, type Lang, type User } from "@/lib/types";
@@ -32,6 +33,7 @@ function buildPaletteIndex(user: User, lang: Lang): PaletteItem[] {
     ["/teams", "users", t("nav_teams")],
     ["/podcast", "headphones", t("nav_podcast")],
     ["/notifications", "bell", t("nav_notifications")],
+    ["/profile", "user", t("nav_profile")],
   ];
   for (const [href, icon, label] of pages) items.push({ href, icon, label, group: "pages" });
 
@@ -58,6 +60,7 @@ function buildPaletteIndex(user: User, lang: Lang): PaletteItem[] {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { user, lang, theme } = await getSession();
   await runReminderSweep(); // throttled internally; sends stale-task email reminders
+  await runDelegationSweep(); // returns expired delegations' tasks to their owners
   const users = listUsers().map(withTeamName);
 
   return (

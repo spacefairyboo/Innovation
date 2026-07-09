@@ -81,6 +81,13 @@ function employeePlan(user: User, lang: Lang, tasks: Task[]): AdvisorAction[] {
     const dd = daysUntilDue(t.due);
 
     if (eff === "blocked") {
+      const email: EmailDraft | undefined = manager?.email ? {
+        toName: manager.name[lang], toEmail: manager.email,
+        subject: ar ? `طلب مساعدة: «${t.title.ar}» متعثرة` : `Help needed: "${t.title.en}" is blocked`,
+        body: ar
+          ? `مرحبًا ${manager.name.ar.split(" ")[0]}،\n\nمهمة «${t.title.ar}» متوقفة حاليًا${note ? ` — ${note}` : ""}. التقدم عند ${t.progress}%${t.due ? ` وتاريخ الاستحقاق ${t.due}` : ""}.\n\nأحتاج تدخلك لإزالة هذا العائق حتى أستطيع المتابعة. هل يمكننا مناقشته اليوم؟\n\nشكرًا،\n${user.name.ar}`
+          : `Hi ${manager.name.en.split(" ")[0]},\n\n"${t.title.en}" is currently blocked${note ? ` — ${note}` : ""}. Progress is at ${t.progress}%${t.due ? ` and the due date is ${t.due}` : ""}.\n\nI need your help clearing this blocker so I can continue. Could we discuss it today?\n\nThanks,\n${user.name.en}`,
+      } : undefined;
       actions.push({
         id: `e-block-${t.id}`, urgency: "critical", icon: "ban",
         title: ar ? `فُكّ تعثر «${title}»` : `Unblock "${title}"`,
@@ -89,25 +96,26 @@ function employeePlan(user: User, lang: Lang, tasks: Task[]): AdvisorAction[] {
           : `This task is stuck${note ? ` — last note: "${note}"` : ""}. Every waiting day pushes the rest of your plan.`,
         steps: ar ? [
           "حدد بدقة ما الذي تنتظره ومن يملكه.",
-          "أرسل الرسالة المجهزة أدناه لمديرك ليتدخل.",
+          email ? "أرسل الرسالة المجهزة أدناه لمديرك ليتدخل." : "اطلب من مديرك التدخل لإزالة العائق.",
           `في أثناء الانتظار، تقدّم في جزء غير معتمد على العائق (التقدم الحالي ${t.progress}%).`,
           "سجّل أي رد تستلمه في تحديث المهمة حتى يبقى السجل كاملاً.",
         ] : [
           "Pin down exactly what you are waiting for and who owns it.",
-          "Send the prepared email below so your manager can intervene.",
+          email ? "Send the prepared email below so your manager can intervene." : "Ask your manager to intervene.",
           `While waiting, push a part that doesn't depend on the blocker (progress is at ${t.progress}%).`,
           "Log any response as a task update so the trail stays complete.",
         ],
-        email: manager?.email ? {
-          toName: manager.name[lang], toEmail: manager.email,
-          subject: ar ? `طلب مساعدة: «${t.title.ar}» متعثرة` : `Help needed: "${t.title.en}" is blocked`,
-          body: ar
-            ? `مرحبًا ${manager.name.ar.split(" ")[0]}،\n\nمهمة «${t.title.ar}» متوقفة حاليًا${note ? ` — ${note}` : ""}. التقدم عند ${t.progress}%${t.due ? ` وتاريخ الاستحقاق ${t.due}` : ""}.\n\nأحتاج تدخلك لإزالة هذا العائق حتى أستطيع المتابعة. هل يمكننا مناقشته اليوم؟\n\nشكرًا،\n${user.name.ar}`
-            : `Hi ${manager.name.en.split(" ")[0]},\n\n"${t.title.en}" is currently blocked${note ? ` — ${note}` : ""}. Progress is at ${t.progress}%${t.due ? ` and the due date is ${t.due}` : ""}.\n\nI need your help clearing this blocker so I can continue. Could we discuss it today?\n\nThanks,\n${user.name.en}`,
-        } : undefined,
+        email,
       });
     } else if (eff === "delayed") {
       const d = daysPastDue(t.due);
+      const email: EmailDraft | undefined = manager?.email ? {
+        toName: manager.name[lang], toEmail: manager.email,
+        subject: ar ? `تحديث الموعد: «${t.title.ar}»` : `Revised timeline: "${t.title.en}"`,
+        body: ar
+          ? `مرحبًا ${manager.name.ar.split(" ")[0]}،\n\nمهمة «${t.title.ar}» تجاوزت موعدها (${t.due}). التقدم الحالي ${t.progress}%${note ? `، وآخر مستجد: ${note}` : ""}.\n\nخطتي لإنهائها: سأقسم المتبقي إلى خطوات يومية وأتوقع إنهاءها خلال الأيام القادمة. سأبقيك على اطلاع بكل تقدم.\n\n${user.name.ar}`
+          : `Hi ${manager.name.en.split(" ")[0]},\n\n"${t.title.en}" has passed its due date (${t.due}). Progress currently stands at ${t.progress}%${note ? `, latest: ${note}` : ""}.\n\nMy plan to close it: I'm breaking the remainder into daily steps and expect to finish within the coming days. I'll keep you posted on each milestone.\n\n${user.name.en}`,
+      } : undefined;
       actions.push({
         id: `e-late-${t.id}`, urgency: "critical", icon: "alert-triangle",
         title: ar ? `أنقذ موعد «${title}»` : `Rescue the deadline on "${title}"`,
@@ -117,21 +125,15 @@ function employeePlan(user: User, lang: Lang, tasks: Task[]): AdvisorAction[] {
         steps: ar ? [
           `قدّر ما تبقى فعليًا (نحو ${100 - t.progress}% من العمل).`,
           "قسّم المتبقي إلى خطوات في «ملاحظة شخصية» وأنجز الأولى اليوم.",
-          "أبلغ مديرك بموعد واقعي جديد بالرسالة المجهزة أدناه.",
+          email ? "أبلغ مديرك بموعد واقعي جديد بالرسالة المجهزة أدناه." : "أبلغ مديرك بموعد واقعي جديد.",
           "حدّث الحالة فور إنجاز كل خطوة.",
         ] : [
           `Size what actually remains (about ${100 - t.progress}% of the work).`,
           "Break the remainder into checklist steps under Note to self and finish the first one today.",
-          "Tell your manager the realistic new date with the prepared email below.",
+          email ? "Tell your manager the realistic new date with the prepared email below." : "Tell your manager the realistic new date.",
           "Update the status as each step lands.",
         ],
-        email: manager?.email ? {
-          toName: manager.name[lang], toEmail: manager.email,
-          subject: ar ? `تحديث الموعد: «${t.title.ar}»` : `Revised timeline: "${t.title.en}"`,
-          body: ar
-            ? `مرحبًا ${manager.name.ar.split(" ")[0]}،\n\nمهمة «${t.title.ar}» تجاوزت موعدها (${t.due}). التقدم الحالي ${t.progress}%${note ? `، وآخر مستجد: ${note}` : ""}.\n\nخطتي لإنهائها: سأقسم المتبقي إلى خطوات يومية وأتوقع إنهاءها خلال الأيام القادمة. سأبقيك على اطلاع بكل تقدم.\n\n${user.name.ar}`
-            : `Hi ${manager.name.en.split(" ")[0]},\n\n"${t.title.en}" has passed its due date (${t.due}). Progress currently stands at ${t.progress}%${note ? `, latest: ${note}` : ""}.\n\nMy plan to close it: I'm breaking the remainder into daily steps and expect to finish within the coming days. I'll keep you posted on each milestone.\n\n${user.name.en}`,
-        } : undefined,
+        email,
       });
     } else if (dd !== null && dd >= 0 && dd <= 2) {
       actions.push({
@@ -197,6 +199,13 @@ function managerPlan(user: User, lang: Lang): AdvisorAction[] {
   for (const t of tasks.filter((x) => effStatus(x) === "blocked")) {
     const owner = getUser(t.ownerId)!;
     const note = t.history.find((h) => h.text[lang])?.text[lang] ?? "";
+    const email: EmailDraft | undefined = owner.email ? {
+      toName: owner.name[lang], toEmail: owner.email,
+      subject: ar ? `بخصوص عائق «${t.title.ar}»` : `About the blocker on "${t.title.en}"`,
+      body: ar
+        ? `مرحبًا ${owner.name.ar.split(" ")[0]}،\n\nاطلعت على تعثر «${t.title.ar}»${note ? ` (${note})` : ""}. سأتولى التصعيد من طرفي اليوم.\n\nفي الأثناء: هل هناك جزء يمكنك التقدم فيه دون انتظار؟ أخبرني إن احتجت أي شيء آخر مني.\n\n${user.name.ar}`
+        : `Hi ${owner.name.en.split(" ")[0]},\n\nI've seen that "${t.title.en}" is blocked${note ? ` (${note})` : ""}. I'll take the escalation from my side today.\n\nMeanwhile: is there a slice you can push without waiting? Let me know if you need anything else from me.\n\n${user.name.en}`,
+    } : undefined;
     actions.push({
       id: `m-block-${t.id}`, urgency: "critical", icon: "ban",
       title: ar ? `ساعد ${owner.name.ar.split(" ")[0]} في «${t.title.ar}»` : `Help ${owner.name.en.split(" ")[0]} unblock "${t.title.en}"`,
@@ -206,19 +215,13 @@ function managerPlan(user: User, lang: Lang): AdvisorAction[] {
       steps: ar ? [
         `تحدث مع ${owner.name.ar} لفهم العائق بدقة (٥ دقائق تكفي).`,
         "تواصل مباشرة مع الجهة المسؤولة عن العائق.",
-        "أرسل الرسالة المجهزة أدناه لتوثيق الطلب.",
+        email ? "أرسل الرسالة المجهزة أدناه لتوثيق الطلب." : "وثّق الطلب كتابيًا حتى يبقى أثر له.",
       ] : [
         `Talk to ${owner.name.en} to pin the blocker down precisely (5 minutes).`,
         "Contact the party who owns the blocker directly.",
-        "Send the prepared email below to put the request on record.",
+        email ? "Send the prepared email below to put the request on record." : "Follow up in writing to put the request on record.",
       ],
-      email: owner.email ? {
-        toName: owner.name[lang], toEmail: owner.email,
-        subject: ar ? `بخصوص عائق «${t.title.ar}»` : `About the blocker on "${t.title.en}"`,
-        body: ar
-          ? `مرحبًا ${owner.name.ar.split(" ")[0]}،\n\nاطلعت على تعثر «${t.title.ar}»${note ? ` (${note})` : ""}. سأتولى التصعيد من طرفي اليوم.\n\nفي الأثناء: هل هناك جزء يمكنك التقدم فيه دون انتظار؟ أخبرني إن احتجت أي شيء آخر مني.\n\n${user.name.ar}`
-          : `Hi ${owner.name.en.split(" ")[0]},\n\nI've seen that "${t.title.en}" is blocked${note ? ` (${note})` : ""}. I'll take the escalation from my side today.\n\nMeanwhile: is there a slice you can push without waiting? Let me know if you need anything else from me.\n\n${user.name.en}`,
-      } : undefined,
+      email,
     });
   }
 
@@ -289,21 +292,22 @@ function managerPlan(user: User, lang: Lang): AdvisorAction[] {
   const recentDone = tasks.filter((x) => x.status === "done" && Date.now() - x.updatedAt < 2 * DAY_MS)[0];
   if (recentDone) {
     const owner = getUser(recentDone.ownerId)!;
+    const email: EmailDraft | undefined = owner.email ? {
+      toName: owner.name[lang], toEmail: owner.email,
+      subject: ar ? `أحسنت — «${recentDone.title.ar}»` : `Well done on "${recentDone.title.en}"`,
+      body: ar
+        ? `${owner.name.ar.split(" ")[0]}،\n\nرأيت إكمالك لـ«${recentDone.title.ar}». عمل ممتاز — شكرًا على الالتزام والجودة.\n\n${user.name.ar}`
+        : `${owner.name.en.split(" ")[0]},\n\nI saw "${recentDone.title.en}" land. Excellent work — thank you for the follow-through and the quality.\n\n${user.name.en}`,
+    } : undefined;
     actions.push({
       id: `m-kudos-${recentDone.id}`, urgency: "normal", icon: "award",
       title: ar ? `قدّر إنجاز ${owner.name.ar.split(" ")[0]}` : `Recognize ${owner.name.en.split(" ")[0]}'s finish`,
       reason: ar
         ? `أكمل «${recentDone.title.ar}» مؤخرًا — التقدير المبكر يرفع الزخم.`
         : `They completed "${recentDone.title.en}" recently — early recognition compounds momentum.`,
-      steps: ar ? ["أرسل الرسالة المجهزة أدناه، أو قلها في اجتماع الفريق."]
-        : ["Send the prepared note below, or say it in the team meeting."],
-      email: owner.email ? {
-        toName: owner.name[lang], toEmail: owner.email,
-        subject: ar ? `أحسنت — «${recentDone.title.ar}»` : `Well done on "${recentDone.title.en}"`,
-        body: ar
-          ? `${owner.name.ar.split(" ")[0]}،\n\nرأيت إكمالك لـ«${recentDone.title.ar}». عمل ممتاز — شكرًا على الالتزام والجودة.\n\n${user.name.ar}`
-          : `${owner.name.en.split(" ")[0]},\n\nI saw "${recentDone.title.en}" land. Excellent work — thank you for the follow-through and the quality.\n\n${user.name.en}`,
-      } : undefined,
+      steps: ar ? [email ? "أرسل الرسالة المجهزة أدناه، أو قلها في اجتماع الفريق." : "قلها في اجتماع الفريق أو أرسل له رسالة قصيرة."]
+        : [email ? "Send the prepared note below, or say it in the team meeting." : "Say it in the team meeting, or send them a quick note."],
+      email,
     });
   }
 
@@ -378,22 +382,23 @@ function seniorPlan(user: User, lang: Lang): AdvisorAction[] {
     .sort((a, b) => (b.stats.done / b.stats.total) - (a.stats.done / a.stats.total))[0];
   if (best && best.stats.done > 0) {
     const manager = getUser(best.team.managerId)!;
+    const email: EmailDraft | undefined = manager.email ? {
+      toName: manager.name[lang], toEmail: manager.email,
+      subject: ar ? `شكرًا لفريق ${best.team.name.ar}` : `Kudos to the ${best.team.name.en} team`,
+      body: ar
+        ? `${manager.name.ar.split(" ")[0]}،\n\nفريقك يحقق أعلى نسبة إنجاز حاليًا. انقل شكري للجميع — هذا المستوى من الالتزام يُلاحظ ويُقدّر.\n\n${user.name.ar}`
+        : `${manager.name.en.split(" ")[0]},\n\nYour team currently holds our strongest completion rate. Please pass my thanks to everyone — this level of follow-through is noticed and valued.\n\n${user.name.en}`,
+    } : undefined;
     actions.push({
       id: `s-kudos-${best.team.id}`, urgency: "normal", icon: "award",
       title: ar ? `قدّر فريق ${best.team.name.ar}` : `Recognize the ${best.team.name.en} team`,
       reason: ar
         ? `أعلى نسبة إنجاز لديك (${Math.round((best.stats.done / best.stats.total) * 100)}%). التقدير العلني يرفع أداء الجميع.`
         : `Your strongest completion rate (${Math.round((best.stats.done / best.stats.total) * 100)}%). Public recognition lifts everyone's bar.`,
-      steps: ar ? ["أرسل الرسالة المجهزة أدناه أو اذكرهم في اجتماع الإدارة القادم."]
-        : ["Send the prepared note below, or call it out in the next leadership meeting."],
+      steps: ar ? [email ? "أرسل الرسالة المجهزة أدناه أو اذكرهم في اجتماع الإدارة القادم." : "اذكرهم في اجتماع الإدارة القادم."]
+        : [email ? "Send the prepared note below, or call it out in the next leadership meeting." : "Call it out in the next leadership meeting."],
       links: [{ label: ar ? "فتح الفريق" : "Open team", href: `/teams/${best.team.id}`, icon: "users" }],
-      email: manager.email ? {
-        toName: manager.name[lang], toEmail: manager.email,
-        subject: ar ? `شكرًا لفريق ${best.team.name.ar}` : `Kudos to the ${best.team.name.en} team`,
-        body: ar
-          ? `${manager.name.ar.split(" ")[0]}،\n\nفريقك يحقق أعلى نسبة إنجاز حاليًا. انقل شكري للجميع — هذا المستوى من الالتزام يُلاحظ ويُقدّر.\n\n${user.name.ar}`
-          : `${manager.name.en.split(" ")[0]},\n\nYour team currently holds our strongest completion rate. Please pass my thanks to everyone — this level of follow-through is noticed and valued.\n\n${user.name.en}`,
-      } : undefined,
+      email,
     });
   }
 
