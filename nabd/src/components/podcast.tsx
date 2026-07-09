@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "./providers";
 import { Icon } from "./icons";
+import { PresenterAvatar } from "./presenter";
 
 /* ---- voice classification: prefer natural-sounding voices, group by gender ---- */
 const FEMALE_MARKERS = ["female", "woman", "zira", "susan", "samantha", "victoria", "karen", "moira", "tessa",
@@ -283,7 +284,7 @@ export function PodcastPlayer({ lines, scopeOptions, scope }: {
       >
         <span aria-hidden className="absolute -top-24 -end-16 w-72 h-72 rounded-full pointer-events-none" style={{ background: "rgb(70 199 180 / 0.2)", filter: "blur(70px)" }} />
         <span aria-hidden className="absolute -bottom-28 start-1/3 w-80 h-80 rounded-full pointer-events-none" style={{ background: "rgb(37 150 190 / 0.14)", filter: "blur(80px)" }} />
-        <PresenterFace speaking={live} />
+        <PresenterAvatar speaking={live} fallback={<PresenterFace speaking={live} />} />
         <div className="relative flex-1 min-w-64">
           <h3 className="m-0 mb-1 text-xl font-bold text-white">{t("podcast_title")}</h3>
           <p className="m-0 mb-4 text-sm max-w-lg" style={{ color: "#9cc4ba" }}>{t("podcast_sub")}</p>
