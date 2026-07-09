@@ -18,9 +18,10 @@ export function getDB(): DatabaseSync {
   db = new DatabaseSync(DB_PATH);
   db.exec("PRAGMA journal_mode = WAL");
   migrate(db);
-  if (isEmpty(db)) seed(db);
+  seed(db);
   return db;
 }
+
 
 function migrate(d: DatabaseSync) {
   d.exec(`
@@ -41,6 +42,7 @@ function migrate(d: DatabaseSync) {
       streak INTEGER NOT NULL DEFAULT 0,
       email TEXT
     );
+
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY,
       owner_id TEXT NOT NULL REFERENCES users(id),
@@ -168,15 +170,13 @@ function migrate(d: DatabaseSync) {
         streak INTEGER NOT NULL DEFAULT 0,
         email TEXT, pref_lang TEXT, pref_theme TEXT
       );
-      INSERT INTO users_new (id, role, team_id, name_en, name_ar, streak, email, pref_lang, pref_theme)
-        SELECT id, role, team_id, name_en, name_ar, streak, email, pref_lang, pref_theme FROM users;
+      INSERT INTO users_new (id, role, team_id, section_id, name_en, name_ar, streak, email, pref_lang, pref_theme)
+        SELECT id, role, team_id, section_id, name_en, name_ar, streak, email, pref_lang, pref_theme FROM users;
       DROP TABLE users;
       ALTER TABLE users_new RENAME TO users;
     `);
   }
-  const shCount = d.prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'section'").get() as { c: number };
   const anyUsers = d.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number };
-  if (shCount.c === 0 && anyUsers.c > 0) seedSectionHeads(d);
   // Org rename: databases seeded before the sections/units restructure keep
   // the old demo names — bring them up to the new hierarchy.
   const u1 = d.prepare("SELECT name_en FROM units WHERE id = 'u1'").get() as { name_en: string } | undefined;
@@ -239,23 +239,27 @@ function seed(d: DatabaseSync) {
   insTeam.run("t3", "u2", "1", "m3", "Unit 1", "الوحدة الأولى");
   insTeam.run("t4", "u2", "2", "m4", "Unit 2", "الوحدة الثانية");
 
-  const insUser = d.prepare("INSERT INTO users (id, role, team_id, name_en, name_ar, streak, email) VALUES (?,?,?,?,?,?,?)");
+  const insUser = d.prepare("INSERT INTO users (id, role, team_id, section_id, name_en, name_ar, streak, email) VALUES (?,?,?,?,?,?,?,?)");
   const mail = deriveEmail;
-  insUser.run("s1", "senior", null, "Layla Al-Harbi", "ليلى الحربي", 0, mail("Layla Al-Harbi"));
-  insUser.run("m1", "manager", "t1", "Omar Hassan", "عمر حسن", 4, mail("Omar Hassan"));
-  insUser.run("m2", "manager", "t2", "Sara Nasser", "سارة ناصر", 6, mail("Sara Nasser"));
-  insUser.run("m3", "manager", "t3", "Khalid Amin", "خالد أمين", 2, mail("Khalid Amin"));
-  insUser.run("m4", "manager", "t4", "Noura Saleh", "نورة صالح", 8, mail("Noura Saleh"));
-  insUser.run("e1", "employee", "t1", "Yousef Adel", "يوسف عادل", 5, mail("Yousef Adel"));
-  insUser.run("e2", "employee", "t1", "Maha Tariq", "مها طارق", 3, mail("Maha Tariq"));
-  insUser.run("e3", "employee", "t1", "Fahad Zaki", "فهد زكي", 0, mail("Fahad Zaki"));
-  insUser.run("e4", "employee", "t2", "Reem Kamal", "ريم كمال", 7, mail("Reem Kamal"));
-  insUser.run("e5", "employee", "t2", "Ali Mansour", "علي منصور", 1, mail("Ali Mansour"));
-  insUser.run("e6", "employee", "t3", "Dana Fares", "دانة فارس", 4, mail("Dana Fares"));
-  insUser.run("e7", "employee", "t3", "Hassan Nabil", "حسن نبيل", 2, mail("Hassan Nabil"));
-  insUser.run("e8", "employee", "t4", "Amal Rashid", "أمل راشد", 9, mail("Amal Rashid"));
-  insUser.run("e9", "employee", "t4", "Ziad Karim", "زياد كريم", 0, mail("Ziad Karim"));
-  seedSectionHeads(d);
+  insUser.run("s1", "senior", null, null, " Department Head", "رئيس القسم", 0, mail("Department Head"));
+  insUser.run("h1", "section", null, "u1", "Rayan", "ريان", 0, deriveEmail("Faisal Al-Otaibi"));
+  insUser.run("h2", "section", null, "u2", "Tamam", "تمتم", 0, deriveEmail("Huda Al-Amri"));
+  insUser.run("m1", "manager", "t1","u1","Omar Hassan", "عمر حسن", 4, mail("Omar Hassan"));
+  insUser.run("m2", "manager", "t2","u1", "Sara Nasser", "سارة ناصر", 6, mail("Sara Nasser"));
+  insUser.run("m3", "manager", "t3", "u2","Khalid Amin", "خالد أمين", 2, mail("Khalid Amin"));
+  insUser.run("m4", "manager", "t4", "u2","Noura Saleh", "نورة صالح", 8, mail("Noura Saleh"));
+  insUser.run("e1", "employee", "t1",null, "Yousef Adel", "يوسف عادل", 5, mail("Yousef Adel"));
+  insUser.run("e2", "employee", "t1",null, "Maha Tariq", "مها طارق", 3, mail("Maha Tariq"));
+  insUser.run("e3", "employee", "t1",null, "Fahad Zaki", "فهد زكي", 0, mail("Fahad Zaki"));
+  insUser.run("e4", "employee", "t2",null, "Reem Kamal", "ريم كمال", 7, mail("Reem Kamal"));
+  insUser.run("e5", "employee", "t2",null, "Ali Mansour", "علي منصور", 1, mail("Ali Mansour"));
+  insUser.run("e6", "employee", "t3", null,"Dana Fares", "دانة فارس", 4, mail("Dana Fares"));
+  insUser.run("e7", "employee", "t3", null, "Hassan Nabil", "حسن نبيل", 2, mail("Hassan Nabil"));
+  insUser.run("e8", "employee", "t4", null,"Amal Rashid", "أمل راشد", 9, mail("Amal Rashid"));
+  insUser.run("e9", "employee", "t4", null,"Ziad Karim", "زياد كريم", 0, mail("Ziad Karim"));
+
+
+
 
   const insTask = d.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?,?)");
   const insUpd = d.prepare("INSERT INTO task_updates (task_id, ts, by_id, text_en, text_ar, status, progress) VALUES (?,?,?,?,?,?,?)");
@@ -348,15 +352,6 @@ function seed(d: DatabaseSync) {
     ago(0, 1));
 
   seedMeetings(d);
-}
-
-/* Section heads — one per section; they see every unit in their section. */
-function seedSectionHeads(d: DatabaseSync) {
-  const ins = d.prepare(
-    "INSERT INTO users (id, role, team_id, section_id, name_en, name_ar, streak, email) VALUES (?,?,?,?,?,?,?,?)",
-  );
-  ins.run("h1", "section", null, "u1", "Faisal Al-Otaibi", "فيصل العتيبي", 0, deriveEmail("Faisal Al-Otaibi"));
-  ins.run("h2", "section", null, "u2", "Huda Al-Amri", "هدى العمري", 0, deriveEmail("Huda Al-Amri"));
 }
 
 /* Demo Outlook calendar — meetings the Graph sync would pull from each
