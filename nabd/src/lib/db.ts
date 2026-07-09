@@ -48,7 +48,8 @@ function migrate(d: DatabaseSync) {
       progress INTEGER NOT NULL DEFAULT 0 CHECK (progress BETWEEN 0 AND 100),
       priority TEXT NOT NULL DEFAULT 'med' CHECK (priority IN ('high','med','low')),
       title_en TEXT NOT NULL, title_ar TEXT NOT NULL,
-      due TEXT, updated_at INTEGER NOT NULL
+      due TEXT, updated_at INTEGER NOT NULL,
+      created_at INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_tasks_owner ON tasks(owner_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_team ON tasks(team_id);
@@ -127,7 +128,8 @@ function migrate(d: DatabaseSync) {
       to_user TEXT NOT NULL REFERENCES users(id),
       start_ts INTEGER NOT NULL,
       end_date TEXT,
-      active INTEGER NOT NULL DEFAULT 1
+      active INTEGER NOT NULL DEFAULT 1,
+      scope TEXT NOT NULL DEFAULT 'all' CHECK (scope IN ('all','task'))
     );
     CREATE INDEX IF NOT EXISTS idx_delegations_from ON delegations(from_user, active);
     CREATE TABLE IF NOT EXISTS delegation_tasks (
@@ -141,6 +143,17 @@ function migrate(d: DatabaseSync) {
   const prefCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];
   if (!prefCols.some((c) => c.name === "pref_lang")) d.exec("ALTER TABLE users ADD COLUMN pref_lang TEXT");
   if (!prefCols.some((c) => c.name === "pref_theme")) d.exec("ALTER TABLE users ADD COLUMN pref_theme TEXT");
+  // Databases created before the creation-date release: backfill from the first update.
+  const taskCols = d.prepare("SELECT name FROM pragma_table_info('tasks')").all() as { name: string }[];
+  if (!taskCols.some((c) => c.name === "created_at")) d.exec("ALTER TABLE tasks ADD COLUMN created_at INTEGER");
+  d.exec(`
+    UPDATE tasks SET created_at = COALESCE(
+      (SELECT MIN(ts) FROM task_updates u WHERE u.task_id = tasks.id), updated_at
+    ) WHERE created_at IS NULL;
+  `);
+  // Databases created before per-task delegation lack delegations.scope.
+  const delCols = d.prepare("SELECT name FROM pragma_table_info('delegations')").all() as { name: string }[];
+  if (!delCols.some((c) => c.name === "scope")) d.exec("ALTER TABLE delegations ADD COLUMN scope TEXT NOT NULL DEFAULT 'all'");
   // Databases created before the Outlook-meetings release have an empty meetings table.
   const meetingCount = d.prepare("SELECT COUNT(*) AS c FROM meetings").get() as { c: number };
   const userCount = d.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number };
@@ -206,7 +219,7 @@ function seed(d: DatabaseSync) {
   insUser.run("e8", "employee", "t4", "Amal Rashid", "أمل راشد", 9, mail("Amal Rashid"));
   insUser.run("e9", "employee", "t4", "Ziad Karim", "زياد كريم", 0, mail("Ziad Karim"));
 
-  const insTask = d.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?)");
+  const insTask = d.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?,?)");
   const insUpd = d.prepare("INSERT INTO task_updates (task_id, ts, by_id, text_en, text_ar, status, progress) VALUES (?,?,?,?,?,?,?)");
   const insAudit = d.prepare("INSERT INTO audit_logs (task_id, changed_by, ts, field, old_value, new_value) VALUES (?,?,?,?,?,?)");
   const insNote = d.prepare("INSERT INTO task_notes (task_id, checklist_items) VALUES (?,?)");
@@ -236,7 +249,7 @@ function seed(d: DatabaseSync) {
   ];
   const insAssignee = d.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
   for (const [id, owner, team, status, progress, prio, en, arTitle, due, updatedAt, noteEn, noteAr] of rows) {
-    insTask.run(id, owner, team, status, progress, prio, en, arTitle, due, updatedAt);
+    insTask.run(id, owner, team, status, progress, prio, en, arTitle, due, updatedAt, updatedAt - 6 * DAY_MS);
     insUpd.run(id, updatedAt, owner, noteEn, noteAr, status, progress);
     insAssignee.run(id, owner);
   }

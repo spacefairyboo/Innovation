@@ -40,6 +40,7 @@ function mapTask(r: Record<string, unknown>, history: TaskUpdate[], assigneeIds:
     priority: r.priority as Priority,
     title: { en: r.title_en as string, ar: r.title_ar as string },
     due: (r.due as string) ?? null, updatedAt: Number(r.updated_at),
+    createdAt: Number(r.created_at ?? r.updated_at),
     history,
   };
 }
@@ -278,9 +279,9 @@ export function createTask(input: {
   if (!owner?.teamId) throw new Error("Assignee must belong to a team");
   const id = "k" + Math.random().toString(36).slice(2, 10);
   const now = Date.now();
-  db.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?)").run(
+  db.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(
     id, owner.id, owner.teamId, "pending", 0, input.priority,
-    input.title, input.title, input.due, now,
+    input.title, input.title, input.due, now, now,
   );
   const ins = db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
   for (const uid of assignees) ins.run(id, uid);

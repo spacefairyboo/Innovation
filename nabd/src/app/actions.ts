@@ -223,6 +223,70 @@ export async function startDelegationAction(delegateId: string, endDate: string 
   refresh();
 }
 
+/** Chat-created task: resolves the assignee name against the caller's authority. */
+export async function createTaskFromChat(input: {
+  title: string; assigneeName: string | null; due: string | null; priority: "high" | "med" | "low";
+}): Promise<{ assignee: { en: string; ar: string }; fellBack: boolean }> {
+  const { user } = await getSession();
+  const title = input.title.trim().slice(0, 120);
+  if (!title) throw new Error("Title required");
+  const due = input.due && /^\d{4}-\d{2}-\d{2}$/.test(input.due) ? input.due : null;
+  const priority = (["high", "med", "low"] as const).includes(input.priority) ? input.priority : "med";
+
+  // Employees create for themselves; managers for their team; senior for anyone.
+  const candidates = user.role === "senior"
+    ? repo.listUsers().filter((u) => u.teamId)
+    : user.role === "manager" && user.teamId
+      ? repo.teamMembers(user.teamId)
+      : [user];
+  const wanted = input.assigneeName?.trim().toLowerCase();
+  const match = wanted
+    ? candidates.find((u) =>
+        u.name.en.toLowerCase().split(/\s+/).includes(wanted) ||
+        u.name.ar.split(/\s+/).includes(input.assigneeName!.trim()) ||
+        u.name.en.toLowerCase().startsWith(wanted))
+    : null;
+  const assignee = match ?? user;
+
+  repo.createTask({ title, assigneeIds: [assignee.id], due, priority, createdBy: user.id });
+  refresh();
+  return { assignee: assignee.name, fellBack: !!wanted && !match };
+}
+
+/** Delegates one task to a colleague (assignee/manager/senior only). */
+export async function delegateTaskAction(taskId: string, delegateId: string, endDate: string | null) {
+  const { user, task } = await assertCanEdit(taskId);
+  const delegate = repo.getUser(delegateId);
+  if (!delegate || !delegate.teamId) throw new Error("Invalid delegate");
+  if (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) throw new Error("Invalid end date");
+  const owner = repo.getUser(task.ownerId)!;
+  if (delegate.id === owner.id) throw new Error("Task already belongs to them");
+
+  const { startTaskDelegation } = await import("@/lib/delegation");
+  startTaskDelegation(owner, delegate, taskId, endDate);
+
+  const { sendEmail } = await import("@/lib/mailer");
+  const until = endDate ? ` until ${endDate}` : "";
+  await sendEmail({
+    toUser: delegate,
+    kind: "delegation",
+    taskId,
+    subject: `"${task.title.en}" has been delegated to you`,
+    body: `Hello ${delegate.name.en.split(" ")[0]},\n\n${user.name.en} has delegated the task "${task.title.en}" to you${until}. You'll find it under My Tasks.\n\n${endDate ? `On ${endDate} it will be assigned back to ${owner.name.en.split(" ")[0]} automatically.` : `It will be assigned back when the delegation is ended.`}\n\n— Nabd, your team pulse`,
+  });
+  refresh();
+}
+
+/** Returns a single delegated task to its original owner. */
+export async function endTaskDelegationAction(taskId: string) {
+  await assertCanEdit(taskId);
+  const { taskDelegation, endDelegation } = await import("@/lib/delegation");
+  const d = taskDelegation(taskId);
+  if (!d || d.scope !== "task") return;
+  endDelegation(d.id);
+  refresh();
+}
+
 /** Ends the caller's active delegation and takes the tasks back. */
 export async function endDelegationAction() {
   const { user } = await getSession();

@@ -5,7 +5,7 @@
 import { notFound } from "next/navigation";
 import { TaskFullView } from "@/components/task-view";
 import type { AssigneeOption } from "@/components/tasks";
-import { getTask, getTeam, teamMembers } from "@/lib/repo";
+import { getTask, getTeam, listUsers, teamMembers } from "@/lib/repo";
 import { getSession } from "@/lib/session";
 import { toVM } from "@/lib/vm";
 
@@ -36,5 +36,10 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
 
   const backHref = user.role === "senior" ? `/teams/${task.teamId}` : "/tasks";
 
-  return <TaskFullView vm={toVM(task)} canEdit={canEdit} assignees={assignees} backHref={backHref} />;
+  // Anyone in the organization can cover a delegated task.
+  const colleagues: AssigneeOption[] = listUsers()
+    .filter((u) => u.teamId)
+    .map((u) => ({ id: u.id, name: u.name, teamName: getTeam(u.teamId!)!.name }));
+
+  return <TaskFullView vm={toVM(task)} canEdit={canEdit} assignees={assignees} colleagues={colleagues} backHref={backHref} />;
 }
