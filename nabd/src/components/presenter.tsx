@@ -203,7 +203,7 @@ export function PresenterAvatar({ speaking, fallback }: {
   }, []);
 
   return (
-    <div className="relative w-40 h-44 md:w-48 md:h-52 shrink-0 select-none" aria-hidden>
+    <div className="relative w-52 h-60 md:w-72 md:h-80 shrink-0 select-none" aria-hidden>
       <span
         className="absolute inset-x-2 top-2 bottom-4 rounded-full pointer-events-none"
         style={{
