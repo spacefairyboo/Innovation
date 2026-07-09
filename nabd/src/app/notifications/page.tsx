@@ -4,11 +4,11 @@
 import { EmailBriefingButton } from "@/components/digest";
 import { NotificationList } from "@/components/notifications";
 import { Icon } from "@/components/icons";
-import { notificationViews } from "@/lib/briefing";
+import { notificationViews } from "@/server/services/briefing.service";
 import { makeT } from "@/lib/i18n";
-import { emailsFor, runReminderSweep } from "@/lib/mailer";
-import { listUsers } from "@/lib/repo";
-import { getSession } from "@/lib/session";
+import { emailsFor, runReminderSweep } from "@/server/services/mailer.service";
+import { listUsers } from "@/server/repositories";
+import { getSession } from "@/server/auth/session";
 import { formatStamp, type Localized } from "@/lib/types";
 
 export default async function NotificationsPage() {

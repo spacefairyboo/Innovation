@@ -4,10 +4,10 @@
 import { Icon } from "@/components/icons";
 import { DelegationCard, PreferencesCard, type DelegationView } from "@/components/profile";
 import { Avatar } from "@/components/ui";
-import { activeDelegationFrom, activeDelegationsTo } from "@/lib/delegation";
+import { activeDelegationFrom, activeDelegationsTo } from "@/server/repositories/delegation.repo";
 import { makeT } from "@/lib/i18n";
-import { getTeam, getUser, listUsers } from "@/lib/repo";
-import { getSession } from "@/lib/session";
+import { getTeam, getUser, listUsers } from "@/server/repositories";
+import { getSession } from "@/server/auth/session";
 
 export default async function ProfilePage() {
   const { user, lang, theme } = await getSession();

@@ -5,9 +5,9 @@
 import { notFound } from "next/navigation";
 import { TaskFullView } from "@/components/task-view";
 import type { AssigneeOption } from "@/components/tasks";
-import { getTask, getTeam, listUsers, overseesTeam, teamMembers } from "@/lib/repo";
-import { getSession } from "@/lib/session";
-import { toVM } from "@/lib/vm";
+import { getTask, getTeam, listUsers, overseesTeam, teamMembers } from "@/server/repositories";
+import { getSession } from "@/server/auth/session";
+import { toVM } from "@/server/vm";
 
 export default async function TaskPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

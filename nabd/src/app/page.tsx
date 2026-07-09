@@ -7,13 +7,13 @@ import { ChartCard, Donut, Sparkline, StatusTable, TeamBars, TeamBarsTable } fro
 import { AttentionList, ExportCsvButton, type AttentionItem } from "@/components/dashboard-widgets";
 import { Avatar, StatusChip } from "@/components/ui";
 import { Icon } from "@/components/icons";
-import { buildAdvisorPlan } from "@/lib/advisor";
-import { insightFor } from "@/lib/briefing";
+import { buildAdvisorPlan } from "@/server/services/advisor.service";
+import { insightFor } from "@/server/services/briefing.service";
 import { makeT } from "@/lib/i18n";
-import { getTeam, getUser, listTeams, overseesTeam, scopeTasks, teamMembers, teamTasks } from "@/lib/repo";
-import { getSession } from "@/lib/session";
+import { getTeam, getUser, listTeams, overseesTeam, scopeTasks, teamMembers, teamTasks } from "@/server/repositories";
+import { getSession } from "@/server/auth/session";
 import { HEALTH_META, countStatuses, effStatus, teamHealth } from "@/lib/types";
-import { csvRows, doneThisWeekCount, greetingKey, recentActivity, weekTrend } from "@/lib/vm";
+import { csvRows, doneThisWeekCount, greetingKey, recentActivity, weekTrend } from "@/server/vm";
 import { TeamGlyph } from "@/components/team-card";
 
 function CompletionRing({ pct, label }: { pct: number; label: string }) {

@@ -9,12 +9,12 @@
    When an action calls for an email, the Advisor compiles the full draft —
    recipient, subject, and body — ready to copy or open in a mail client. */
 
-import { getTeam, getUser, listTeams, sectionTeams, teamMembers, teamTasks, scopeTasks } from "./repo";
-import type { Team } from "./types";
+import { getTeam, getUser, listTeams, sectionTeams, teamMembers, teamTasks, scopeTasks } from "../repositories";
+import type { Team } from "@/lib/types";
 import {
   DAY_MS, type Lang, type Task, type User,
   countStatuses, effStatus, isStale, teamHealth, todayISO,
-} from "./types";
+} from "@/lib/types";
 
 export interface EmailDraft {
   toName: string;

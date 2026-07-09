@@ -6,8 +6,8 @@ import { notFound } from "next/navigation";
 import { TeamCard } from "@/components/team-card";
 import { Icon } from "@/components/icons";
 import { makeT } from "@/lib/i18n";
-import { getUser, listTeams, listUnits, teamMembers, teamTasks } from "@/lib/repo";
-import { getSession } from "@/lib/session";
+import { getUser, listTeams, listUnits, teamMembers, teamTasks } from "@/server/repositories";
+import { getSession } from "@/server/auth/session";
 import { HEALTH_META, countStatuses, teamHealth } from "@/lib/types";
 
 export default async function TeamsPage() {

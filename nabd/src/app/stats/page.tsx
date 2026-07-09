@@ -12,10 +12,10 @@ import { ExportCsvButton } from "@/components/dashboard-widgets";
 import { Icon } from "@/components/icons";
 import { Avatar } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
-import { getUser, listTeams, scopeTasks, teamMembers, teamTasks, userTasks } from "@/lib/repo";
-import { getSession } from "@/lib/session";
+import { getUser, listTeams, scopeTasks, teamMembers, teamTasks, userTasks } from "@/server/repositories";
+import { getSession } from "@/server/auth/session";
 import { DAY_MS, HEALTH_META, countStatuses, teamHealth, type Task, type User } from "@/lib/types";
-import { completionTrend, csvRows } from "@/lib/vm";
+import { completionTrend, csvRows } from "@/server/vm";
 
 const avgProgress = (tasks: Task[]): number =>
   tasks.length ? Math.round(tasks.reduce((s, t) => s + t.progress, 0) / tasks.length) : 0;

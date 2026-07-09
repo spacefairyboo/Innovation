@@ -8,7 +8,7 @@
    organizer, start/end) maps 1:1 onto the `meetings` table. The demo
    seeds a realistic calendar instead. */
 
-import { getDB } from "./db";
+import { getDB } from "../db/connection";
 
 export interface Meeting {
   id: number;

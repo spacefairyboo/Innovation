@@ -8,7 +8,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useI18n, useToast } from "./providers";
 import { Icon } from "./icons";
-import type { AdvisorAction } from "@/lib/advisor";
+import type { AdvisorAction } from "@/server/services/advisor.service";
 
 const URGENCY_STYLE: Record<AdvisorAction["urgency"], { labelKey: string; color: string; bg: string }> = {
   critical: { labelKey: "urgency_critical", color: "var(--st-blocked)", bg: "var(--st-blocked-bg)" },

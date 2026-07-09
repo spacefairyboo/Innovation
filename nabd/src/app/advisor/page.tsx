@@ -3,9 +3,9 @@
 
 import { AdvisorActionCard } from "@/components/advisor";
 import { Icon } from "@/components/icons";
-import { buildAdvisorPlan } from "@/lib/advisor";
+import { buildAdvisorPlan } from "@/server/services/advisor.service";
 import { makeT } from "@/lib/i18n";
-import { getSession } from "@/lib/session";
+import { getSession } from "@/server/auth/session";
 
 export default async function AdvisorPage() {
   const { user, lang } = await getSession();

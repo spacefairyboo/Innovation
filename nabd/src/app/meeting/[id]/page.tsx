@@ -5,8 +5,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { makeT } from "@/lib/i18n";
-import { getMeeting } from "@/lib/meetings";
-import { getSession } from "@/lib/session";
+import { getMeeting } from "@/server/repositories/meeting.repo";
+import { getSession } from "@/server/auth/session";
 
 export default async function MeetingPage({ params }: {
   params: Promise<{ id: string }>;

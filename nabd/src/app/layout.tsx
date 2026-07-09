@@ -3,11 +3,11 @@ import "./globals.css";
 import { AppProviders } from "@/components/providers";
 import { Shell, type ShellUser } from "@/components/shell";
 import type { PaletteItem } from "@/components/palette";
-import { getSession } from "@/lib/session";
+import { getSession } from "@/server/auth/session";
 import { makeT } from "@/lib/i18n";
-import { runDelegationSweep } from "@/lib/delegation";
-import { runReminderSweep } from "@/lib/mailer";
-import { getTeam, listTeams, listUsers, scopeTasks, unreadCount } from "@/lib/repo";
+import { runDelegationSweep } from "@/server/services/delegation.service";
+import { runReminderSweep } from "@/server/services/mailer.service";
+import { getTeam, listTeams, listUsers, scopeTasks, unreadCount } from "@/server/repositories";
 import { STATUS_META, effStatus, type Lang, type User } from "@/lib/types";
 
 export const metadata: Metadata = {

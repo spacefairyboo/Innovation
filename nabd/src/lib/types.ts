@@ -112,6 +112,18 @@ export interface StatusCounts {
   total: number;
 }
 
+/** A live handover of tasks between two users (all tasks or a single one). */
+export interface Delegation {
+  id: number;
+  fromUser: string;
+  toUser: string;
+  startTs: number;
+  endDate: string | null; // YYYY-MM-DD; null = until ended manually
+  active: boolean;
+  scope: "all" | "task";
+  taskCount: number;
+}
+
 export type NotifKind = "blocked" | "delayed" | "stale" | "done";
 
 export interface Notification {
@@ -125,8 +137,8 @@ export interface Notification {
   read: boolean;
 }
 
-export const DAY_MS = 86_400_000;
-export const STALE_AFTER_DAYS = 3;
+export { DAY_MS, STALE_AFTER_DAYS } from "./constants";
+import { DAY_MS, STALE_AFTER_DAYS } from "./constants";
 
 export const STATUS_ORDER: EffStatus[] = ["done", "ontrack", "pending", "delayed", "blocked"];
 

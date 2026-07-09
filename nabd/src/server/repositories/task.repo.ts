@@ -1,30 +1,15 @@
-/* Repository layer — the only module that talks to the database.
-   All functions return plain serializable objects safe to pass to
-   client components. */
+/* Task repository — tasks, their assignees, update history, audit log,
+   and the private note-to-self checklist. Pure data access: multi-statement
+   writes run inside transactions; every statement is parameterized. */
 
-import { getDB, withTransaction } from "./db";
-import {
-  DAY_MS, type ActivityEvent, type ChecklistItem, type FieldChange,
-  type Notification, type Priority, type Task, type TaskStatus,
-  type TaskUpdate, type Team, type Unit, type User,
-  effStatus, isStale,
-} from "./types";
+import { getDB, withTransaction } from "../db/connection";
+import { getUser } from "./org.repo";
+import type {
+  ActivityEvent, ChecklistItem, FieldChange, Priority,
+  Task, TaskStatus, TaskUpdate,
+} from "@/lib/types";
 
-/* ---------- row mappers ---------- */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-const mapUnit = (r: any): Unit => ({ id: r.id, emoji: r.emoji, name: { en: r.name_en, ar: r.name_ar } });
-const mapTeam = (r: any): Team => ({
-  id: r.id, unitId: r.unit_id, emoji: r.emoji, managerId: r.manager_id,
-  name: { en: r.name_en, ar: r.name_ar },
-});
-const mapUser = (r: any): User => ({
-  id: r.id, role: r.role, teamId: r.team_id ?? null,
-  sectionId: r.section_id ?? null,
-  name: { en: r.name_en, ar: r.name_ar }, streak: Number(r.streak),
-  email: r.email ?? null,
-  prefLang: r.pref_lang === "ar" || r.pref_lang === "en" ? r.pref_lang : null,
-  prefTheme: r.pref_theme === "dark" || r.pref_theme === "light" ? r.pref_theme : null,
-});
 const mapUpdate = (r: any): TaskUpdate => ({
   ts: Number(r.ts), byId: r.by_id ?? null, text: { en: r.text_en, ar: r.text_ar },
   status: r.status, progress: Number(r.progress),
@@ -77,40 +62,10 @@ function tasksFromRows(rows: Record<string, unknown>[]): Task[] {
     return mapTask(r, byTask.get(id) ?? [], ordered);
   });
 }
-
-/* ---------- reads ---------- */
-export const listUnits = (): Unit[] =>
-  (getDB().prepare("SELECT * FROM units").all() as Record<string, unknown>[]).map(mapUnit);
-
-export const listTeams = (): Team[] =>
-  (getDB().prepare("SELECT * FROM teams").all() as Record<string, unknown>[]).map(mapTeam);
-
-export const listUsers = (): User[] =>
-  (getDB().prepare("SELECT * FROM users").all() as Record<string, unknown>[]).map(mapUser);
-
-export const getUser = (id: string): User | null => {
-  const r = getDB().prepare("SELECT * FROM users WHERE id = ?").get(id);
-  return r ? mapUser(r) : null;
-};
-
-export const getTeam = (id: string): Team | null => {
-  const r = getDB().prepare("SELECT * FROM teams WHERE id = ?").get(id);
-  return r ? mapTeam(r) : null;
-};
-
-export const getUnit = (id: string): Unit | null => {
-  const r = getDB().prepare("SELECT * FROM units WHERE id = ?").get(id);
-  return r ? mapUnit(r) : null;
-};
-
 export const getTask = (id: string): Task | null => {
   const r = getDB().prepare("SELECT * FROM tasks WHERE id = ?").get(id) as Record<string, unknown> | undefined;
   return r ? tasksFromRows([r])[0] : null;
 };
-
-export const teamMembers = (teamId: string): User[] =>
-  (getDB().prepare("SELECT * FROM users WHERE team_id = ?").all(teamId) as Record<string, unknown>[]).map(mapUser);
-
 export const userTasks = (userId: string): Task[] =>
   tasksFromRows(getDB().prepare(`
     SELECT DISTINCT t.* FROM tasks t
@@ -124,34 +79,6 @@ export const teamTasks = (teamId: string): Task[] =>
 
 export const allTasks = (): Task[] =>
   tasksFromRows(getDB().prepare("SELECT * FROM tasks ORDER BY updated_at DESC").all() as Record<string, unknown>[]);
-
-/** The units (teams table) belonging to one section. */
-export const sectionTeams = (sectionId: string): Team[] =>
-  listTeams().filter((x) => x.unitId === sectionId);
-
-/** All tasks across a section's units. */
-export const sectionTasks = (sectionId: string): Task[] => {
-  const ids = sectionTeams(sectionId).map((x) => x.id);
-  return allTasks().filter((x) => ids.includes(x.teamId));
-};
-
-/** Everything a user is allowed to see: senior → all sections, section head →
-    their section's units, unit head → their unit, member → own tasks only. */
-export function scopeTasks(user: User): Task[] {
-  if (user.role === "senior") return allTasks();
-  if (user.role === "section" && user.sectionId) return sectionTasks(user.sectionId);
-  if (user.role === "manager" && user.teamId) return teamTasks(user.teamId);
-  return userTasks(user.id);
-}
-
-/** Does this user's role give them authority over the given unit's tasks? */
-export function overseesTeam(user: User, teamId: string): boolean {
-  if (user.role === "senior") return true;
-  if (user.role === "section" && user.sectionId) return getTeam(teamId)?.unitId === user.sectionId;
-  if (user.role === "manager") return user.teamId === teamId;
-  return false;
-}
-
 /* ---------- audit log ---------- */
 function logAudit(taskId: string, changedBy: string, ts: number, change: FieldChange): void {
   getDB().prepare(
@@ -332,47 +259,4 @@ export function deleteTask(taskId: string): void {
     db.prepare("DELETE FROM task_assignees WHERE task_id = ?").run(taskId);
     db.prepare("DELETE FROM tasks WHERE id = ?").run(taskId);
   });
-}
-
-export function bumpStreak(userId: string): void {
-  getDB().prepare("UPDATE users SET streak = streak + 1 WHERE id = ?").run(userId);
-}
-
-export function saveUserPrefs(userId: string, prefs: { lang?: "en" | "ar"; theme?: "light" | "dark" }): void {
-  const db = getDB();
-  if (prefs.lang) db.prepare("UPDATE users SET pref_lang = ? WHERE id = ?").run(prefs.lang, userId);
-  if (prefs.theme) db.prepare("UPDATE users SET pref_theme = ? WHERE id = ?").run(prefs.theme, userId);
-}
-
-/* ---------- notifications (derived from live data; read-state persisted) ---------- */
-export function buildNotifications(user: User): Notification[] {
-  const db = getDB();
-  const readRows = db.prepare("SELECT notif_id FROM notif_reads WHERE user_id = ?").all(user.id) as { notif_id: string }[];
-  const read = new Set(readRows.map((r) => r.notif_id));
-  const out: Notification[] = [];
-  for (const task of scopeTasks(user)) {
-    const eff = effStatus(task);
-    const base = { taskId: task.id, ts: task.updatedAt, whoId: task.ownerId, teamId: task.teamId };
-    if (eff === "blocked") out.push({ id: `nb_${task.id}`, kind: "blocked", read: read.has(`nb_${task.id}`), ...base });
-    if (eff === "delayed") out.push({ id: `nd_${task.id}`, kind: "delayed", read: read.has(`nd_${task.id}`), ...base });
-    if (user.role === "employee" && isStale(task)) {
-      out.push({
-        id: `ns_${task.id}`, kind: "stale", read: read.has(`ns_${task.id}`),
-        staleDays: Math.floor((Date.now() - task.updatedAt) / DAY_MS), ...base,
-      });
-    }
-    if (user.role !== "employee" && task.status === "done" && Date.now() - task.updatedAt < 2 * DAY_MS) {
-      out.push({ id: `nk_${task.id}`, kind: "done", read: read.has(`nk_${task.id}`), ...base });
-    }
-  }
-  return out.sort((a, b) => b.ts - a.ts);
-}
-
-export const unreadCount = (user: User): number =>
-  buildNotifications(user).filter((nn) => !nn.read).length;
-
-export function markAllRead(user: User): void {
-  const db = getDB();
-  const ins = db.prepare("INSERT OR IGNORE INTO notif_reads (user_id, notif_id) VALUES (?,?)");
-  for (const nn of buildNotifications(user)) ins.run(user.id, nn.id);
 }

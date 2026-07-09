@@ -6,90 +6,125 @@
 is **Node.js 22 running inside Next.js 16** (App Router). Server components
 render pages on the server, and every mutation goes through **Server Actions**
 — typed TypeScript functions that run only on the server and are invoked from
-the browser like RPC calls. This replaces a hand-rolled REST/JSON API: the
-"API surface" is `src/app/actions.ts`, and Next.js handles transport,
-serialization, and CSRF-safe invocation.
+the browser like RPC calls. This replaces a hand-rolled REST/JSON API: Next.js
+handles transport, serialization, and CSRF-safe invocation.
 
 ```
-Browser (React 19 client components)
-  │  render                     │  mutate
-  ▼                             ▼
-Server Components (src/app/**/page.tsx)     Server Actions (src/app/actions.ts)
-  │            reads                          │  validate session + input
-  ▼                                           ▼
-             Repository layer (src/lib/repo.ts, delegation.ts, …)
-                                │
-                                ▼
-                 SQLite via node:sqlite (src/lib/db.ts)
-                        data/nabd.db (WAL)
+Browser (React 19 client components in src/components)
+  │  render                              │  mutate
+  ▼                                      ▼
+Server Components                 src/app/actions.ts (stable API facade)
+(src/app/**/page.tsx)                    │
+  │                               src/server/actions/*  ← controllers:
+  │  reads                          session + input validation (guards,
+  ▼                                 server/validation.ts)
+src/server/repositories  ◄──────  src/server/services/*  ← business logic:
+(SQL, one module per aggregate)    access rules, delegation, mailer,
+  │                                briefing, advisor
+  ▼
+src/server/db/connection.ts  →  SQLite (node:sqlite), data/nabd.db (WAL)
 ```
 
 ## Folder standards
 
 ```
-nabd/
-├── src/
-│   ├── app/                  # Routes (Next.js App Router) — one folder per URL
-│   │   ├── actions.ts        # ★ The API layer: every mutation, session-checked
-│   │   ├── layout.tsx        # Shell, palette index, lazy background sweeps
-│   │   ├── page.tsx          # Dashboard
-│   │   ├── tasks/ teams/ task/[id]/ meeting/[id]/ calendar/
-│   │   ├── advisor/ stats/ podcast/ notifications/ profile/
-│   │   └── globals.css       # Design tokens + Tailwind v4
-│   ├── components/           # Client components ("use client") — UI only,
-│   │   │                     #   never touch the database directly
-│   │   ├── tasks.tsx task-view.tsx profile.tsx podcast.tsx presenter.tsx …
-│   │   └── providers.tsx     # i18n + toast contexts
-│   └── lib/                  # ★ The backend: server-side domain modules
-│       ├── db.ts             # Connection, PRAGMAs, migrations, seed, withTransaction
-│       ├── repo.ts           # Repository: the ONLY module issuing SQL for domain data
-│       ├── delegation.ts     # Delegation domain logic (transactional)
-│       ├── inbox.ts meetings.ts mailer.ts briefing.ts advisor.ts value.ts
-│       ├── session.ts        # Cookie session (swap for Auth.js in production)
-│       ├── types.ts i18n.ts nlp.ts parser.ts vm.ts   # shared/isomorphic
-│       └── (client-safe modules never import db.ts)
-├── public/models/            # 3D presenter avatar (GLB)
-└── data/nabd.db              # SQLite database (gitignored, auto-created)
+nabd/src/
+├── app/                       # Routes (framework-defined) — one folder per URL
+│   ├── actions.ts             # ★ Mutation API facade — what clients import
+│   └── …/page.tsx             # Server-rendered pages (read via repositories)
+├── components/                # Client components ("use client") — UI only;
+│                              #   never touch the database directly
+├── lib/                       # Shared / isomorphic code (safe on both sides)
+│   ├── types.ts               # Domain models/entities
+│   ├── constants.ts           # Domain constants and whitelists
+│   ├── i18n.ts                # Bilingual dictionary (en + ar)
+│   ├── nlp.ts parser.ts       # Natural-language extraction (chat + email)
+│   └── value.ts               # High-value scoring (pure)
+└── server/                    # ★ The backend
+    ├── config.ts              # Env configuration — the only process.env reader
+    ├── logger.ts              # Leveled, scoped logger (LOG_LEVEL)
+    ├── validation.ts          # Input validation helpers for the API boundary
+    ├── vm.ts                  # View-model builders (serializable page props)
+    ├── auth/session.ts        # Cookie session (swap for Auth.js in production)
+    ├── db/
+    │   ├── connection.ts      # Single handle, PRAGMAs, withTransaction, shutdown
+    │   ├── migrations.ts      # Idempotent startup migrations
+    │   └── seed.ts            # Demo data + resetDB
+    ├── repositories/          # Data access — the only SQL in the codebase
+    │   ├── index.ts           # Facade the route layer imports
+    │   ├── org.repo.ts        # Sections, units, users, preferences
+    │   ├── task.repo.ts       # Tasks, history, audit log, checklists
+    │   ├── delegation.repo.ts # Delegation rows + task moves
+    │   ├── email.repo.ts      # The outbox
+    │   ├── inbox.repo.ts      # AI mail-scanner suggestions
+    │   └── meeting.repo.ts    # Outlook calendar events
+    ├── services/              # Business logic on top of repositories
+    │   ├── access.service.ts  # Visibility hierarchy + derived notifications
+    │   ├── delegation.service.ts  # Handover orchestration + expiry sweep
+    │   ├── mailer.service.ts  # SMTP + stale-task reminder sweep
+    │   ├── briefing.service.ts    # The spoken narrative + insights
+    │   └── advisor.service.ts # Per-role prioritized plans + email drafts
+    └── actions/               # Controllers ("use server") — thin, validated
+        ├── guards.ts          # Shared authorization + sanitizers
+        ├── task.actions.ts    # CRUD, check-in, chat-created tasks
+        ├── delegation.actions.ts
+        ├── inbox.actions.ts
+        ├── profile.actions.ts # Identity + persisted preferences
+        └── system.actions.ts  # Notifications, digest, demo reset
 ```
 
-Conventions enforced across the codebase:
+Layering rules enforced across the codebase:
 
-- **Layering** — pages read through `repo.ts`; mutations go through
-  `actions.ts`; client components receive plain serializable view-models
-  (`vm.ts`) and never import server modules.
-- **Authorization at the boundary** — every server action re-derives the
-  session and re-checks authority (`overseesTeam`, `vetAssignees`); nothing
-  trusts the client.
-- **Validation at the boundary** — server actions whitelist enums, clamp
-  numbers, bound string lengths, and regex-check dates before anything
+- **Pages** read through the repositories facade; **mutations** go through
+  `app/actions.ts` → controllers → services/repositories.
+- **Client components** receive plain serializable view-models (`server/vm.ts`)
+  and import only the actions facade — never server modules (type-only
+  imports excepted).
+- **Authorization at the boundary** — every controller re-derives the session
+  and re-checks authority (`guards.ts`, `access.service.ts`).
+- **Validation at the boundary** — `server/validation.ts` whitelists enums,
+  clamps numbers, bounds strings, and regex-checks dates before anything
   reaches SQL.
-- **Bilingual by construction** — every user-facing string lives in
-  `i18n.ts` (en + ar); domain data carries `Localized {en, ar}` pairs.
+- **Bilingual by construction** — user-facing strings live in `lib/i18n.ts`;
+  domain data carries `Localized {en, ar}` pairs.
 
 ## Database connectivity
 
-`src/lib/db.ts` owns the connection (a single cached handle per process):
+`server/db/connection.ts` owns the single cached handle:
 
 - `PRAGMA journal_mode = WAL` — concurrent readers during writes
 - `PRAGMA foreign_keys = ON` — referential integrity enforced by the engine
-- `PRAGMA busy_timeout = 5000` — parallel server-action writes queue rather
-  than fail
+- `PRAGMA busy_timeout = 5000` — parallel writes queue rather than fail
 - `withTransaction(fn)` — multi-statement writes (task create/update/delete,
   delegation start/end) are atomic; nested calls join the outer transaction
-- **Migrations** run idempotently on startup: schema is created with
-  `IF NOT EXISTS`, additive columns via guarded `ALTER TABLE`s, and the one
-  breaking change (the section-head role) via a guarded table rebuild —
-  existing databases upgrade in place, no tooling required
-- All statements are **parameterized** (`?` placeholders) — no string-built SQL
+- Initialization failures are logged and the handle is discarded (no
+  half-migrated connection survives); the handle closes on process exit
+- **Migrations** (`db/migrations.ts`) run idempotently on startup: `IF NOT
+  EXISTS` schema, guarded `ALTER TABLE`s, and one guarded table rebuild —
+  existing databases upgrade in place with no tooling
+- Covering **indexes** on every hot lookup (tasks by owner/team, updates and
+  audit by task, delegations by both parties, reminder dedup by task+kind)
+- All statements are **parameterized** — no string-built SQL anywhere
 
-Swapping SQLite for Postgres/MySQL means reimplementing `db.ts`/`repo.ts`
-against the new driver; nothing above the repository layer changes.
+Swapping SQLite for Postgres/MySQL means reimplementing `server/db/` and the
+repositories against the new driver; services, actions, and pages don't change.
+
+## Configuration
+
+`server/config.ts` is the only module that reads `process.env`:
+
+| Variable | Purpose |
+|---|---|
+| `DATA_DIR` | SQLite location (default `./data`) |
+| `SMTP_HOST/PORT/USER/PASS/FROM` | Real email delivery (outbox works without) |
+| `OUTLOOK_TENANT_ID/CLIENT_ID/CLIENT_SECRET` | Microsoft Graph mail + calendar sync |
+| `LOG_LEVEL` | `debug`/`info`/`warn`/`error` (default `info`) |
 
 ## External integrations
 
 | Integration | Module | Production hookup |
 |---|---|---|
-| Email sending | `lib/mailer.ts` | `SMTP_HOST/PORT/USER/PASS/FROM` (nodemailer); every mail also lands in the in-app outbox |
-| Outlook mail scan | `lib/inbox.ts` | Microsoft Graph `/messages` with `OUTLOOK_*` credentials (demo inbox seeded) |
-| Outlook calendar | `lib/meetings.ts` | Microsoft Graph `calendarView` (demo calendar seeded) |
+| Email sending | `services/mailer.service.ts` | SMTP via nodemailer; every mail also lands in the in-app outbox |
+| Outlook mail scan | `repositories/inbox.repo.ts` + `lib/nlp.ts` | Microsoft Graph `/messages` (demo inbox seeded) |
+| Outlook calendar | `repositories/meeting.repo.ts` | Microsoft Graph `calendarView` (demo calendar seeded) |
 | Speech | client-side Web Speech API | on-device; nothing uploaded |
