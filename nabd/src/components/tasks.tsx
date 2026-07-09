@@ -27,6 +27,20 @@ export interface TaskVM {
   activity: ActivityEvent[];
   checklist: ChecklistItem[];
   value: TaskValue;
+  /** Set while the task sits with a delegate. */
+  delegation: { fromName: Localized; toName: Localized; endDate: string | null; scope: "all" | "task" } | null;
+}
+
+/** "Covering: Yousef → Maha" — shown wherever a delegated task appears. */
+export function DelegationChip({ delegation }: { delegation: TaskVM["delegation"] }) {
+  const { t, lang } = useI18n();
+  if (!delegation) return null;
+  return (
+    <span className="chip bg-accent-soft text-primary" title={delegation.endDate ? `${t("delegation_active_until")} ${delegation.endDate}` : undefined}>
+      <Icon name="user-check" size={12} />
+      {t("delegated_chip")}: {delegation.fromName[lang]} {lang === "ar" ? "←" : "→"} {delegation.toName[lang]}
+    </span>
+  );
 }
 
 /** The gold high-value flag, with the AI's reasoning in the tooltip. */
@@ -45,6 +59,57 @@ export function ValueChip({ value }: { value: TaskValue }) {
 }
 
 export interface AssigneeOption { id: string; name: Localized; teamName: Localized }
+
+/** Searchable multi-select over people — used by the Update dialog and the task page. */
+export function AssigneePicker({ options, selected, onToggle, disabled }: {
+  options: AssigneeOption[];
+  selected: string[];
+  onToggle: (id: string) => void;
+  disabled?: boolean;
+}) {
+  const { t, lang } = useI18n();
+  const [q, setQ] = useState("");
+  const needle = q.trim().toLowerCase();
+  const filtered = needle
+    ? options.filter((a) =>
+        `${a.name.en} ${a.name.ar} ${a.teamName.en} ${a.teamName.ar}`.toLowerCase().includes(needle))
+    : options;
+  return (
+    <div className="border border-line rounded-xl p-2 bg-surface-2">
+      <div className="relative mb-1.5">
+        <Icon name="search" size={14} className="absolute top-1/2 -translate-y-1/2 start-2.5 text-ink-3 pointer-events-none" />
+        <input
+          className="w-full border border-line rounded-lg ps-8 pe-3 py-1.5 bg-surface text-ink text-sm focus:border-accent"
+          placeholder={t("assignee_search")}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      </div>
+      <div className="grid sm:grid-cols-2 gap-0.5 max-h-48 overflow-y-auto">
+        {filtered.map((a) => (
+          <label
+            key={a.id}
+            className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm cursor-pointer transition
+              ${selected.includes(a.id) ? "bg-accent-soft" : "hover:bg-surface"}`}
+          >
+            <input
+              type="checkbox"
+              className="w-4 h-4 accent-[var(--primary)] cursor-pointer"
+              checked={selected.includes(a.id)}
+              disabled={disabled}
+              onChange={() => onToggle(a.id)}
+            />
+            <span className="flex-1 min-w-0 truncate">{a.name[lang]}</span>
+            <span className="text-[0.68rem] text-ink-3 truncate">{a.teamName[lang]}</span>
+          </label>
+        ))}
+        {filtered.length === 0 && (
+          <div className="text-xs text-ink-3 px-2.5 py-2 sm:col-span-2">{t("no_people_match")}</div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const PRIO_META: Record<Priority, { labelKey: string; cls: string }> = {
   high: { labelKey: "prio_high", cls: "text-[var(--st-blocked)]" },
@@ -97,6 +162,7 @@ export function TaskRow({ vm, mine, canEdit, canNudge, showTeam, onOpen }: {
             )}
           </span>
           {showTeam && <span>{vm.teamName[lang]}</span>}
+          {vm.delegation && <DelegationChip delegation={vm.delegation} />}
           {due.text && (
             <span className={`inline-flex items-center gap-1 ${due.overdue ? "text-[var(--st-delayed)] font-semibold" : ""}`}>
               <Icon name="calendar" size={12} /> {due.text}
@@ -242,6 +308,48 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
       )}
       {editing && <TaskModal vm={editing} assignees={assignees} onClose={() => setEditing(null)} />}
     </div>
+  );
+}
+
+/** My Tasks with a separate tab for tasks that arrived through delegation. */
+export function TaskTabs({ myVms, delegatedVms, ...listProps }: {
+  myVms: TaskVM[];
+  delegatedVms: TaskVM[];
+  mine?: boolean;
+  withFilters?: boolean;
+  valueFilter?: boolean;
+  assignees?: AssigneeOption[];
+  initialQuery?: string;
+}) {
+  const { t } = useI18n();
+  const [tab, setTab] = useState<"mine" | "delegated">("mine");
+  if (!delegatedVms.length) return <TaskListSection vms={myVms} {...listProps} />;
+
+  const tabs = [
+    { id: "mine" as const, label: t("tab_my_tasks"), count: myVms.length, icon: "clipboard-list" },
+    { id: "delegated" as const, label: t("tab_delegated"), count: delegatedVms.length, icon: "user-check" },
+  ];
+  return (
+    <>
+      <div className="flex gap-1.5 mb-3" role="tablist">
+        {tabs.map((x) => (
+          <button
+            key={x.id}
+            role="tab"
+            aria-selected={tab === x.id}
+            className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold cursor-pointer transition border"
+            style={tab === x.id
+              ? { background: "var(--accent-soft)", color: "var(--primary)", borderColor: "var(--accent)" }
+              : { background: "var(--surface-2)", color: "var(--ink-2)", borderColor: "var(--line)" }}
+            onClick={() => setTab(x.id)}
+          >
+            <Icon name={x.icon} size={14} /> {x.label}
+            <span className="chip bg-surface border border-line text-ink-2">{x.count}</span>
+          </button>
+        ))}
+      </div>
+      <TaskListSection key={tab} vms={tab === "mine" ? myVms : delegatedVms} {...listProps} />
+    </>
   );
 }
 
@@ -484,23 +592,7 @@ function TaskModal({ vm, assignees, onClose }: {
           <div>
             <div className="text-xs font-semibold text-ink-2 mb-1">{t("assignees")}</div>
             <p className="m-0 mb-2 text-xs text-ink-3">{t("assignees_sub")}</p>
-            <div className="border border-line rounded-xl p-2 bg-surface-2 grid sm:grid-cols-2 gap-0.5">
-              {assignees.map((a) => (
-                <label
-                  key={a.id}
-                  className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm cursor-pointer transition
-                    ${assigneeIds.includes(a.id) ? "bg-accent-soft" : "hover:bg-surface"}`}
-                >
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 accent-[var(--primary)] cursor-pointer"
-                    checked={assigneeIds.includes(a.id)}
-                    onChange={() => toggleAssignee(a.id)}
-                  />
-                  {a.name[lang]}
-                </label>
-              ))}
-            </div>
+            <AssigneePicker options={assignees} selected={assigneeIds} onToggle={toggleAssignee} />
           </div>
         )}
 

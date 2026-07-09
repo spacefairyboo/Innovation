@@ -14,6 +14,7 @@ export interface Delegation {
   startTs: number;
   endDate: string | null; // YYYY-MM-DD; null = until ended manually
   active: boolean;
+  scope: "all" | "task";
   taskCount: number;
 }
 
@@ -21,6 +22,7 @@ export interface Delegation {
 const mapRow = (r: any): Delegation => ({
   id: Number(r.id), fromUser: r.from_user, toUser: r.to_user,
   startTs: Number(r.start_ts), endDate: r.end_date ?? null, active: !!r.active,
+  scope: r.scope === "task" ? "task" : "all",
   taskCount: Number(r.task_count ?? 0),
 });
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -29,8 +31,9 @@ const SELECT = `
   SELECT d.*, (SELECT COUNT(*) FROM delegation_tasks dt WHERE dt.delegation_id = d.id) AS task_count
   FROM delegations d`;
 
+/** The user's active everything-delegation (profile-level), if any. */
 export function activeDelegationFrom(userId: string): Delegation | null {
-  const r = getDB().prepare(`${SELECT} WHERE d.from_user = ? AND d.active = 1 LIMIT 1`).get(userId);
+  const r = getDB().prepare(`${SELECT} WHERE d.from_user = ? AND d.active = 1 AND d.scope = 'all' LIMIT 1`).get(userId);
   return r ? mapRow(r) : null;
 }
 
@@ -39,17 +42,46 @@ export function activeDelegationsTo(userId: string): Delegation[] {
     .all(userId) as Record<string, unknown>[]).map(mapRow);
 }
 
+/** The active delegation covering one task (task-scoped or profile-wide), if any. */
+export function taskDelegation(taskId: string): Delegation | null {
+  const r = getDB().prepare(`
+    ${SELECT} JOIN delegation_tasks dt ON dt.delegation_id = d.id
+    WHERE dt.task_id = ? AND d.active = 1 LIMIT 1
+  `).get(taskId);
+  return r ? mapRow(r) : null;
+}
+
+/** Ids of tasks currently sitting with `userId` because someone delegated them. */
+export function taskIdsDelegatedTo(userId: string): Set<string> {
+  const rows = getDB().prepare(`
+    SELECT dt.task_id FROM delegation_tasks dt
+    JOIN delegations d ON d.id = dt.delegation_id
+    WHERE d.to_user = ? AND d.active = 1
+  `).all(userId) as { task_id: string }[];
+  return new Set(rows.map((r) => r.task_id));
+}
+
 /**
  * Moves every open task off `from` onto `to`: `to` replaces `from` in the
  * assignee list (and as owner where `from` owned the task). Which tasks moved
  * — and whether ownership moved — is recorded so endDelegation can revert.
  */
+function moveTask(delegationId: number, taskId: string, fromId: string, toId: string, ownerId: string): void {
+  const db = getDB();
+  const wasOwner = ownerId === fromId;
+  db.prepare("INSERT INTO delegation_tasks (delegation_id, task_id, was_owner) VALUES (?,?,?)")
+    .run(delegationId, taskId, wasOwner ? 1 : 0);
+  db.prepare("DELETE FROM task_assignees WHERE task_id = ? AND user_id = ?").run(taskId, fromId);
+  db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)").run(taskId, toId);
+  if (wasOwner) db.prepare("UPDATE tasks SET owner_id = ? WHERE id = ?").run(toId, taskId);
+}
+
 export function startDelegation(from: User, to: User, endDate: string | null): Delegation {
   const db = getDB();
   if (activeDelegationFrom(from.id)) throw new Error("Delegation already active");
 
   const res = db.prepare(
-    "INSERT INTO delegations (from_user, to_user, start_ts, end_date, active) VALUES (?,?,?,?,1)",
+    "INSERT INTO delegations (from_user, to_user, start_ts, end_date, active, scope) VALUES (?,?,?,?,1,'all')",
   ).run(from.id, to.id, Date.now(), endDate);
   const delegationId = Number(res.lastInsertRowid);
 
@@ -59,19 +91,22 @@ export function startDelegation(from: User, to: User, endDate: string | null): D
     WHERE (t.owner_id = ? OR a.user_id = ?) AND t.status != 'done'
   `).all(from.id, from.id) as { id: string; owner_id: string }[];
 
-  const insDt = db.prepare("INSERT INTO delegation_tasks (delegation_id, task_id, was_owner) VALUES (?,?,?)");
-  const delAsg = db.prepare("DELETE FROM task_assignees WHERE task_id = ? AND user_id = ?");
-  const insAsg = db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
-  const setOwner = db.prepare("UPDATE tasks SET owner_id = ? WHERE id = ?");
-
-  for (const t of open) {
-    const wasOwner = t.owner_id === from.id;
-    insDt.run(delegationId, t.id, wasOwner ? 1 : 0);
-    delAsg.run(t.id, from.id);
-    insAsg.run(t.id, to.id);
-    if (wasOwner) setOwner.run(to.id, t.id);
-  }
+  for (const t of open) moveTask(delegationId, t.id, from.id, to.id, t.owner_id);
   return activeDelegationFrom(from.id)!;
+}
+
+/** Delegates a single task from its current owner to a colleague. */
+export function startTaskDelegation(from: User, to: User, taskId: string, endDate: string | null): Delegation {
+  const db = getDB();
+  if (taskDelegation(taskId)) throw new Error("Task already delegated");
+  const task = getTask(taskId);
+  if (!task) throw new Error("Task not found");
+
+  const res = db.prepare(
+    "INSERT INTO delegations (from_user, to_user, start_ts, end_date, active, scope) VALUES (?,?,?,?,1,'task')",
+  ).run(from.id, to.id, Date.now(), endDate);
+  moveTask(Number(res.lastInsertRowid), taskId, from.id, to.id, task.ownerId);
+  return taskDelegation(taskId)!;
 }
 
 /** Hands every delegated task back to the original user and closes the delegation. */

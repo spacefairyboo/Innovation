@@ -1,21 +1,46 @@
 "use client";
 
 /* Full-page task view — the Update dialog at page scale: editor on the left,
-   note-to-self checklist and the attributed activity log on the right. */
+   note-to-self checklist, per-task delegation, and the attributed activity
+   log on the right. */
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { removeTask, saveTask } from "@/app/actions";
+import { delegateTaskAction, endTaskDelegationAction, removeTask, saveTask } from "@/app/actions";
 import { useI18n, useToast } from "./providers";
 import { dueInfo, relTime, StatusChip } from "./ui";
 import { Icon } from "./icons";
-import { ActivityLog, ChecklistEditor, ValueChip, type AssigneeOption, type TaskVM } from "./tasks";
+import {
+  ActivityLog, AssigneePicker, ChecklistEditor, DelegationChip, ValueChip,
+  type AssigneeOption, type TaskVM,
+} from "./tasks";
 import { STATUS_META, effStatus, type ChecklistItem, type Priority, type TaskStatus } from "@/lib/types";
 
-export function TaskFullView({ vm, canEdit, assignees, backHref }: {
+/** One labeled fact in the header strip. */
+function Meta({ icon, label, children, tone }: {
+  icon: string;
+  label: string;
+  children: React.ReactNode;
+  tone?: "warn";
+}) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs bg-surface
+        ${tone === "warn" ? "border-[var(--st-delayed)] text-[var(--st-delayed)] font-semibold" : "border-line text-ink-2"}`}
+    >
+      <Icon name={icon} size={12} className={tone === "warn" ? "" : "text-ink-3"} />
+      <span className={tone === "warn" ? "" : "text-ink-3"}>{label}:</span>
+      <b className="font-semibold">{children}</b>
+    </span>
+  );
+}
+
+export function TaskFullView({ vm, canEdit, assignees, colleagues, backHref }: {
   vm: TaskVM;
   canEdit: boolean;
   assignees?: AssigneeOption[];
+  /** Everyone this task could be delegated to. */
+  colleagues: AssigneeOption[];
   backHref: string;
 }) {
   const { t, lang } = useI18n();
@@ -33,6 +58,8 @@ export function TaskFullView({ vm, canEdit, assignees, backHref }: {
   const [checklist, setChecklist] = useState<ChecklistItem[]>(vm.checklist);
   const eff = effStatus(task);
   const dueView = dueInfo(task.due, t, lang);
+  const locale = lang === "ar" ? "ar" : "en";
+  const createdStr = new Date(task.createdAt).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 
   const toggleAssignee = (id: string) =>
     setAssigneeIds((ids) => ids.includes(id)
@@ -54,41 +81,52 @@ export function TaskFullView({ vm, canEdit, assignees, backHref }: {
   return (
     <>
       {/* header */}
-      <div className="flex items-center gap-3.5 mb-5 flex-wrap">
-        <button className="icon-btn" onClick={() => router.push(backHref)} aria-label={t("cancel")}>
+      <div className="flex items-start gap-3.5 mb-3 flex-wrap">
+        <button className="icon-btn mt-1" onClick={() => router.push(backHref)} aria-label={t("cancel")}>
           <Icon name={lang === "ar" ? "chevron-right" : "chevron-left"} size={18} />
         </button>
         <span
-          className="w-11 h-11 rounded-2xl grid place-items-center shrink-0"
+          className="w-12 h-12 rounded-2xl grid place-items-center shrink-0"
           style={{ background: `var(--st-${eff}-bg)`, color: `var(--st-${eff})` }}
         >
-          <Icon name={STATUS_META[eff].icon} size={20} />
+          <Icon name={STATUS_META[eff].icon} size={22} />
         </span>
-        <div className="min-w-0">
-          <h2 className="m-0 text-xl font-bold truncate">{task.title[lang]}</h2>
-          <p className="m-0 mt-1 text-sm text-ink-2 flex items-center gap-2 flex-wrap">
+        <div className="min-w-0 flex-1">
+          <h2 className="m-0 text-2xl font-bold leading-snug">{task.title[lang]}</h2>
+          <div className="mt-2 flex items-center gap-2 flex-wrap">
             <StatusChip status={eff} />
             <ValueChip value={vm.value} />
-            <span className="text-xs text-ink-3">
-              {vm.assignees.map((a) => a.name[lang]).join(lang === "ar" ? "، " : ", ")}
-              {vm.assignees[0]?.managerName && ` · ${t("line_manager")}: ${vm.assignees[0].managerName[lang]}`}
-              {" · "}{vm.teamName[lang]}
-              {dueView.text && ` · ${dueView.text}`}
-              {" · "}{t("updated")}: {relTime(task.updatedAt, t)}
-            </span>
-          </p>
+            <DelegationChip delegation={vm.delegation} />
+          </div>
         </div>
-        <div className="flex-1" />
         {canEdit && (
-          <button className="btn-primary" disabled={pending} onClick={submit}>
+          <button className="btn-primary mt-1" disabled={pending} onClick={submit}>
             <Icon name="check" size={15} /> {t("save")}
           </button>
         )}
       </div>
 
+      {/* facts strip */}
+      <div className="flex items-center gap-2 flex-wrap mb-5">
+        <Meta icon="user" label={t("assignees")}>
+          {vm.assignees.map((a) => a.name[lang]).join(lang === "ar" ? "، " : ", ")}
+        </Meta>
+        {vm.assignees[0]?.managerName && (
+          <Meta icon="users" label={t("line_manager")}>{vm.assignees[0].managerName[lang]}</Meta>
+        )}
+        <Meta icon="building" label={t("profile_team")}>{vm.teamName[lang]}</Meta>
+        {dueView.text && (
+          <Meta icon="calendar" label={t("due_date")} tone={dueView.overdue ? "warn" : undefined}>
+            {task.due}
+          </Meta>
+        )}
+        <Meta icon="plus" label={t("created")}>{createdStr}</Meta>
+        <Meta icon="history" label={t("updated")}>{relTime(task.updatedAt, t)}</Meta>
+      </div>
+
       <div className="grid gap-5 lg:[grid-template-columns:1.5fr_1fr] items-start">
         {/* editor */}
-        <div className="card flex flex-col gap-4">
+        <div className="card flex flex-col gap-5">
           <label className="block">
             <span className="block text-xs font-semibold text-ink-2 mb-1.5">{t("task_title")}</span>
             <input className="field-input" value={title} disabled={!canEdit} onChange={(e) => setTitle(e.target.value)} />
@@ -141,23 +179,7 @@ export function TaskFullView({ vm, canEdit, assignees, backHref }: {
           {canEdit && assignees && assignees.length > 0 && (
             <div>
               <div className="text-xs font-semibold text-ink-2 mb-1">{t("assignees")}</div>
-              <div className="border border-line rounded-xl p-2 bg-surface-2 grid sm:grid-cols-2 gap-0.5">
-                {assignees.map((a) => (
-                  <label
-                    key={a.id}
-                    className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm cursor-pointer transition
-                      ${assigneeIds.includes(a.id) ? "bg-accent-soft" : "hover:bg-surface"}`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 accent-[var(--primary)] cursor-pointer"
-                      checked={assigneeIds.includes(a.id)}
-                      onChange={() => toggleAssignee(a.id)}
-                    />
-                    {a.name[lang]}
-                  </label>
-                ))}
-              </div>
+              <AssigneePicker options={assignees} selected={assigneeIds} onToggle={toggleAssignee} />
             </div>
           )}
 
@@ -174,7 +196,7 @@ export function TaskFullView({ vm, canEdit, assignees, backHref }: {
           )}
 
           {canEdit && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pt-1 border-t border-grid">
               <button
                 className="btn bg-[var(--st-blocked-bg)] text-[var(--st-blocked)]"
                 onClick={() => {
@@ -192,8 +214,12 @@ export function TaskFullView({ vm, canEdit, assignees, backHref }: {
           )}
         </div>
 
-        {/* side column: checklist + activity */}
+        {/* side column: delegation + checklist + activity */}
         <div className="grid gap-5 min-w-0">
+          {canEdit && task.status !== "done" && (
+            <TaskDelegationCard vm={vm} colleagues={colleagues} />
+          )}
+
           <div className="card">
             <div className="flex items-center gap-1.5 text-sm font-bold mb-1">
               <Icon name="list-checks" size={15} /> {t("note_self")}
@@ -213,5 +239,76 @@ export function TaskFullView({ vm, canEdit, assignees, backHref }: {
         </div>
       </div>
     </>
+  );
+}
+
+/** Delegate this one task to a colleague — or hand it back. */
+function TaskDelegationCard({ vm, colleagues }: { vm: TaskVM; colleagues: AssigneeOption[] }) {
+  const { t, lang } = useI18n();
+  const toast = useToast();
+  const [pending, startTransition] = useTransition();
+  const [delegateId, setDelegateId] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+  const d = vm.delegation;
+  const options = colleagues.filter((c) => !vm.task.assigneeIds.includes(c.id));
+
+  return (
+    <div className="card">
+      <div className="flex items-center gap-1.5 text-sm font-bold mb-1">
+        <Icon name="user-check" size={15} /> {t("delegation_title")}
+      </div>
+
+      {d ? (
+        <>
+          <p className="m-0 mb-2.5 text-xs text-ink-2 leading-5">
+            {t("task_delegated_note", { from: d.fromName[lang], to: d.toName[lang] })}
+            {d.endDate && <> {t("delegation_active_until")} <b>{d.endDate}</b>.</>}
+          </p>
+          {d.scope === "task" ? (
+            <button
+              className="btn-ghost btn-sm"
+              disabled={pending}
+              onClick={() => startTransition(async () => {
+                await endTaskDelegationAction(vm.task.id);
+                toast(t("task_delegation_returned"));
+              })}
+            >
+              <Icon name="rotate-ccw" size={13} /> {t("task_delegation_return")}
+            </button>
+          ) : (
+            <p className="m-0 text-[0.7rem] text-ink-3">{t("task_delegation_via_profile")}</p>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="m-0 mb-2.5 text-xs text-ink-3 leading-5">{t("task_delegation_sub")}</p>
+          <div className="flex flex-col gap-2">
+            <select className="field-input" value={delegateId} onChange={(e) => setDelegateId(e.target.value)}>
+              <option value="">{t("delegation_pick")}</option>
+              {options.map((c) => (
+                <option key={c.id} value={c.id}>{c.name[lang]} — {c.teamName[lang]}</option>
+              ))}
+            </select>
+            <input
+              type="date" className="field-input" min={today} value={endDate}
+              aria-label={t("delegation_end_date")}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+            <p className="m-0 -mt-0.5 text-[0.7rem] text-ink-3 leading-4">{t("delegation_end_hint")}</p>
+            <button
+              className="btn-primary btn-sm self-start"
+              disabled={!delegateId || pending}
+              onClick={() => startTransition(async () => {
+                await delegateTaskAction(vm.task.id, delegateId, endDate || null);
+                toast(t("task_delegation_started"));
+              })}
+            >
+              <Icon name="send" size={13} /> {t("task_delegation_start")}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

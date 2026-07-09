@@ -59,6 +59,7 @@ export interface Task {
   title: Localized;
   due: string | null; // YYYY-MM-DD
   updatedAt: number;
+  createdAt: number;
   history: TaskUpdate[];
 }
 

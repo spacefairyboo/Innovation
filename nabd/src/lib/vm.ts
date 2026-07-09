@@ -1,5 +1,6 @@
 /* Server-side view-model builders shared by pages. */
 
+import { taskDelegation } from "./delegation";
 import { makeT } from "./i18n";
 import { getChecklist, getTeam, getUser, taskActivity } from "./repo";
 import { taskValue } from "./value";
@@ -17,6 +18,7 @@ export function toVM(task: Task): TaskVM {
       const manager = uTeam ? getUser(uTeam.managerId) : null;
       return { id: u!.id, name: u!.name, managerName: manager && manager.id !== u!.id ? manager.name : null };
     });
+  const d = taskDelegation(task.id);
   return {
     task,
     ownerName: owner.name,
@@ -25,6 +27,12 @@ export function toVM(task: Task): TaskVM {
     activity: taskActivity(task.id),
     checklist: getChecklist(task.id),
     value: taskValue(task),
+    delegation: d ? {
+      fromName: getUser(d.fromUser)!.name,
+      toName: getUser(d.toUser)!.name,
+      endDate: d.endDate,
+      scope: d.scope,
+    } : null,
   };
 }
 

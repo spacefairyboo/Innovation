@@ -4,11 +4,11 @@
    the resulting patch is applied through the applyCheckin server action. */
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { applyCheckin } from "@/app/actions";
+import { applyCheckin, createTaskFromChat } from "@/app/actions";
 import { useI18n } from "./providers";
 import { Modal } from "./ui";
 import { Icon } from "./icons";
-import { isSummaryRequest, matchTask, parseUpdate, type ParsedUpdate } from "@/lib/parser";
+import { isSummaryRequest, matchTask, parseCreateTask, parseUpdate, type ParsedUpdate } from "@/lib/parser";
 import { STATUS_META, effStatus, type Task, type TaskStatus } from "@/lib/types";
 
 interface Msg {
@@ -118,6 +118,24 @@ function ChatModal({ tasks, userFirstName, doneThisWeek, startVoice, onClose }: 
     if (!text) return;
     push({ who: "user", text });
     if (isSummaryRequest(text)) { push({ who: "bot", text: summaryText() }); return; }
+
+    // "create a new task assign it to omar, to update the policy by tomorrow…"
+    const create = parseCreateTask(text);
+    if (create) {
+      startTransition(async () => {
+        try {
+          const res = await createTaskFromChat(create);
+          let msg = t("chat_created", { task: create.title, who: res.assignee[lang] });
+          if (res.fellBack && create.assigneeName) msg += `\n${t("chat_created_fallback", { name: create.assigneeName })}`;
+          if (create.due) msg += `\n${t("chat_created_due", { due: create.due })}`;
+          if (create.priority === "high") msg += `\n${t("chat_created_prio")}`;
+          push({ who: "bot", text: msg });
+        } catch {
+          push({ who: "bot", text: t("chat_create_failed") });
+        }
+      });
+      return;
+    }
 
     const parsed = parseUpdate(text);
     const open = tasks.filter((x) => x.status !== "done");

@@ -4,7 +4,8 @@ import { StatTiles } from "@/components/charts";
 import { CheckinButtons } from "@/components/chat";
 import { Icon } from "@/components/icons";
 import { EmailSuggestions } from "@/components/inbox";
-import { NewTaskButton, TaskListSection, type AssigneeOption } from "@/components/tasks";
+import { NewTaskButton, TaskTabs, type AssigneeOption } from "@/components/tasks";
+import { taskIdsDelegatedTo } from "@/lib/delegation";
 import { makeT } from "@/lib/i18n";
 import { pendingSuggestions } from "@/lib/inbox";
 import { getTeam, teamMembers, userTasks } from "@/lib/repo";
@@ -21,6 +22,7 @@ export default async function MyTasksPage({ searchParams }: {
   const tasks = userTasks(user.id);
   const stats = countStatuses(tasks);
   const doneThisWeek = doneThisWeekCount(tasks);
+  const delegatedIn = taskIdsDelegatedTo(user.id);
 
   const assignees: AssigneeOption[] | undefined =
     user.role === "manager" && user.teamId
@@ -53,8 +55,9 @@ export default async function MyTasksPage({ searchParams }: {
 
       <EmailSuggestions suggestions={pendingSuggestions(user.id)} />
 
-      <TaskListSection
-        vms={tasks.map(toVM)}
+      <TaskTabs
+        myVms={tasks.filter((x) => !delegatedIn.has(x.id)).map(toVM)}
+        delegatedVms={tasks.filter((x) => delegatedIn.has(x.id)).map(toVM)}
         mine
         withFilters
         valueFilter={user.role === "manager"}

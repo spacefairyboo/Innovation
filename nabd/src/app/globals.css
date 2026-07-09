@@ -250,3 +250,34 @@ body::after {
 }
 .animate-modal-pop { animation: modal-pop 0.16s ease; }
 .animate-mic-pulse { animation: mic-pulse 1.2s ease-in-out infinite; }
+
+/* Audio-briefing presenter face */
+@keyframes face-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes face-blink {
+  0%, 94%, 100% { transform: scaleY(1); }
+  96%, 98% { transform: scaleY(0.08); }
+}
+@keyframes face-mouth-talk {
+  0%, 100% { transform: scaleY(0.4); }
+  25% { transform: scaleY(1); }
+  50% { transform: scaleY(0.6); }
+  75% { transform: scaleY(0.9); }
+}
+@keyframes face-aura {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.06); }
+}
+@keyframes face-wave {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.9; }
+}
+@keyframes face-shimmer {
+  0%, 100% { opacity: 0.35; transform: translateX(0); }
+  50% { opacity: 0.75; transform: translateX(3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .presenter-face * { animation: none !important; }
+}
