@@ -1,11 +1,12 @@
 /* Audio briefing — the narrative is generated fresh server-side from live
    data; the client player speaks it on-device. */
 
+import { notFound } from "next/navigation";
 import { EmailBriefingButton } from "@/components/digest";
 import { PodcastPlayer } from "@/components/podcast";
 import { buildPodcastScript } from "@/lib/briefing";
 import { makeT } from "@/lib/i18n";
-import { allTasks, listTeams, listUnits, scopeTasks, teamTasks } from "@/lib/repo";
+import { allTasks, listTeams, listUnits, teamTasks } from "@/lib/repo";
 import { getSession } from "@/lib/session";
 import type { Task } from "@/lib/types";
 
@@ -16,11 +17,12 @@ export default async function PodcastPage({ searchParams }: {
   const { user, lang } = await getSession();
   const t = makeT(lang);
 
-  const scope = user.role === "senior" ? (rawScope ?? "all") : "own";
+  // The audio briefing is the senior manager's channel only.
+  if (user.role !== "senior") notFound();
+
+  const scope = rawScope ?? "all";
   let tasks: Task[];
-  if (user.role !== "senior") {
-    tasks = scopeTasks(user);
-  } else if (scope === "all") {
+  if (scope === "all") {
     tasks = allTasks();
   } else if (scope.startsWith("u")) {
     const teamIds = listTeams().filter((x) => x.unitId === scope).map((x) => x.id);
@@ -29,15 +31,13 @@ export default async function PodcastPage({ searchParams }: {
     tasks = teamTasks(scope);
   }
 
-  const lines = buildPodcastScript(user, lang, tasks, user.role === "senior" && scope === "all");
+  const lines = buildPodcastScript(user, lang, tasks, scope === "all");
 
-  const scopeOptions = user.role === "senior"
-    ? [
-        { value: "all", label: t("org_pulse") },
-        ...listUnits().map((u) => ({ value: u.id, label: `${t("unit")}: ${u.name[lang]}` })),
-        ...listTeams().map((tm) => ({ value: tm.id, label: `${t("team")}: ${tm.name[lang]}` })),
-      ]
-    : null;
+  const scopeOptions = [
+    { value: "all", label: t("org_pulse") },
+    ...listUnits().map((u) => ({ value: u.id, label: `${t("unit")}: ${u.name[lang]}` })),
+    ...listTeams().map((tm) => ({ value: tm.id, label: `${t("team")}: ${tm.name[lang]}` })),
+  ];
 
   return (
     <>

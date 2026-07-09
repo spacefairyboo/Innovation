@@ -38,7 +38,12 @@ export default async function Dashboard() {
   const insight = insightFor(tasks, lang);
   const doneThisWeek = doneThisWeekCount(tasks);
   const greeting = t(greetingKey());
-  const scopeTitle = t(user.role === "senior" ? "org_pulse" : user.role === "manager" ? "team_pulse" : "my_pulse");
+  const scopeTitle = t(
+    user.role === "senior" ? "org_pulse"
+    : user.role === "section" ? "section_pulse"
+    : user.role === "manager" ? "team_pulse"
+    : "my_pulse",
+  );
   const health = HEALTH_META[teamHealth(stats)];
   const completion = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
   const dateStr = new Date().toLocaleDateString(lang === "ar" ? "ar" : "en", { weekday: "long", day: "numeric", month: "long" });
@@ -56,8 +61,13 @@ export default async function Dashboard() {
       due: x.due,
     }));
 
-  const teamRows = user.role === "senior"
-    ? listTeams().map((team) => ({
+  const visibleTeams = user.role === "senior"
+    ? listTeams()
+    : user.role === "section" && user.sectionId
+      ? listTeams().filter((x) => x.unitId === user.sectionId)
+      : null;
+  const teamRows = visibleTeams
+    ? visibleTeams.map((team) => ({
         id: team.id, label: team.name[lang],
         stats: countStatuses(teamTasks(team.id)),
       }))
@@ -100,12 +110,14 @@ export default async function Dashboard() {
             >
               <Icon name="lightbulb" size={16} /> {t("advisor_open")}
             </Link>
-            <Link
-              href="/podcast"
-              className="inline-flex items-center gap-2 rounded-full px-4.5 py-2.5 text-sm font-semibold no-underline text-white border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition"
-            >
-              <Icon name="headphones" size={16} /> {t("nav_podcast")}
-            </Link>
+            {user.role === "senior" && (
+              <Link
+                href="/podcast"
+                className="inline-flex items-center gap-2 rounded-full px-4.5 py-2.5 text-sm font-semibold no-underline text-white border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition"
+              >
+                <Icon name="headphones" size={16} /> {t("nav_podcast")}
+              </Link>
+            )}
             {user.role !== "employee" && (
               <span className="[&>button]:!text-white [&>button]:!border-white/20 [&>button]:!bg-white/10">
                 <ExportCsvButton rows={csvRows(tasks, lang)} filename={`nabd-report-${new Date().toISOString().slice(0, 10)}.csv`} />

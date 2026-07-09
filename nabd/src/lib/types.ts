@@ -2,7 +2,8 @@
 
 export type Lang = "en" | "ar";
 export type Theme = "light" | "dark";
-export type Role = "senior" | "manager" | "employee";
+/** senior → all sections; section → their section's units; manager → their unit; employee → own tasks. */
+export type Role = "senior" | "section" | "manager" | "employee";
 
 /** Stored status. "delayed" is derived (past due & unfinished), never stored. */
 export type TaskStatus = "done" | "ontrack" | "pending" | "blocked";
@@ -35,6 +36,8 @@ export interface User {
   name: Localized;
   streak: number;
   email: string | null;
+  /** Section heads only: the section (units-table id) they lead. */
+  sectionId: string | null;
   /** Saved profile preferences; null = follow the session default. */
   prefLang: Lang | null;
   prefTheme: Theme | null;

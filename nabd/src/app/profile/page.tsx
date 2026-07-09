@@ -13,7 +13,7 @@ export default async function ProfilePage() {
   const { user, lang, theme } = await getSession();
   const t = makeT(lang);
   const team = user.teamId ? getTeam(user.teamId) : null;
-  const roleLabel = t(user.role === "senior" ? "role_senior" : user.role === "manager" ? "role_manager" : "role_employee");
+  const roleLabel = t(`role_${user.role}`);
 
   const raw = activeDelegationFrom(user.id);
   const active: DelegationView | null = raw

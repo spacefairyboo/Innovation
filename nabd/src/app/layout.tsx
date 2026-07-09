@@ -30,8 +30,8 @@ function buildPaletteIndex(user: User, lang: Lang): PaletteItem[] {
     ["/advisor", "lightbulb", t("nav_advisor")],
     ...(user.role !== "employee" ? [["/stats", "trending-up", t("nav_stats")] as [string, string, string]] : []),
     ["/calendar", "calendar", t("nav_calendar")],
-    ["/teams", "users", t("nav_teams")],
-    ["/podcast", "headphones", t("nav_podcast")],
+    ...(user.role !== "employee" ? [["/teams", "users", t("nav_teams")] as [string, string, string]] : []),
+    ...(user.role === "senior" ? [["/podcast", "headphones", t("nav_podcast")] as [string, string, string]] : []),
     ["/notifications", "bell", t("nav_notifications")],
     ["/profile", "user", t("nav_profile")],
   ];
@@ -48,9 +48,13 @@ function buildPaletteIndex(user: User, lang: Lang): PaletteItem[] {
     });
   }
 
-  const visibleTeams = user.role === "manager" && user.teamId
-    ? listTeams().filter((x) => x.id === user.teamId)
-    : listTeams();
+  const visibleTeams = user.role === "employee"
+    ? []
+    : user.role === "section" && user.sectionId
+      ? listTeams().filter((x) => x.unitId === user.sectionId)
+      : user.role === "manager" && user.teamId
+        ? listTeams().filter((x) => x.id === user.teamId)
+        : listTeams();
   for (const team of visibleTeams) {
     items.push({ href: `/teams/${team.id}`, icon: "users", label: team.name[lang], group: "teams" });
   }

@@ -9,7 +9,7 @@ import { TaskListSection, type AssigneeOption } from "@/components/tasks";
 import { TeamGlyph } from "@/components/team-card";
 import { Avatar } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
-import { getTeam, getUnit, teamMembers, teamTasks, userTasks } from "@/lib/repo";
+import { getTeam, getUnit, overseesTeam, teamMembers, teamTasks, userTasks } from "@/lib/repo";
 import { getSession } from "@/lib/session";
 import { HEALTH_META, countStatuses, teamHealth } from "@/lib/types";
 import { csvRows, toVM } from "@/lib/vm";
@@ -25,12 +25,16 @@ export default async function TeamPage({ params, searchParams }: {
   const team = getTeam(teamId);
   if (!team) notFound();
 
+  // Org pages follow the hierarchy: members never see them; everyone else
+  // only the units their role oversees.
+  const canManage = overseesTeam(user, team.id);
+  if (!canManage) notFound();
+
   const tasks = teamTasks(team.id);
   const stats = countStatuses(tasks);
   const members = teamMembers(team.id);
   const unit = getUnit(team.unitId)!;
   const h = HEALTH_META[teamHealth(stats)];
-  const canManage = user.role === "senior" || (user.role === "manager" && user.teamId === team.id);
 
   const assignees: AssigneeOption[] | undefined = canManage
     ? members.map((m) => ({ id: m.id, name: m.name, teamName: team.name }))

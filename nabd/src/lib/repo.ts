@@ -19,6 +19,7 @@ const mapTeam = (r: any): Team => ({
 });
 const mapUser = (r: any): User => ({
   id: r.id, role: r.role, teamId: r.team_id ?? null,
+  sectionId: r.section_id ?? null,
   name: { en: r.name_en, ar: r.name_ar }, streak: Number(r.streak),
   email: r.email ?? null,
   prefLang: r.pref_lang === "ar" || r.pref_lang === "en" ? r.pref_lang : null,
@@ -124,11 +125,31 @@ export const teamTasks = (teamId: string): Task[] =>
 export const allTasks = (): Task[] =>
   tasksFromRows(getDB().prepare("SELECT * FROM tasks ORDER BY updated_at DESC").all() as Record<string, unknown>[]);
 
-/** Everything a user is allowed to see. */
+/** The units (teams table) belonging to one section. */
+export const sectionTeams = (sectionId: string): Team[] =>
+  listTeams().filter((x) => x.unitId === sectionId);
+
+/** All tasks across a section's units. */
+export const sectionTasks = (sectionId: string): Task[] => {
+  const ids = sectionTeams(sectionId).map((x) => x.id);
+  return allTasks().filter((x) => ids.includes(x.teamId));
+};
+
+/** Everything a user is allowed to see: senior → all sections, section head →
+    their section's units, unit head → their unit, member → own tasks only. */
 export function scopeTasks(user: User): Task[] {
   if (user.role === "senior") return allTasks();
+  if (user.role === "section" && user.sectionId) return sectionTasks(user.sectionId);
   if (user.role === "manager" && user.teamId) return teamTasks(user.teamId);
   return userTasks(user.id);
+}
+
+/** Does this user's role give them authority over the given unit's tasks? */
+export function overseesTeam(user: User, teamId: string): boolean {
+  if (user.role === "senior") return true;
+  if (user.role === "section" && user.sectionId) return getTeam(teamId)?.unitId === user.sectionId;
+  if (user.role === "manager") return user.teamId === teamId;
+  return false;
 }
 
 /* ---------- audit log ---------- */

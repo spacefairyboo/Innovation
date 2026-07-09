@@ -50,13 +50,13 @@ export function Shell({ user, users, unreadCount, theme, palette, children }: {
     { href: "/advisor", ico: "lightbulb", label: t("nav_advisor") },
     ...(user.role !== "employee" ? [{ href: "/stats", ico: "trending-up", label: t("nav_stats") }] : []),
     { href: "/calendar", ico: "calendar", label: t("nav_calendar") },
-    { href: "/teams", ico: "users", label: t("nav_teams") },
-    { href: "/podcast", ico: "headphones", label: t("nav_podcast") },
+    ...(user.role !== "employee" ? [{ href: "/teams", ico: "users", label: t("nav_teams") }] : []),
+    ...(user.role === "senior" ? [{ href: "/podcast", ico: "headphones", label: t("nav_podcast") }] : []),
     { href: "/notifications", ico: "bell", label: t("nav_notifications"), badge: unreadCount },
     { href: "/profile", ico: "user", label: t("nav_profile") },
   ];
 
-  const roleLabel = t(user.role === "senior" ? "role_senior" : user.role === "manager" ? "role_manager" : "role_employee");
+  const roleLabel = t(`role_${user.role}`);
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
@@ -245,6 +245,7 @@ function UserSwitcher({ users, currentId, onClose, onReset }: {
   const [, startTransition] = useTransition();
   const groups: { role: Role; label: string }[] = [
     { role: "senior", label: t("role_senior") },
+    { role: "section", label: t("role_section") },
     { role: "manager", label: t("role_manager") },
     { role: "employee", label: t("role_employee") },
   ];
