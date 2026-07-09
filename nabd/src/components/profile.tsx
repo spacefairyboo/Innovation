@@ -3,7 +3,7 @@
 /* Profile widgets: saved preferences (language & theme) and delegation —
    hand every open task to a colleague, optionally until a date. */
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { endDelegationAction, savePreferences, startDelegationAction } from "@/app/actions";
 import { useI18n, useToast } from "./providers";
 import { Icon } from "./icons";
@@ -80,8 +80,10 @@ export function DelegationCard({ active, colleagues }: {
   const [pending, startTransition] = useTransition();
   const [delegateId, setDelegateId] = useState("");
   const [endDate, setEndDate] = useState("");
-  const today = new Date().toISOString().slice(0, 10);
-
+ // Set after mount: a render-time "today" can differ between the server
+  // HTML and the client's first render, tripping hydration.
+  const [today, setToday] = useState("");
+  useEffect(() => setToday(new Date().toISOString().slice(0, 10)), []);
   return (
     <div className="card">
       <h3 className="m-0 text-base font-bold flex items-center gap-2">
@@ -140,7 +142,7 @@ export function DelegationCard({ active, colleagues }: {
             id="delegate-end"
             type="date"
             className="field-input"
-            min={today}
+            min={today || undefined}
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
           />
