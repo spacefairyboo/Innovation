@@ -35,6 +35,9 @@ export interface User {
   name: Localized;
   streak: number;
   email: string | null;
+  /** Saved profile preferences; null = follow the session default. */
+  prefLang: Lang | null;
+  prefTheme: Theme | null;
 }
 
 export interface TaskUpdate {

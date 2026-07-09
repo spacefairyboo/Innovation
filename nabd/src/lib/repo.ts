@@ -21,6 +21,8 @@ const mapUser = (r: any): User => ({
   id: r.id, role: r.role, teamId: r.team_id ?? null,
   name: { en: r.name_en, ar: r.name_ar }, streak: Number(r.streak),
   email: r.email ?? null,
+  prefLang: r.pref_lang === "ar" || r.pref_lang === "en" ? r.pref_lang : null,
+  prefTheme: r.pref_theme === "dark" || r.pref_theme === "light" ? r.pref_theme : null,
 });
 const mapUpdate = (r: any): TaskUpdate => ({
   ts: Number(r.ts), byId: r.by_id ?? null, text: { en: r.text_en, ar: r.text_ar },
@@ -299,6 +301,12 @@ export function deleteTask(taskId: string): void {
 
 export function bumpStreak(userId: string): void {
   getDB().prepare("UPDATE users SET streak = streak + 1 WHERE id = ?").run(userId);
+}
+
+export function saveUserPrefs(userId: string, prefs: { lang?: "en" | "ar"; theme?: "light" | "dark" }): void {
+  const db = getDB();
+  if (prefs.lang) db.prepare("UPDATE users SET pref_lang = ? WHERE id = ?").run(prefs.lang, userId);
+  if (prefs.theme) db.prepare("UPDATE users SET pref_theme = ? WHERE id = ?").run(prefs.theme, userId);
 }
 
 /* ---------- notifications (derived from live data; read-state persisted) ---------- */

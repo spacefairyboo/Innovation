@@ -14,8 +14,12 @@ function refresh() {
 }
 
 export async function switchUser(userId: string) {
-  if (!repo.getUser(userId)) throw new Error("Unknown user");
+  const target = repo.getUser(userId);
+  if (!target) throw new Error("Unknown user");
   await setSessionCookie("uid", userId);
+  // Saved profile preferences follow the user across sign-ins.
+  if (target.prefLang) await setSessionCookie("lang", target.prefLang);
+  if (target.prefTheme) await setSessionCookie("theme", target.prefTheme);
   refresh();
 }
 
@@ -173,6 +177,70 @@ export async function emailMyBriefing() {
     subject: lang === "ar" ? `ملخص نبض — ${dateStr}` : `Your Nabd briefing — ${dateStr}`,
     body: lines.join("\n\n"),
   });
+  refresh();
+}
+
+/** Persists profile preferences (they follow the user across sign-ins) and applies them now. */
+export async function savePreferences(prefs: { lang?: "en" | "ar"; theme?: "light" | "dark" }) {
+  const { user } = await getSession();
+  const clean: { lang?: "en" | "ar"; theme?: "light" | "dark" } = {};
+  if (prefs.lang === "en" || prefs.lang === "ar") clean.lang = prefs.lang;
+  if (prefs.theme === "light" || prefs.theme === "dark") clean.theme = prefs.theme;
+  repo.saveUserPrefs(user.id, clean);
+  if (clean.lang) await setSessionCookie("lang", clean.lang);
+  if (clean.theme) await setSessionCookie("theme", clean.theme);
+  refresh();
+}
+
+/** Delegates all of the caller's open tasks to a colleague and emails them. */
+export async function startDelegationAction(delegateId: string, endDate: string | null) {
+  const { user } = await getSession();
+  const delegate = repo.getUser(delegateId);
+  if (!delegate || delegate.id === user.id) throw new Error("Invalid delegate");
+  if (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) throw new Error("Invalid end date");
+
+  const { startDelegation, activeDelegationFrom } = await import("@/lib/delegation");
+  if (activeDelegationFrom(user.id)) throw new Error("Delegation already active");
+  const d = startDelegation(user, delegate, endDate);
+
+  const { sendEmail } = await import("@/lib/mailer");
+  const until = endDate ? ` until ${endDate}` : "";
+  await sendEmail({
+    toUser: delegate,
+    kind: "delegation",
+    subject: `${user.name.en} has delegated their tasks to you`,
+    body: [
+      `Hello ${delegate.name.en.split(" ")[0]},`,
+      ``,
+      `${user.name.en} has delegated their open tasks to you${until}. ${d.taskCount} task${d.taskCount === 1 ? " is" : "s are"} now assigned to you — you'll find them under My Tasks.`,
+      endDate
+        ? `On ${endDate} the tasks will be assigned back to ${user.name.en.split(" ")[0]} automatically.`
+        : `The tasks will be assigned back when ${user.name.en.split(" ")[0]} ends the delegation.`,
+      ``,
+      `— Nabd, your team pulse`,
+    ].filter(Boolean).join("\n"),
+  });
+  refresh();
+}
+
+/** Ends the caller's active delegation and takes the tasks back. */
+export async function endDelegationAction() {
+  const { user } = await getSession();
+  const { activeDelegationFrom, endDelegation } = await import("@/lib/delegation");
+  const d = activeDelegationFrom(user.id);
+  if (!d) return;
+  endDelegation(d.id);
+
+  const delegate = repo.getUser(d.toUser);
+  if (delegate) {
+    const { sendEmail } = await import("@/lib/mailer");
+    await sendEmail({
+      toUser: delegate,
+      kind: "delegation_ended",
+      subject: `Delegation from ${user.name.en} has ended`,
+      body: `Hello ${delegate.name.en.split(" ")[0]},\n\n${user.name.en} has ended the delegation. Their tasks have been handed back — thank you for covering.\n\n— Nabd, your team pulse`,
+    });
+  }
   refresh();
 }
 
