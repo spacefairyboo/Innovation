@@ -4,7 +4,7 @@
    note-to-self checklist, per-task delegation, and the attributed activity
    log on the right. */
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { delegateTaskAction, endTaskDelegationAction, removeTask, saveTask } from "@/app/actions";
 import { useI18n, useToast } from "./providers";
@@ -58,8 +58,10 @@ export function TaskFullView({ vm, canEdit, assignees, colleagues, backHref }: {
   const [checklist, setChecklist] = useState<ChecklistItem[]>(vm.checklist);
   const eff = effStatus(task);
   const dueView = dueInfo(task.due, t, lang);
-  const locale = lang === "ar" ? "ar" : "en";
-  const createdStr = new Date(task.createdAt).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
+  // Deterministic date format — locale formatting can differ between the
+  // server's ICU and the browser's, breaking hydration.
+  const cd = new Date(task.createdAt);
+  const createdStr = `${cd.getDate()}/${cd.getMonth() + 1}/${cd.getFullYear()}`;
 
   const toggleAssignee = (id: string) =>
     setAssigneeIds((ids) => ids.includes(id)
@@ -249,7 +251,12 @@ function TaskDelegationCard({ vm, colleagues }: { vm: TaskVM; colleagues: Assign
   const [pending, startTransition] = useTransition();
   const [delegateId, setDelegateId] = useState("");
   const [endDate, setEndDate] = useState("");
-  const today = new Date().toISOString().slice(0, 10);
+  // Set after mount: a render-time "today" can differ between server and client.
+  const [today, setToday] = useState("");
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setToday(new Date().toISOString().slice(0, 10));
+  }, []);
   const d = vm.delegation;
   const options = colleagues.filter((c) => !vm.task.assigneeIds.includes(c.id));
 
@@ -291,7 +298,7 @@ function TaskDelegationCard({ vm, colleagues }: { vm: TaskVM; colleagues: Assign
               ))}
             </select>
             <input
-              type="date" className="field-input" min={today} value={endDate}
+              type="date" className="field-input" min={today || undefined} value={endDate}
               aria-label={t("delegation_end_date")}
               onChange={(e) => setEndDate(e.target.value)}
             />

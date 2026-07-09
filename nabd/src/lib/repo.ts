@@ -2,7 +2,7 @@
    All functions return plain serializable objects safe to pass to
    client components. */
 
-import { getDB } from "./db";
+import { getDB, withTransaction } from "./db";
 import {
   DAY_MS, type ActivityEvent, type ChecklistItem, type FieldChange,
   type Notification, type Priority, type Task, type TaskStatus,
@@ -231,6 +231,15 @@ export function updateTask(
   note: { en: string; ar: string } | null,
   changedBy: string,
 ): Task | null {
+  return withTransaction(() => updateTaskInner(taskId, patch, note, changedBy));
+}
+
+function updateTaskInner(
+  taskId: string,
+  patch: Partial<Pick<Task, "status" | "progress" | "priority" | "due">> & { title?: string; assigneeIds?: string[] },
+  note: { en: string; ar: string } | null,
+  changedBy: string,
+): Task | null {
   const db = getDB();
   const existing = getTask(taskId);
   if (!existing) return null;
@@ -294,31 +303,35 @@ export function updateTask(
 export function createTask(input: {
   title: string; assigneeIds: string[]; due: string | null; priority: Priority; createdBy: string;
 }): Task {
-  const db = getDB();
-  const assignees = [...new Set(input.assigneeIds)];
-  const owner = getUser(assignees[0]);
-  if (!owner?.teamId) throw new Error("Assignee must belong to a team");
-  const id = "k" + Math.random().toString(36).slice(2, 10);
-  const now = Date.now();
-  db.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(
-    id, owner.id, owner.teamId, "pending", 0, input.priority,
-    input.title, input.title, input.due, now, now,
-  );
-  const ins = db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
-  for (const uid of assignees) ins.run(id, uid);
-  db.prepare(
-    "INSERT INTO task_updates (task_id, ts, by_id, text_en, text_ar, status, progress) VALUES (?,?,?,?,?,?,?)",
-  ).run(id, now, input.createdBy, "Task created", "أُنشئت المهمة", "pending", 0);
-  return getTask(id)!;
+  return withTransaction(() => {
+    const db = getDB();
+    const assignees = [...new Set(input.assigneeIds)];
+    const owner = getUser(assignees[0]);
+    if (!owner?.teamId) throw new Error("Assignee must belong to a team");
+    const id = "k" + Math.random().toString(36).slice(2, 10);
+    const now = Date.now();
+    db.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(
+      id, owner.id, owner.teamId, "pending", 0, input.priority,
+      input.title, input.title, input.due, now, now,
+    );
+    const ins = db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
+    for (const uid of assignees) ins.run(id, uid);
+    db.prepare(
+      "INSERT INTO task_updates (task_id, ts, by_id, text_en, text_ar, status, progress) VALUES (?,?,?,?,?,?,?)",
+    ).run(id, now, input.createdBy, "Task created", "أُنشئت المهمة", "pending", 0);
+    return getTask(id)!;
+  });
 }
 
 export function deleteTask(taskId: string): void {
-  const db = getDB();
-  db.prepare("DELETE FROM task_updates WHERE task_id = ?").run(taskId);
-  db.prepare("DELETE FROM audit_logs WHERE task_id = ?").run(taskId);
-  db.prepare("DELETE FROM task_notes WHERE task_id = ?").run(taskId);
-  db.prepare("DELETE FROM task_assignees WHERE task_id = ?").run(taskId);
-  db.prepare("DELETE FROM tasks WHERE id = ?").run(taskId);
+  withTransaction(() => {
+    const db = getDB();
+    db.prepare("DELETE FROM task_updates WHERE task_id = ?").run(taskId);
+    db.prepare("DELETE FROM audit_logs WHERE task_id = ?").run(taskId);
+    db.prepare("DELETE FROM task_notes WHERE task_id = ?").run(taskId);
+    db.prepare("DELETE FROM task_assignees WHERE task_id = ?").run(taskId);
+    db.prepare("DELETE FROM tasks WHERE id = ?").run(taskId);
+  });
 }
 
 export function bumpStreak(userId: string): void {
