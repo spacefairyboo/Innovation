@@ -80,10 +80,14 @@ export function DelegationCard({ active, colleagues }: {
   const [pending, startTransition] = useTransition();
   const [delegateId, setDelegateId] = useState("");
   const [endDate, setEndDate] = useState("");
- // Set after mount: a render-time "today" can differ between the server
+  // Set after mount: a render-time "today" can differ between the server
   // HTML and the client's first render, tripping hydration.
   const [today, setToday] = useState("");
-  useEffect(() => setToday(new Date().toISOString().slice(0, 10)), []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setToday(new Date().toISOString().slice(0, 10));
+  }, []);
+
   return (
     <div className="card">
       <h3 className="m-0 text-base font-bold flex items-center gap-2">

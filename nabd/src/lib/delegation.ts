@@ -3,7 +3,7 @@
    task and emails the delegate; ending it (manually, or automatically on
    the optional end date) hands everything that was transferred back. */
 
-import { getDB } from "./db";
+import { getDB, withTransaction } from "./db";
 import { getUser, getTask } from "./repo";
 import { todayISO, type User } from "./types";
 
@@ -77,61 +77,67 @@ function moveTask(delegationId: number, taskId: string, fromId: string, toId: st
 }
 
 export function startDelegation(from: User, to: User, endDate: string | null): Delegation {
-  const db = getDB();
-  if (activeDelegationFrom(from.id)) throw new Error("Delegation already active");
+  return withTransaction(() => {
+    const db = getDB();
+    if (activeDelegationFrom(from.id)) throw new Error("Delegation already active");
 
-  const res = db.prepare(
-    "INSERT INTO delegations (from_user, to_user, start_ts, end_date, active, scope) VALUES (?,?,?,?,1,'all')",
-  ).run(from.id, to.id, Date.now(), endDate);
-  const delegationId = Number(res.lastInsertRowid);
+    const res = db.prepare(
+      "INSERT INTO delegations (from_user, to_user, start_ts, end_date, active, scope) VALUES (?,?,?,?,1,'all')",
+    ).run(from.id, to.id, Date.now(), endDate);
+    const delegationId = Number(res.lastInsertRowid);
 
-  const open = db.prepare(`
-    SELECT DISTINCT t.id, t.owner_id FROM tasks t
-    LEFT JOIN task_assignees a ON a.task_id = t.id
-    WHERE (t.owner_id = ? OR a.user_id = ?) AND t.status != 'done'
-  `).all(from.id, from.id) as { id: string; owner_id: string }[];
+    const open = db.prepare(`
+      SELECT DISTINCT t.id, t.owner_id FROM tasks t
+      LEFT JOIN task_assignees a ON a.task_id = t.id
+      WHERE (t.owner_id = ? OR a.user_id = ?) AND t.status != 'done'
+    `).all(from.id, from.id) as { id: string; owner_id: string }[];
 
-  for (const t of open) moveTask(delegationId, t.id, from.id, to.id, t.owner_id);
-  return activeDelegationFrom(from.id)!;
+    for (const t of open) moveTask(delegationId, t.id, from.id, to.id, t.owner_id);
+    return activeDelegationFrom(from.id)!;
+  });
 }
 
 /** Delegates a single task from its current owner to a colleague. */
 export function startTaskDelegation(from: User, to: User, taskId: string, endDate: string | null): Delegation {
-  const db = getDB();
-  if (taskDelegation(taskId)) throw new Error("Task already delegated");
-  const task = getTask(taskId);
-  if (!task) throw new Error("Task not found");
+  return withTransaction(() => {
+    const db = getDB();
+    if (taskDelegation(taskId)) throw new Error("Task already delegated");
+    const task = getTask(taskId);
+    if (!task) throw new Error("Task not found");
 
-  const res = db.prepare(
-    "INSERT INTO delegations (from_user, to_user, start_ts, end_date, active, scope) VALUES (?,?,?,?,1,'task')",
-  ).run(from.id, to.id, Date.now(), endDate);
-  moveTask(Number(res.lastInsertRowid), taskId, from.id, to.id, task.ownerId);
-  return taskDelegation(taskId)!;
+    const res = db.prepare(
+      "INSERT INTO delegations (from_user, to_user, start_ts, end_date, active, scope) VALUES (?,?,?,?,1,'task')",
+    ).run(from.id, to.id, Date.now(), endDate);
+    moveTask(Number(res.lastInsertRowid), taskId, from.id, to.id, task.ownerId);
+    return taskDelegation(taskId)!;
+  });
 }
 
 /** Hands every delegated task back to the original user and closes the delegation. */
 export function endDelegation(delegationId: number): void {
-  const db = getDB();
-  const d = db.prepare(`${SELECT} WHERE d.id = ?`).get(delegationId);
-  if (!d) return;
-  const del = mapRow(d);
-  if (!del.active) return;
+  withTransaction(() => {
+    const db = getDB();
+    const d = db.prepare(`${SELECT} WHERE d.id = ?`).get(delegationId);
+    if (!d) return;
+    const del = mapRow(d);
+    if (!del.active) return;
 
-  const moved = db.prepare(
-    "SELECT task_id, was_owner FROM delegation_tasks WHERE delegation_id = ?",
-  ).all(delegationId) as { task_id: string; was_owner: number }[];
+    const moved = db.prepare(
+      "SELECT task_id, was_owner FROM delegation_tasks WHERE delegation_id = ?",
+    ).all(delegationId) as { task_id: string; was_owner: number }[];
 
-  const delAsg = db.prepare("DELETE FROM task_assignees WHERE task_id = ? AND user_id = ?");
-  const insAsg = db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
-  const setOwner = db.prepare("UPDATE tasks SET owner_id = ? WHERE id = ?");
+    const delAsg = db.prepare("DELETE FROM task_assignees WHERE task_id = ? AND user_id = ?");
+    const insAsg = db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
+    const setOwner = db.prepare("UPDATE tasks SET owner_id = ? WHERE id = ?");
 
-  for (const m of moved) {
-    if (!getTask(m.task_id)) continue; // deleted while delegated
-    delAsg.run(m.task_id, del.toUser);
-    insAsg.run(m.task_id, del.fromUser);
-    if (m.was_owner) setOwner.run(del.fromUser, m.task_id);
-  }
-  db.prepare("UPDATE delegations SET active = 0 WHERE id = ?").run(delegationId);
+    for (const m of moved) {
+      if (!getTask(m.task_id)) continue; // deleted while delegated
+      delAsg.run(m.task_id, del.toUser);
+      insAsg.run(m.task_id, del.fromUser);
+      if (m.was_owner) setOwner.run(del.fromUser, m.task_id);
+    }
+    db.prepare("UPDATE delegations SET active = 0 WHERE id = ?").run(delegationId);
+  });
 }
 
 /**

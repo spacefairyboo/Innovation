@@ -77,15 +77,23 @@ export async function saveTask(input: {
   checklist?: ChecklistItem[];
 }) {
   const { user } = await getSession();
-  const title = input.title.trim();
+  // Validate every field server-side — the client is never trusted.
+  const title = input.title.trim().slice(0, 200);
   if (!title) throw new Error("Title required");
+  const due = input.due && /^\d{4}-\d{2}-\d{2}$/.test(input.due) ? input.due : null;
+  const priority = PRIORITIES.includes(input.priority) ? input.priority : "med";
+  const status = input.status && STATUSES.includes(input.status) ? input.status : undefined;
+  const progress = input.progress !== undefined
+    ? Math.max(0, Math.min(100, Math.round(Number(input.progress) || 0)))
+    : undefined;
+
   if (input.id) {
     const { user: editor } = await assertCanEdit(input.id);
     const assigneeIds = input.assigneeIds?.length ? vetAssignees(editor, input.assigneeIds) : undefined;
-    const note = input.note?.trim();
+    const note = input.note?.trim().slice(0, 2000);
     repo.updateTask(
       input.id,
-      { title, due: input.due, priority: input.priority, status: input.status, progress: input.progress, assigneeIds },
+      { title, due, priority, status, progress, assigneeIds },
       note ? { en: note, ar: note } : null,
       editor.id,
     );
@@ -94,11 +102,14 @@ export async function saveTask(input: {
     const assigneeIds = user.role === "employee"
       ? [user.id]
       : vetAssignees(user, input.assigneeIds?.length ? input.assigneeIds : [user.id]);
-    const task = repo.createTask({ title, assigneeIds, due: input.due, priority: input.priority, createdBy: user.id });
+    const task = repo.createTask({ title, assigneeIds, due, priority, createdBy: user.id });
     if (input.checklist?.length) repo.saveChecklist(task.id, sanitizeChecklist(input.checklist));
   }
   refresh();
 }
+
+const PRIORITIES: Priority[] = ["high", "med", "low"];
+const STATUSES: TaskStatus[] = ["done", "ontrack", "pending", "blocked"];
 
 function sanitizeChecklist(items: ChecklistItem[]): ChecklistItem[] {
   return items

@@ -6,7 +6,7 @@ A bilingual (English / العربية) task-tracking platform where **employees 
 
 | Path | What it is |
 |---|---|
-| [`nabd/`](nabd/) | **The application** — Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SQLite. Start here. |
+| [`nabd/`](nabd/) | **The application** — Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SQLite. Start here — see [`nabd/ARCHITECTURE.md`](nabd/ARCHITECTURE.md) for the stack, folder standards, and data flow. |
 | [`legacy-static/`](legacy-static/) | The original zero-dependency vanilla JS prototype (open `index.html` directly in a browser). Kept for reference. |
 
 ## Quick start

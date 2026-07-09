@@ -16,12 +16,39 @@ export function getDB(): DatabaseSync {
   if (db) return db;
   fs.mkdirSync(DATA_DIR, { recursive: true });
   db = new DatabaseSync(DB_PATH);
+  // Connection standards: WAL for concurrent readers, enforced foreign keys,
+  // and a busy timeout so parallel server-action writes queue instead of failing.
   db.exec("PRAGMA journal_mode = WAL");
+  db.exec("PRAGMA foreign_keys = ON");
+  db.exec("PRAGMA busy_timeout = 5000");
   migrate(db);
-  seed(db);
+  // Seed only a brand-new database — re-seeding an existing one would
+  // collide with its primary keys on the next boot.
+  if (isEmpty(db)) seed(db);
   return db;
 }
 
+/**
+ * Runs `fn` inside a single transaction: multi-statement writes either all
+ * land or none do. Nested calls join the outer transaction.
+ */
+let txDepth = 0;
+export function withTransaction<T>(fn: () => T): T {
+  const d = getDB();
+  if (txDepth > 0) return fn();
+  d.exec("BEGIN IMMEDIATE");
+  txDepth++;
+  try {
+    const out = fn();
+    d.exec("COMMIT");
+    return out;
+  } catch (err) {
+    d.exec("ROLLBACK");
+    throw err;
+  } finally {
+    txDepth--;
+  }
+}
 
 function migrate(d: DatabaseSync) {
   d.exec(`
@@ -161,6 +188,12 @@ function migrate(d: DatabaseSync) {
   // extended role CHECK and the section_id column, then seed the two heads.
   const usersSql = (d.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get() as { sql: string } | undefined)?.sql ?? "";
   if (usersSql && !usersSql.includes("'section'")) {
+    // Copy section_id only when the old table already has it — genuinely old
+    // databases don't, and selecting a missing column would abort the rebuild.
+    const oldCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];
+    const sectionCol = oldCols.some((c) => c.name === "section_id") ? "section_id" : "NULL";
+    const emailCol = oldCols.some((c) => c.name === "email") ? "email" : "NULL";
+    d.exec("PRAGMA foreign_keys = OFF"); // table rebuild: children keep referencing "users" by name
     d.exec(`
       CREATE TABLE users_new (
         id TEXT PRIMARY KEY, role TEXT NOT NULL CHECK (role IN ('senior','section','manager','employee')),
@@ -171,12 +204,12 @@ function migrate(d: DatabaseSync) {
         email TEXT, pref_lang TEXT, pref_theme TEXT
       );
       INSERT INTO users_new (id, role, team_id, section_id, name_en, name_ar, streak, email, pref_lang, pref_theme)
-        SELECT id, role, team_id, section_id, name_en, name_ar, streak, email, pref_lang, pref_theme FROM users;
+        SELECT id, role, team_id, ${sectionCol}, name_en, name_ar, streak, ${emailCol}, pref_lang, pref_theme FROM users;
       DROP TABLE users;
       ALTER TABLE users_new RENAME TO users;
     `);
+    d.exec("PRAGMA foreign_keys = ON");
   }
-  const anyUsers = d.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number };
   // Org rename: databases seeded before the sections/units restructure keep
   // the old demo names — bring them up to the new hierarchy.
   const u1 = d.prepare("SELECT name_en FROM units WHERE id = 'u1'").get() as { name_en: string } | undefined;
@@ -241,9 +274,9 @@ function seed(d: DatabaseSync) {
 
   const insUser = d.prepare("INSERT INTO users (id, role, team_id, section_id, name_en, name_ar, streak, email) VALUES (?,?,?,?,?,?,?,?)");
   const mail = deriveEmail;
-  insUser.run("s1", "senior", null, null, " Department Head", "رئيس القسم", 0, mail("Department Head"));
-  insUser.run("h1", "section", null, "u1", "Rayan", "ريان", 0, deriveEmail("Faisal Al-Otaibi"));
-  insUser.run("h2", "section", null, "u2", "Tamam", "تمتم", 0, deriveEmail("Huda Al-Amri"));
+  insUser.run("s1", "senior", null, null, "Department Head", "رئيس القسم", 0, mail("Department Head"));
+  insUser.run("h1", "section", null, "u1", "Rayan", "ريان", 0, mail("Rayan"));
+  insUser.run("h2", "section", null, "u2", "Tamam", "تمتم", 0, mail("Tamam"));
   insUser.run("m1", "manager", "t1","u1","Omar Hassan", "عمر حسن", 4, mail("Omar Hassan"));
   insUser.run("m2", "manager", "t2","u1", "Sara Nasser", "سارة ناصر", 6, mail("Sara Nasser"));
   insUser.run("m3", "manager", "t3", "u2","Khalid Amin", "خالد أمين", 2, mail("Khalid Amin"));
