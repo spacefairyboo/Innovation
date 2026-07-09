@@ -39,7 +39,7 @@ export function toVM(task: Task): TaskVM {
 export function csvRows(tasks: Task[], lang: Lang): string[][] {
   const t = makeT(lang);
   return [
-    ["Task", "Owner", "Team", "Status", "Progress %", "Due", "Last updated"],
+    ["Task", "Owner", "Unit", "Status", "Progress %", "Due", "Last updated"],
     ...tasks.map((x) => [
       x.title[lang],
       getUser(x.ownerId)!.name[lang],

@@ -5,7 +5,7 @@
 import { notFound } from "next/navigation";
 import { TaskFullView } from "@/components/task-view";
 import type { AssigneeOption } from "@/components/tasks";
-import { getTask, getTeam, listUsers, teamMembers } from "@/lib/repo";
+import { getTask, getTeam, listUsers, overseesTeam, teamMembers } from "@/lib/repo";
 import { getSession } from "@/lib/session";
 import { toVM } from "@/lib/vm";
 
@@ -15,26 +15,17 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const task = getTask(id);
   if (!task) notFound();
 
-  // Visibility mirrors scopeTasks: senior sees all, managers their team,
-  // employees only tasks they are assigned to.
-  const visible =
-    user.role === "senior" ||
-    (user.role === "manager" && user.teamId === task.teamId) ||
-    task.assigneeIds.includes(user.id);
-  if (!visible) notFound();
-
-  const canEdit =
-    user.role === "senior" ||
-    task.assigneeIds.includes(user.id) ||
-    (user.role === "manager" && user.teamId === task.teamId);
+  // Visibility mirrors scopeTasks: assignees plus anyone overseeing the unit.
+  const canEdit = task.assigneeIds.includes(user.id) || overseesTeam(user, task.teamId);
+  if (!canEdit) notFound();
 
   const team = getTeam(task.teamId)!;
   const assignees: AssigneeOption[] | undefined =
-    user.role === "manager" || user.role === "senior"
+    user.role !== "employee"
       ? teamMembers(task.teamId).map((m) => ({ id: m.id, name: m.name, teamName: team.name }))
       : undefined;
 
-  const backHref = user.role === "senior" ? `/teams/${task.teamId}` : "/tasks";
+  const backHref = user.role === "employee" ? "/tasks" : `/teams/${task.teamId}`;
 
   // Anyone in the organization can cover a delegated task.
   const colleagues: AssigneeOption[] = listUsers()

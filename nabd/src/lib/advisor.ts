@@ -9,7 +9,8 @@
    When an action calls for an email, the Advisor compiles the full draft —
    recipient, subject, and body — ready to copy or open in a mail client. */
 
-import { getTeam, getUser, listTeams, teamMembers, teamTasks, scopeTasks } from "./repo";
+import { getTeam, getUser, listTeams, sectionTeams, teamMembers, teamTasks, scopeTasks } from "./repo";
+import type { Team } from "./types";
 import {
   DAY_MS, type Lang, type Task, type User,
   countStatuses, effStatus, isStale, teamHealth, todayISO,
@@ -305,8 +306,8 @@ function managerPlan(user: User, lang: Lang): AdvisorAction[] {
       reason: ar
         ? `أكمل «${recentDone.title.ar}» مؤخرًا — التقدير المبكر يرفع الزخم.`
         : `They completed "${recentDone.title.en}" recently — early recognition compounds momentum.`,
-      steps: ar ? [email ? "أرسل الرسالة المجهزة أدناه، أو قلها في اجتماع الفريق." : "قلها في اجتماع الفريق أو أرسل له رسالة قصيرة."]
-        : [email ? "Send the prepared note below, or say it in the team meeting." : "Say it in the team meeting, or send them a quick note."],
+      steps: ar ? [email ? "أرسل الرسالة المجهزة أدناه، أو قلها في اجتماع الوحدة." : "قلها في اجتماع الوحدة أو أرسل له رسالة قصيرة."]
+        : [email ? "Send the prepared note below, or say it in the unit meeting." : "Say it in the unit meeting, or send them a quick note."],
       email,
     });
   }
@@ -315,23 +316,23 @@ function managerPlan(user: User, lang: Lang): AdvisorAction[] {
   return actions.sort((a, b) => rank[a.urgency] - rank[b.urgency]).slice(0, 7);
 }
 
-/* ---------------- senior manager ---------------- */
+/* ---------------- senior manager & section heads ---------------- */
 
-function seniorPlan(user: User, lang: Lang): AdvisorAction[] {
+function seniorPlan(user: User, lang: Lang, teams: Team[]): AdvisorAction[] {
   const ar = lang === "ar";
   const actions: AdvisorAction[] = [];
 
-  for (const team of listTeams()) {
+  for (const team of teams) {
     const stats = countStatuses(teamTasks(team.id));
     const health = teamHealth(stats);
     const manager = getUser(team.managerId)!;
     if (health === "risk") {
       actions.push({
         id: `s-risk-${team.id}`, urgency: "critical", icon: "alert-triangle",
-        title: ar ? `تدخل في فريق ${team.name.ar}` : `Step into the ${team.name.en} team`,
+        title: ar ? `تدخل في وحدة ${team.name.ar}` : `Step into the ${team.name.en} unit`,
         reason: ar
-          ? `${stats.blocked} متعثرة و${stats.delayed} متأخرة من أصل ${stats.total} — الفريق في دائرة الخطر.`
-          : `${stats.blocked} blocked and ${stats.delayed} overdue out of ${stats.total} — the team is at risk.`,
+          ? `${stats.blocked} متعثرة و${stats.delayed} متأخرة من أصل ${stats.total} — الوحدة في دائرة الخطر.`
+          : `${stats.blocked} blocked and ${stats.delayed} overdue out of ${stats.total} — the unit is at risk.`,
         steps: ar ? [
           `اعقد لقاء قصيرًا مع ${manager.name.ar} اليوم.`,
           "ركّز على أقدم عائق أولاً — غالبًا يفك البقية.",
@@ -342,24 +343,26 @@ function seniorPlan(user: User, lang: Lang): AdvisorAction[] {
           "Ask: what decision do you need from me right now?",
         ],
         links: [
-          { label: ar ? "فتح الفريق" : "Open team", href: `/teams/${team.id}`, icon: "users" },
-          { label: ar ? "استمع إلى ملخص الفريق" : "Listen to team briefing", href: `/podcast?scope=${team.id}`, icon: "headphones" },
+          { label: ar ? "فتح الوحدة" : "Open unit", href: `/teams/${team.id}`, icon: "users" },
+          ...(user.role === "senior"
+            ? [{ label: ar ? "استمع إلى ملخص الوحدة" : "Listen to unit briefing", href: `/podcast?scope=${team.id}`, icon: "headphones" }]
+            : []),
         ],
         email: manager.email ? {
           toName: manager.name[lang], toEmail: manager.email,
-          subject: ar ? `لقاء سريع بخصوص فريق ${team.name.ar}` : `Quick sync on the ${team.name.en} team`,
+          subject: ar ? `لقاء سريع بخصوص وحدة ${team.name.ar}` : `Quick sync on the ${team.name.en} unit`,
           body: ar
-            ? `مرحبًا ${manager.name.ar.split(" ")[0]}،\n\nأرى ${stats.blocked} مهمة متعثرة و${stats.delayed} متأخرة لدى فريقك. أريد مساعدتك في إزالة العوائق لا مساءلتك.\n\nهل تناسبك ١٥ دقيقة اليوم؟ جهّز أكبر عائقين وسنحلهما معًا.\n\n${user.name.ar}`
-            : `Hi ${manager.name.en.split(" ")[0]},\n\nI can see ${stats.blocked} blocked and ${stats.delayed} overdue tasks on your team. I want to help clear the path, not audit it.\n\nDoes 15 minutes today work? Bring the two biggest blockers and we'll resolve them together.\n\n${user.name.en}`,
+            ? `مرحبًا ${manager.name.ar.split(" ")[0]}،\n\nأرى ${stats.blocked} مهمة متعثرة و${stats.delayed} متأخرة لدى وحدتك. أريد مساعدتك في إزالة العوائق لا مساءلتك.\n\nهل تناسبك ١٥ دقيقة اليوم؟ جهّز أكبر عائقين وسنحلهما معًا.\n\n${user.name.ar}`
+            : `Hi ${manager.name.en.split(" ")[0]},\n\nI can see ${stats.blocked} blocked and ${stats.delayed} overdue tasks on your unit. I want to help clear the path, not audit it.\n\nDoes 15 minutes today work? Bring the two biggest blockers and we'll resolve them together.\n\n${user.name.en}`,
         } : undefined,
       });
     } else if (health === "ok") {
       actions.push({
         id: `s-watch-${team.id}`, urgency: "high", icon: "eye",
-        title: ar ? `تابع فريق ${team.name.ar}` : `Keep an eye on ${team.name.en}`,
+        title: ar ? `تابع وحدة ${team.name.ar}` : `Keep an eye on ${team.name.en}`,
         reason: ar
-          ? `مؤشرات الفريق تستدعي متابعة أقرب هذا الأسبوع.`
-          : `The team's indicators call for a closer look this week.`,
+          ? `مؤشرات الوحدة تستدعي متابعة أقرب هذا الأسبوع.`
+          : `The unit's indicators call for a closer look this week.`,
         steps: ar ? [
           `اطلب من ${manager.name.ar} ملخصًا من ثلاث نقاط.`,
           "استمع إلى الملخص الصوتي لنطاق هذا الفريق قبل اللقاء.",
@@ -368,15 +371,17 @@ function seniorPlan(user: User, lang: Lang): AdvisorAction[] {
           "Listen to the audio briefing scoped to this team before you meet.",
         ],
         links: [
-          { label: ar ? "فتح الفريق" : "Open team", href: `/teams/${team.id}`, icon: "users" },
-          { label: ar ? "استمع إلى ملخص الفريق" : "Listen to team briefing", href: `/podcast?scope=${team.id}`, icon: "headphones" },
+          { label: ar ? "فتح الوحدة" : "Open unit", href: `/teams/${team.id}`, icon: "users" },
+          ...(user.role === "senior"
+            ? [{ label: ar ? "استمع إلى ملخص الوحدة" : "Listen to unit briefing", href: `/podcast?scope=${team.id}`, icon: "headphones" }]
+            : []),
         ],
       });
     }
   }
 
-  // Recognition: the team with the strongest completion share.
-  const best = listTeams()
+  // Recognition: the unit with the strongest completion share.
+  const best = teams
     .map((team) => ({ team, stats: countStatuses(teamTasks(team.id)) }))
     .filter((x) => x.stats.total > 0)
     .sort((a, b) => (b.stats.done / b.stats.total) - (a.stats.done / a.stats.total))[0];
@@ -384,20 +389,20 @@ function seniorPlan(user: User, lang: Lang): AdvisorAction[] {
     const manager = getUser(best.team.managerId)!;
     const email: EmailDraft | undefined = manager.email ? {
       toName: manager.name[lang], toEmail: manager.email,
-      subject: ar ? `شكرًا لفريق ${best.team.name.ar}` : `Kudos to the ${best.team.name.en} team`,
+      subject: ar ? `شكرًا لوحدة ${best.team.name.ar}` : `Kudos to the ${best.team.name.en} unit`,
       body: ar
-        ? `${manager.name.ar.split(" ")[0]}،\n\nفريقك يحقق أعلى نسبة إنجاز حاليًا. انقل شكري للجميع — هذا المستوى من الالتزام يُلاحظ ويُقدّر.\n\n${user.name.ar}`
-        : `${manager.name.en.split(" ")[0]},\n\nYour team currently holds our strongest completion rate. Please pass my thanks to everyone — this level of follow-through is noticed and valued.\n\n${user.name.en}`,
+        ? `${manager.name.ar.split(" ")[0]}،\n\nوحدتك تحقق أعلى نسبة إنجاز حاليًا. انقل شكري للجميع — هذا المستوى من الالتزام يُلاحظ ويُقدّر.\n\n${user.name.ar}`
+        : `${manager.name.en.split(" ")[0]},\n\nYour unit currently holds our strongest completion rate. Please pass my thanks to everyone — this level of follow-through is noticed and valued.\n\n${user.name.en}`,
     } : undefined;
     actions.push({
       id: `s-kudos-${best.team.id}`, urgency: "normal", icon: "award",
-      title: ar ? `قدّر فريق ${best.team.name.ar}` : `Recognize the ${best.team.name.en} team`,
+      title: ar ? `قدّر وحدة ${best.team.name.ar}` : `Recognize the ${best.team.name.en} unit`,
       reason: ar
         ? `أعلى نسبة إنجاز لديك (${Math.round((best.stats.done / best.stats.total) * 100)}%). التقدير العلني يرفع أداء الجميع.`
         : `Your strongest completion rate (${Math.round((best.stats.done / best.stats.total) * 100)}%). Public recognition lifts everyone's bar.`,
       steps: ar ? [email ? "أرسل الرسالة المجهزة أدناه أو اذكرهم في اجتماع الإدارة القادم." : "اذكرهم في اجتماع الإدارة القادم."]
         : [email ? "Send the prepared note below, or call it out in the next leadership meeting." : "Call it out in the next leadership meeting."],
-      links: [{ label: ar ? "فتح الفريق" : "Open team", href: `/teams/${best.team.id}`, icon: "users" }],
+      links: [{ label: ar ? "فتح الوحدة" : "Open unit", href: `/teams/${best.team.id}`, icon: "users" }],
       email,
     });
   }
@@ -416,14 +421,17 @@ export function buildAdvisorPlan(user: User, lang: Lang): AdvisorPlan {
   let actions: AdvisorAction[];
   if (user.role === "employee") actions = employeePlan(user, lang, tasks);
   else if (user.role === "manager") actions = managerPlan(user, lang);
-  else actions = seniorPlan(user, lang);
+  else if (user.role === "section") actions = seniorPlan(user, lang, user.sectionId ? sectionTeams(user.sectionId) : []);
+  else actions = seniorPlan(user, lang, listTeams());
 
   // Every action gets an in-app shortcut where the work actually happens.
   const defaultLink = user.role === "employee"
     ? { label: ar ? "فتح مهامي" : "Open My Tasks", href: "/tasks", icon: "clipboard-list" }
     : user.role === "manager" && user.teamId
-      ? { label: ar ? "فتح الفريق" : "Open team", href: `/teams/${user.teamId}`, icon: "users" }
-      : null;
+      ? { label: ar ? "فتح الوحدة" : "Open unit", href: `/teams/${user.teamId}`, icon: "users" }
+      : user.role === "section"
+        ? { label: ar ? "فتح الوحدات" : "Open units", href: "/teams", icon: "users" }
+        : null;
   if (defaultLink) {
     for (const a of actions) if (!a.links?.length) a.links = [defaultLink];
   }

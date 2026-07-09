@@ -1,5 +1,8 @@
-/* Teams & Units — the org map: every unit, team, and health badge. */
+/* Units & Sections — the org map: every section, unit, and health badge.
+   Scope: senior sees everything, a section head their section, a unit head
+   their unit; team members have no org pages at all. */
 
+import { notFound } from "next/navigation";
 import { TeamCard } from "@/components/team-card";
 import { Icon } from "@/components/icons";
 import { makeT } from "@/lib/i18n";
@@ -10,10 +13,13 @@ import { HEALTH_META, countStatuses, teamHealth } from "@/lib/types";
 export default async function TeamsPage() {
   const { user, lang } = await getSession();
   const t = makeT(lang);
+  if (user.role === "employee") notFound();
 
-  const visibleTeams = user.role === "manager" && user.teamId
-    ? listTeams().filter((x) => x.id === user.teamId)
-    : listTeams();
+  const visibleTeams = user.role === "section" && user.sectionId
+    ? listTeams().filter((x) => x.unitId === user.sectionId)
+    : user.role === "manager" && user.teamId
+      ? listTeams().filter((x) => x.id === user.teamId)
+      : listTeams();
   const visibleUnitIds = new Set(visibleTeams.map((x) => x.unitId));
   const units = listUnits().filter((u) => visibleUnitIds.has(u.id));
 

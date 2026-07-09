@@ -53,10 +53,13 @@ export default async function StatsPage() {
   const health = HEALTH_META[teamHealth(stats)];
   const contributors = topContributors(tasks, 5);
 
-  // Senior: group by team. Manager: group by member.
+  // Senior: group by unit across the org. Section head: by unit in their
+  // section. Unit head: by member.
   const groups: { rows: ProgressRow[]; barRows: TeamBarRow[]; groupLabel: string } = (() => {
-    if (user.role === "senior") {
-      const teams = listTeams();
+    if (user.role === "senior" || user.role === "section") {
+      const teams = user.role === "senior"
+        ? listTeams()
+        : listTeams().filter((x) => x.unitId === user.sectionId);
       return {
         groupLabel: t("team"),
         rows: teams.map((team) => {
@@ -153,7 +156,7 @@ export default async function StatsPage() {
       </div>
 
       <ChartCard
-        title={user.role === "senior" ? t("by_team") : t("by_member")}
+        title={user.role === "manager" ? t("by_member") : t("by_team")}
         sub={t("by_team_sub")}
         chart={<TeamBars rows={groups.barRows} />}
         table={<TeamBarsTable rows={groups.barRows} />}

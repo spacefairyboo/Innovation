@@ -24,37 +24,43 @@ export async function switchUser(userId: string) {
 }
 
 export async function setLang(lang: "en" | "ar") {
+  if (lang !== "en" && lang !== "ar") throw new Error("Invalid language");
+  const { user } = await getSession();
+  repo.saveUserPrefs(user.id, { lang }); // persists per user, not just per browser
   await setSessionCookie("lang", lang);
   refresh();
 }
 
 export async function setTheme(theme: "light" | "dark") {
+  if (theme !== "light" && theme !== "dark") throw new Error("Invalid theme");
+  const { user } = await getSession();
+  repo.saveUserPrefs(user.id, { theme });
   await setSessionCookie("theme", theme);
   refresh();
 }
 
-/** May the current user modify this task? Owner, their manager, or the senior manager. */
+/** May the current user modify this task? An assignee, or anyone whose role oversees its unit. */
 async function assertCanEdit(taskId: string) {
   const { user } = await getSession();
   const task = repo.getTask(taskId);
   if (!task) throw new Error("Task not found");
-  const allowed =
-    user.role === "senior" ||
-    task.assigneeIds.includes(user.id) ||
-    (user.role === "manager" && user.teamId === task.teamId);
+  const allowed = task.assigneeIds.includes(user.id) || repo.overseesTeam(user, task.teamId);
   if (!allowed) throw new Error("Not allowed");
   return { user, task };
 }
 
 /** Validates an assignee list against the editor's authority; returns clean ids. */
-function vetAssignees(editor: { id: string; role: string; teamId: string | null }, ids: string[]): string[] {
+function vetAssignees(editor: { id: string; role: string; teamId: string | null; sectionId: string | null }, ids: string[]): string[] {
   const clean = [...new Set(ids)].filter(Boolean);
   if (!clean.length) throw new Error("At least one assignee required");
   for (const id of clean) {
     const target = repo.getUser(id);
     if (!target) throw new Error("Unknown assignee");
     if (editor.role === "employee" && target.id !== editor.id) throw new Error("Not allowed");
-    if (editor.role === "manager" && target.teamId !== editor.teamId) throw new Error("Not your team");
+    if (editor.role === "manager" && target.teamId !== editor.teamId) throw new Error("Not your unit");
+    if (editor.role === "section" && (!target.teamId || repo.getTeam(target.teamId)?.unitId !== editor.sectionId)) {
+      throw new Error("Not your section");
+    }
   }
   return clean;
 }
@@ -233,12 +239,15 @@ export async function createTaskFromChat(input: {
   const due = input.due && /^\d{4}-\d{2}-\d{2}$/.test(input.due) ? input.due : null;
   const priority = (["high", "med", "low"] as const).includes(input.priority) ? input.priority : "med";
 
-  // Employees create for themselves; managers for their team; senior for anyone.
+  // Members create for themselves; unit heads for their unit; section heads
+  // for their section; the senior manager for anyone.
   const candidates = user.role === "senior"
     ? repo.listUsers().filter((u) => u.teamId)
-    : user.role === "manager" && user.teamId
-      ? repo.teamMembers(user.teamId)
-      : [user];
+    : user.role === "section" && user.sectionId
+      ? repo.sectionTeams(user.sectionId).flatMap((tm) => repo.teamMembers(tm.id))
+      : user.role === "manager" && user.teamId
+        ? repo.teamMembers(user.teamId)
+        : [user];
   const wanted = input.assigneeName?.trim().toLowerCase();
   const match = wanted
     ? candidates.find((u) =>

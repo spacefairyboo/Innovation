@@ -34,8 +34,9 @@ function migrate(d: DatabaseSync) {
       name_en TEXT NOT NULL, name_ar TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY, role TEXT NOT NULL CHECK (role IN ('senior','manager','employee')),
+      id TEXT PRIMARY KEY, role TEXT NOT NULL CHECK (role IN ('senior','section','manager','employee')),
       team_id TEXT REFERENCES teams(id),
+      section_id TEXT REFERENCES units(id),
       name_en TEXT NOT NULL, name_ar TEXT NOT NULL,
       streak INTEGER NOT NULL DEFAULT 0,
       email TEXT
@@ -154,6 +155,41 @@ function migrate(d: DatabaseSync) {
   // Databases created before per-task delegation lack delegations.scope.
   const delCols = d.prepare("SELECT name FROM pragma_table_info('delegations')").all() as { name: string }[];
   if (!delCols.some((c) => c.name === "scope")) d.exec("ALTER TABLE delegations ADD COLUMN scope TEXT NOT NULL DEFAULT 'all'");
+  // Databases created before the section-head role: rebuild users with the
+  // extended role CHECK and the section_id column, then seed the two heads.
+  const usersSql = (d.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get() as { sql: string } | undefined)?.sql ?? "";
+  if (usersSql && !usersSql.includes("'section'")) {
+    d.exec(`
+      CREATE TABLE users_new (
+        id TEXT PRIMARY KEY, role TEXT NOT NULL CHECK (role IN ('senior','section','manager','employee')),
+        team_id TEXT REFERENCES teams(id),
+        section_id TEXT REFERENCES units(id),
+        name_en TEXT NOT NULL, name_ar TEXT NOT NULL,
+        streak INTEGER NOT NULL DEFAULT 0,
+        email TEXT, pref_lang TEXT, pref_theme TEXT
+      );
+      INSERT INTO users_new (id, role, team_id, name_en, name_ar, streak, email, pref_lang, pref_theme)
+        SELECT id, role, team_id, name_en, name_ar, streak, email, pref_lang, pref_theme FROM users;
+      DROP TABLE users;
+      ALTER TABLE users_new RENAME TO users;
+    `);
+  }
+  const shCount = d.prepare("SELECT COUNT(*) AS c FROM users WHERE role = 'section'").get() as { c: number };
+  const anyUsers = d.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number };
+  if (shCount.c === 0 && anyUsers.c > 0) seedSectionHeads(d);
+  // Org rename: databases seeded before the sections/units restructure keep
+  // the old demo names — bring them up to the new hierarchy.
+  const u1 = d.prepare("SELECT name_en FROM units WHERE id = 'u1'").get() as { name_en: string } | undefined;
+  if (u1?.name_en === "Technology Unit") {
+    d.exec(`
+      UPDATE units SET emoji='B', name_en='Business Excellence', name_ar='التميّز المؤسسي' WHERE id='u1';
+      UPDATE units SET emoji='C', name_en='Corporate Governance', name_ar='الحوكمة المؤسسية' WHERE id='u2';
+      UPDATE teams SET emoji='D', name_en='Data Management', name_ar='إدارة البيانات' WHERE id='t1';
+      UPDATE teams SET emoji='B', name_en='Business Development', name_ar='تطوير الأعمال' WHERE id='t2';
+      UPDATE teams SET emoji='1', name_en='Unit 1', name_ar='الوحدة الأولى' WHERE id='t3';
+      UPDATE teams SET emoji='2', name_en='Unit 2', name_ar='الوحدة الثانية' WHERE id='t4';
+    `);
+  }
   // Databases created before the Outlook-meetings release have an empty meetings table.
   const meetingCount = d.prepare("SELECT COUNT(*) AS c FROM meetings").get() as { c: number };
   const userCount = d.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number };
@@ -192,15 +228,16 @@ const inDays = (n: number) => new Date(Date.now() + n * DAY_MS).toISOString().sl
 const deriveEmail = (en: string) => `${en.toLowerCase().replace(/[^a-z ]/g, "").trim().replace(/ +/g, ".")}@nabd.example`;
 
 function seed(d: DatabaseSync) {
+  // Org hierarchy: sections (units table) contain units (teams table).
   const insUnit = d.prepare("INSERT INTO units VALUES (?,?,?,?)");
-  insUnit.run("u1", "T", "Technology Unit", "وحدة التقنية");
-  insUnit.run("u2", "B", "Business Unit", "وحدة الأعمال");
+  insUnit.run("u1", "B", "Business Excellence", "التميّز المؤسسي");
+  insUnit.run("u2", "C", "Corporate Governance", "الحوكمة المؤسسية");
 
   const insTeam = d.prepare("INSERT INTO teams VALUES (?,?,?,?,?,?)");
-  insTeam.run("t1", "u1", "D", "m1", "Development", "التطوير");
-  insTeam.run("t2", "u1", "X", "m2", "Design", "التصميم");
-  insTeam.run("t3", "u2", "M", "m3", "Marketing", "التسويق");
-  insTeam.run("t4", "u2", "C", "m4", "Customer Success", "نجاح العملاء");
+  insTeam.run("t1", "u1", "D", "m1", "Data Management", "إدارة البيانات");
+  insTeam.run("t2", "u1", "B", "m2", "Business Development", "تطوير الأعمال");
+  insTeam.run("t3", "u2", "1", "m3", "Unit 1", "الوحدة الأولى");
+  insTeam.run("t4", "u2", "2", "m4", "Unit 2", "الوحدة الثانية");
 
   const insUser = d.prepare("INSERT INTO users (id, role, team_id, name_en, name_ar, streak, email) VALUES (?,?,?,?,?,?,?)");
   const mail = deriveEmail;
@@ -218,6 +255,7 @@ function seed(d: DatabaseSync) {
   insUser.run("e7", "employee", "t3", "Hassan Nabil", "حسن نبيل", 2, mail("Hassan Nabil"));
   insUser.run("e8", "employee", "t4", "Amal Rashid", "أمل راشد", 9, mail("Amal Rashid"));
   insUser.run("e9", "employee", "t4", "Ziad Karim", "زياد كريم", 0, mail("Ziad Karim"));
+  seedSectionHeads(d);
 
   const insTask = d.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?,?)");
   const insUpd = d.prepare("INSERT INTO task_updates (task_id, ts, by_id, text_en, text_ar, status, progress) VALUES (?,?,?,?,?,?,?)");
@@ -310,6 +348,15 @@ function seed(d: DatabaseSync) {
     ago(0, 1));
 
   seedMeetings(d);
+}
+
+/* Section heads — one per section; they see every unit in their section. */
+function seedSectionHeads(d: DatabaseSync) {
+  const ins = d.prepare(
+    "INSERT INTO users (id, role, team_id, section_id, name_en, name_ar, streak, email) VALUES (?,?,?,?,?,?,?,?)",
+  );
+  ins.run("h1", "section", null, "u1", "Faisal Al-Otaibi", "فيصل العتيبي", 0, deriveEmail("Faisal Al-Otaibi"));
+  ins.run("h2", "section", null, "u2", "Huda Al-Amri", "هدى العمري", 0, deriveEmail("Huda Al-Amri"));
 }
 
 /* Demo Outlook calendar — meetings the Graph sync would pull from each
