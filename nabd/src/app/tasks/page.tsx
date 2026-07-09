@@ -2,12 +2,12 @@
 
 import { StatTiles } from "@/components/charts";
 import { CheckinButtons } from "@/components/chat";
-import { Icon } from "@/components/icons";
+import { Icon } from "@/components/ui";
 import { EmailSuggestions } from "@/components/inbox";
 import { NewTaskButton, TaskTabs, type AssigneeOption } from "@/components/tasks";
-import { taskIdsDelegatedTo } from "@/server/repositories/delegation.repo";
+import { taskIdsDelegatedTo } from "@/server/repositories/delegationRepository";
 import { makeT } from "@/lib/i18n";
-import { pendingSuggestions } from "@/server/repositories/inbox.repo";
+import { pendingSuggestions } from "@/server/repositories/inboxRepository";
 import { getTeam, teamMembers, userTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { countStatuses } from "@/lib/types";

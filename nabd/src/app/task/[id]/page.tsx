@@ -3,7 +3,7 @@
    the calendar, and the command palette. */
 
 import { notFound } from "next/navigation";
-import { TaskFullView } from "@/components/task-view";
+import { TaskFullView } from "@/components/tasks";
 import type { AssigneeOption } from "@/components/tasks";
 import { getTask, getTeam, listUsers, overseesTeam, teamMembers } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";

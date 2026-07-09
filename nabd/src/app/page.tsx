@@ -4,17 +4,17 @@
 
 import Link from "next/link";
 import { ChartCard, Donut, Sparkline, StatusTable, TeamBars, TeamBarsTable } from "@/components/charts";
-import { AttentionList, ExportCsvButton, type AttentionItem } from "@/components/dashboard-widgets";
+import { AttentionList, ExportCsvButton, type AttentionItem } from "@/components/dashboard";
 import { Avatar, StatusChip } from "@/components/ui";
-import { Icon } from "@/components/icons";
-import { buildAdvisorPlan } from "@/server/services/advisor.service";
-import { insightFor } from "@/server/services/briefing.service";
+import { Icon } from "@/components/ui";
+import { buildAdvisorPlan } from "@/server/services/advisorService";
+import { insightFor } from "@/server/services/briefingService";
 import { makeT } from "@/lib/i18n";
 import { getTeam, getUser, listTeams, overseesTeam, scopeTasks, teamMembers, teamTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { HEALTH_META, countStatuses, effStatus, teamHealth } from "@/lib/types";
 import { csvRows, doneThisWeekCount, greetingKey, recentActivity, weekTrend } from "@/server/vm";
-import { TeamGlyph } from "@/components/team-card";
+import { TeamGlyph } from "@/components/teams";
 
 function CompletionRing({ pct, label }: { pct: number; label: string }) {
   const R = 42, C = 2 * Math.PI * R;

@@ -1,10 +1,10 @@
 /* Profile — account details, saved preferences (language & theme), and
    delegation: hand all open tasks to a colleague while away. */
 
-import { Icon } from "@/components/icons";
+import { Icon } from "@/components/ui";
 import { DelegationCard, PreferencesCard, type DelegationView } from "@/components/profile";
 import { Avatar } from "@/components/ui";
-import { activeDelegationFrom, activeDelegationsTo } from "@/server/repositories/delegation.repo";
+import { activeDelegationFrom, activeDelegationsTo } from "@/server/repositories/delegationRepository";
 import { makeT } from "@/lib/i18n";
 import { getTeam, getUser, listUsers } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";

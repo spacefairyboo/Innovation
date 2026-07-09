@@ -8,8 +8,8 @@ import {
   StatTiles, StatusTable, TeamBars, TeamBarsTable, TrendTable,
   type ProgressRow, type TeamBarRow,
 } from "@/components/charts";
-import { ExportCsvButton } from "@/components/dashboard-widgets";
-import { Icon } from "@/components/icons";
+import { ExportCsvButton } from "@/components/dashboard";
+import { Icon } from "@/components/ui";
 import { Avatar } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
 import { getUser, listTeams, scopeTasks, teamMembers, teamTasks, userTasks } from "@/server/repositories";

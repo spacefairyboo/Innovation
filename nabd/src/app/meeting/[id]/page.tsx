@@ -3,9 +3,9 @@
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Icon } from "@/components/icons";
+import { Icon } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
-import { getMeeting } from "@/server/repositories/meeting.repo";
+import { getMeeting } from "@/server/repositories/meetingRepository";
 import { getSession } from "@/server/auth/session";
 
 export default async function MeetingPage({ params }: {

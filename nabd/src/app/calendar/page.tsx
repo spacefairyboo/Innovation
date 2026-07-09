@@ -3,9 +3,9 @@
    click it for the full details). */
 
 import Link from "next/link";
-import { Icon } from "@/components/icons";
+import { Icon } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
-import { meetingsForMonth, type Meeting } from "@/server/repositories/meeting.repo";
+import { meetingsForMonth, type Meeting } from "@/server/repositories/meetingRepository";
 import { scopeTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { STATUS_META, effStatus, todayISO, type EffStatus, type Lang, type Task } from "@/lib/types";

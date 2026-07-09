@@ -1,6 +1,6 @@
 /* Server-side view-model builders shared by pages. */
 
-import { taskDelegation } from "./repositories/delegation.repo";
+import { taskDelegation } from "./repositories/delegationRepository";
 import { makeT } from "@/lib/i18n";
 import { getChecklist, getTeam, getUser, taskActivity } from "./repositories";
 import { taskValue } from "@/lib/value";

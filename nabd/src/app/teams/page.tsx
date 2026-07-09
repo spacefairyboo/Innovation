@@ -3,8 +3,8 @@
    their unit; team members have no org pages at all. */
 
 import { notFound } from "next/navigation";
-import { TeamCard } from "@/components/team-card";
-import { Icon } from "@/components/icons";
+import { TeamCard } from "@/components/teams";
+import { Icon } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
 import { getUser, listTeams, listUnits, teamMembers, teamTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";

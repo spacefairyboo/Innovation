@@ -3,9 +3,9 @@
 
 import { revalidatePath } from "next/cache";
 import { getSession } from "../auth/session";
-import { getTask } from "../repositories/task.repo";
-import { getTeam, getUser } from "../repositories/org.repo";
-import { overseesTeam } from "../services/access.service";
+import { getTask } from "../repositories/taskRepository";
+import { getTeam, getUser } from "../repositories/orgRepository";
+import { overseesTeam } from "../services/accessService";
 import type { ChecklistItem, User } from "@/lib/types";
 
 /** Revalidates every route after a mutation. */

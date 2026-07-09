@@ -2,8 +2,8 @@
    with step-by-step guidance and prepared emails, per persona. */
 
 import { AdvisorActionCard } from "@/components/advisor";
-import { Icon } from "@/components/icons";
-import { buildAdvisorPlan } from "@/server/services/advisor.service";
+import { Icon } from "@/components/ui";
+import { buildAdvisorPlan } from "@/server/services/advisorService";
 import { makeT } from "@/lib/i18n";
 import { getSession } from "@/server/auth/session";
 

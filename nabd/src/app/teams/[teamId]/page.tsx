@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChartCard, Donut, MiniBars, StatTiles, StatusTable } from "@/components/charts";
-import { ExportCsvButton } from "@/components/dashboard-widgets";
-import { Icon } from "@/components/icons";
+import { ExportCsvButton } from "@/components/dashboard";
+import { Icon } from "@/components/ui";
 import { TaskListSection, type AssigneeOption } from "@/components/tasks";
-import { TeamGlyph } from "@/components/team-card";
+import { TeamGlyph } from "@/components/teams";
 import { Avatar } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
 import { getTeam, getUnit, overseesTeam, teamMembers, teamTasks, userTasks } from "@/server/repositories";

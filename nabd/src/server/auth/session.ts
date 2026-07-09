@@ -3,7 +3,7 @@
    auth provider (e.g. Auth.js) — everything else reads getSession() only. */
 
 import { cookies } from "next/headers";
-import { getUser } from "../repositories/org.repo";
+import { getUser } from "../repositories/orgRepository";
 import type { Lang, Theme, User } from "@/lib/types";
 
 const UID_COOKIE = "nabd_uid";

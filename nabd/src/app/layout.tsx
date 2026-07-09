@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppProviders } from "@/components/providers";
-import { Shell, type ShellUser } from "@/components/shell";
-import type { PaletteItem } from "@/components/palette";
+import { Shell, type ShellUser } from "@/components/layout";
+import type { PaletteItem } from "@/components/layout";
 import { getSession } from "@/server/auth/session";
 import { makeT } from "@/lib/i18n";
-import { runDelegationSweep } from "@/server/services/delegation.service";
-import { runReminderSweep } from "@/server/services/mailer.service";
+import { runDelegationSweep } from "@/server/services/delegationService";
+import { runReminderSweep } from "@/server/services/mailerService";
 import { getTeam, listTeams, listUsers, scopeTasks, unreadCount } from "@/server/repositories";
 import { STATUS_META, effStatus, type Lang, type User } from "@/lib/types";
 

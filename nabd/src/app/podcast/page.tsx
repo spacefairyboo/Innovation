@@ -3,8 +3,8 @@
 
 import { notFound } from "next/navigation";
 import { EmailBriefingButton } from "@/components/digest";
-import { PodcastPlayer } from "@/components/podcast";
-import { buildPodcastScript } from "@/server/services/briefing.service";
+import { PodcastPlayer } from "@/components/briefing";
+import { buildPodcastScript } from "@/server/services/briefingService";
 import { makeT } from "@/lib/i18n";
 import { allTasks, listTeams, listUnits, teamTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";

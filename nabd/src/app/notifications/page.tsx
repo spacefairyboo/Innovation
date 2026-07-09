@@ -3,10 +3,10 @@
 
 import { EmailBriefingButton } from "@/components/digest";
 import { NotificationList } from "@/components/notifications";
-import { Icon } from "@/components/icons";
-import { notificationViews } from "@/server/services/briefing.service";
+import { Icon } from "@/components/ui";
+import { notificationViews } from "@/server/services/briefingService";
 import { makeT } from "@/lib/i18n";
-import { emailsFor, runReminderSweep } from "@/server/services/mailer.service";
+import { emailsFor, runReminderSweep } from "@/server/services/mailerService";
 import { listUsers } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { formatStamp, type Localized } from "@/lib/types";
