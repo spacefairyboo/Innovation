@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "./providers";
 import { Icon } from "./icons";
-import { PresenterAvatar } from "./presenter";
+import { PresenterAvatar, presenterPulse } from "./presenter";
 
 /* ---- voice classification: prefer natural-sounding voices, group by gender ---- */
 const FEMALE_MARKERS = ["female", "woman", "zira", "susan", "samantha", "victoria", "karen", "moira", "tessa",
@@ -245,7 +245,9 @@ export function PodcastPlayer({ lines, scopeOptions, scope }: {
       utt.lang = lang === "ar" ? "ar-SA" : "en-US";
       if (voice) utt.voice = voice;
       utt.rate = rateRef.current;
-      utt.onstart = () => setLineIdx(i);
+      utt.onstart = () => { setLineIdx(i); presenterPulse(); };
+      // Word boundaries drive the avatar's mouth, keeping it in sync with the audio.
+      utt.onboundary = () => presenterPulse();
       if (i === lines.length - 1) utt.onend = () => { setPlaying(false); setLineIdx(-1); };
       synth.speak(utt);
     });

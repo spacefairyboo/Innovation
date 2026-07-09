@@ -1,14 +1,34 @@
 "use client";
 
-/* The briefing presenter — a real 3D face (three.js) with ARKit blendshapes,
-   driven live: periodic blinks and micro head-sway when idle; jaw + mouth
-   visemes while the briefing is being spoken. The model is the "facecap"
-   example asset bundled with three.js (MIT), served from /models/facecap.glb
-   with its KTX2 basis transcoder in /basis. Falls back to the illustrated
-   portrait until the model is ready (or if WebGL is unavailable). */
+/* The briefing presenter — a rigged 3D avatar (three.js + Ready Player Me
+   model from the MIT-licensed TalkingHead project, bundled at
+   /models/avatar.glb) with real facial animation:
+
+     idle     periodic blinks, soft smile, gentle head sway
+     speaking mouth visemes synced to the speech engine — every word
+              boundary reported by SpeechSynthesis fires presenterPulse(),
+              which opens the mouth on a fresh viseme and lets it decay,
+              so the lips track the actual audio cadence (with a rhythmic
+              fallback for voices that don't report boundaries)
+
+   Falls back to the illustrated portrait until the model is ready or if
+   WebGL is unavailable. Honors prefers-reduced-motion. */
 
 import { useEffect, useRef, useState } from "react";
-import type { Mesh, MeshStandardMaterial } from "three";
+import type { Bone, Mesh } from "three";
+
+/* ---- audio-sync bus: the player pulses this on every spoken word ---- */
+const pulseListeners = new Set<() => void>();
+export function presenterPulse(): void {
+  pulseListeners.forEach((fn) => fn());
+}
+
+type MorphMesh = Mesh & {
+  morphTargetInfluences: number[];
+  morphTargetDictionary: Record<string, number>;
+};
+
+const VISEMES = ["viseme_aa", "viseme_E", "viseme_I", "viseme_O", "viseme_U", "viseme_DD", "viseme_PP", "viseme_FF"];
 
 export function PresenterAvatar({ speaking, fallback }: {
   speaking: boolean;
@@ -33,8 +53,6 @@ export function PresenterAvatar({ speaking, fallback }: {
       try {
         const THREE = await import("three");
         const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
-        const { KTX2Loader } = await import("three/examples/jsm/loaders/KTX2Loader.js");
-        const { MeshoptDecoder } = await import("three/examples/jsm/libs/meshopt_decoder.module.js");
         const { RoomEnvironment } = await import("three/examples/jsm/environments/RoomEnvironment.js");
         if (cancelled) return;
 
@@ -45,110 +63,113 @@ export function PresenterAvatar({ speaking, fallback }: {
         renderer.domElement.style.cssText = "position:absolute;inset:0;width:100%;height:100%;";
 
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(26, mount.clientWidth / mount.clientHeight, 0.05, 20);
+        const camera = new THREE.PerspectiveCamera(23, mount.clientWidth / mount.clientHeight, 0.05, 30);
 
         const pmrem = new THREE.PMREMGenerator(renderer);
         scene.environment = pmrem.fromScene(new RoomEnvironment()).texture;
-        const key = new THREE.DirectionalLight(0xfff4e6, 0.7);
-        key.position.set(0.5, 0.6, 1);
+        const key = new THREE.DirectionalLight(0xfff2e2, 1.1);
+        key.position.set(0.6, 1.8, 1.2);
         scene.add(key);
-        const rim = new THREE.DirectionalLight(0x46c7b4, 0.9);
-        rim.position.set(-1, 0.3, -0.6);
+        const rim = new THREE.DirectionalLight(0x46c7b4, 1.4);
+        rim.position.set(-1.2, 1.6, -0.8);
         scene.add(rim);
-        scene.add(new THREE.AmbientLight(0xdff5f1, 0.25));
+        scene.add(new THREE.AmbientLight(0xdff5f1, 0.35));
 
-        const ktx2 = new KTX2Loader().setTranscoderPath("/basis/").detectSupport(renderer);
-        const gltf = await new GLTFLoader()
-          .setKTX2Loader(ktx2)
-          .setMeshoptDecoder(MeshoptDecoder)
-          .loadAsync("/models/facecap.glb");
+        const gltf = await new GLTFLoader().loadAsync("/models/avatar.glb");
         if (cancelled) { renderer.dispose(); pmrem.dispose(); return; }
 
         const root = gltf.scene;
-        // Warm porcelain skin instead of the asset's flat grey (eyes untouched).
-        root.traverse((o) => {
-          const mesh = o as Mesh;
-          if (!mesh.isMesh || mesh.name.toLowerCase().includes("eye")) return;
-          const mat = mesh.material as MeshStandardMaterial;
-          mat.color?.set(0xf0d8c2);
-        });
         scene.add(root);
 
-        const head = root.getObjectByName("mesh_2") as unknown as {
-          morphTargetInfluences: number[];
-          morphTargetDictionary: Record<string, number>;
-        } | null;
-        if (!head) throw new Error("face mesh not found");
-        const inf = head.morphTargetInfluences;
-        const dict = head.morphTargetDictionary;
-        const set = (name: string, v: number) => { const i = dict[name]; if (i !== undefined) inf[i] = v; };
+        // Every mesh that carries the facial morphs (head + teeth).
+        const morphMeshes: MorphMesh[] = [];
+        root.traverse((o) => {
+          const m = o as MorphMesh;
+          if (m.isMesh && m.morphTargetDictionary && m.morphTargetInfluences) morphMeshes.push(m);
+        });
+        const set = (name: string, v: number) => {
+          for (const m of morphMeshes) {
+            const i = m.morphTargetDictionary[name];
+            if (i !== undefined) m.morphTargetInfluences[i] = v;
+          }
+        };
 
-        // Frame the face: distance derived from the head's real size so the
-        // face fills the canvas without clipping.
-        const box = new THREE.Box3().setFromObject(root);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        const dist = (size.y / 2) / Math.tan((camera.fov * Math.PI) / 360) * 0.72;
-        camera.position.set(center.x + size.x * 0.12, center.y + size.y * 0.06, box.max.z + dist);
-        camera.lookAt(center.x, center.y + size.y * 0.04, center.z);
+        // Frame the head and shoulders.
+        const headBone = root.getObjectByName("Head") as Bone | null;
+        root.updateWorldMatrix(true, true);
+        const headPos = new THREE.Vector3();
+        if (headBone) headBone.getWorldPosition(headPos);
+        else headPos.set(0, 1.65, 0);
+        camera.position.set(headPos.x + 0.07, headPos.y + 0.05, headPos.z + 0.78);
+        camera.lookAt(headPos.x, headPos.y + 0.02, headPos.z);
+
+        const headBase = headBone ? headBone.rotation.clone() : null;
+
+        /* ---- audio-synced mouth state ---- */
+        let energy = 0;              // 1 on every spoken word, decays fast
+        let viseme = VISEMES[0];     // the mouth shape of the current word
+        let lastPulse = -10;
+        const clock = new THREE.Clock();
+        const onPulse = () => {
+          energy = 1;
+          viseme = VISEMES[Math.floor(Math.random() * VISEMES.length)];
+          lastPulse = clock.elapsedTime;
+        };
+        pulseListeners.add(onPulse);
 
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const clock = new THREE.Clock();
         let nextBlink = 1.2;
         let blinkT = -1;
+        let mouth = 0;
 
         const tick = () => {
           const dt = clock.getDelta();
           const t = clock.elapsedTime;
           const talking = speakingRef.current;
 
-          // gentle head sway, a touch livelier while talking
-          root.rotation.y = Math.sin(t * 0.45) * 0.07 + (talking ? Math.sin(t * 1.9) * 0.025 : 0);
-          root.rotation.x = Math.sin(t * 0.6) * 0.02 + (talking ? Math.sin(t * 2.7) * 0.012 : 0);
-          root.rotation.z = Math.sin(t * 0.3) * 0.012;
+          // gentle sway on the whole figure + a livelier head while talking
+          root.rotation.y = Math.sin(t * 0.4) * 0.05;
+          if (headBone && headBase) {
+            headBone.rotation.x = headBase.x + Math.sin(t * 0.7) * 0.025 + (talking ? Math.sin(t * 2.3) * 0.02 : 0);
+            headBone.rotation.y = headBase.y + Math.sin(t * 0.5) * 0.06 + (talking ? Math.sin(t * 1.7) * 0.03 : 0);
+            headBone.rotation.z = headBase.z + Math.sin(t * 0.33) * 0.015;
+          }
 
           // blink every few seconds
           nextBlink -= dt;
-          if (nextBlink <= 0 && blinkT < 0) { blinkT = 0; nextBlink = 2.2 + Math.random() * 3.2; }
+          if (nextBlink <= 0 && blinkT < 0) { blinkT = 0; nextBlink = 2.4 + Math.random() * 3; }
           if (blinkT >= 0) {
             blinkT += dt;
-            const p = blinkT / 0.26;
+            const p = blinkT / 0.24;
             const v = p < 0.42 ? p / 0.42 : p < 0.58 ? 1 : Math.max(0, 1 - (p - 0.58) / 0.42);
-            set("eyeBlink_L", v);
-            set("eyeBlink_R", v);
+            set("eyeBlinkLeft", v);
+            set("eyeBlinkRight", v);
             if (p >= 1) blinkT = -1;
           }
 
-          // mouth: pseudo-visemes while the speech engine talks
+          // mouth: word pulses from the speech engine drive the visemes
+          energy *= Math.exp(-dt * 6.5);
+          let target = 0;
           if (talking) {
-            const open = Math.max(0, Math.sin(t * 9.2) * 0.55 + Math.sin(t * 13.7) * 0.35 + 0.12);
-            set("jawOpen", Math.min(0.5, open * 0.5));
-            set("mouthFunnel", Math.max(0, Math.sin(t * 6.3)) * 0.28);
-            set("mouthPucker", Math.max(0, Math.sin(t * 4.7 + 1.4)) * 0.22);
-            set("mouthStretch_L", Math.max(0, Math.sin(t * 5.4 + 0.6)) * 0.18);
-            set("mouthStretch_R", Math.max(0, Math.sin(t * 5.9 + 2.1)) * 0.18);
-            set("mouthSmile_L", 0.08);
-            set("mouthSmile_R", 0.08);
-            set("browInnerUp", 0.12 + Math.max(0, Math.sin(t * 1.3)) * 0.1);
-          } else {
-            // ease back to a calm, faintly smiling rest pose
-            const jaw = dict["jawOpen"];
-            if (jaw !== undefined) inf[jaw] += (0 - inf[jaw]) * Math.min(1, dt * 10);
-            set("mouthFunnel", 0);
-            set("mouthPucker", 0);
-            set("mouthStretch_L", 0);
-            set("mouthStretch_R", 0);
-            set("mouthSmile_L", 0.22);
-            set("mouthSmile_R", 0.22);
-            set("browInnerUp", 0.05);
+            target = energy;
+            // some voices never report word boundaries — keep a speech rhythm
+            if (t - lastPulse > 0.8) target = Math.max(0, Math.sin(t * 8.6) * 0.4 + 0.32);
           }
+          mouth += (target - mouth) * Math.min(1, dt * 18);
+
+          for (const v of VISEMES) set(v, 0);
+          set(viseme, Math.min(1, mouth * 1.1));
+          set("jawOpen", mouth * 0.28);
+          set("mouthSmileLeft", talking ? 0.05 : 0.28);
+          set("mouthSmileRight", talking ? 0.05 : 0.28);
+          set("browInnerUp", talking ? 0.1 + Math.max(0, Math.sin(t * 1.4)) * 0.12 : 0.04);
 
           renderer.render(scene, camera);
         };
 
         if (reduceMotion) {
-          set("mouthSmile_L", 0.22);
-          set("mouthSmile_R", 0.22);
+          set("mouthSmileLeft", 0.28);
+          set("mouthSmileRight", 0.28);
           renderer.render(scene, camera);
         } else {
           renderer.setAnimationLoop(tick);
@@ -166,12 +187,12 @@ export function PresenterAvatar({ speaking, fallback }: {
         setReady(true);
 
         dispose = () => {
+          pulseListeners.delete(onPulse);
           window.removeEventListener("resize", onResize);
           renderer.setAnimationLoop(null);
           renderer.domElement.remove();
           renderer.dispose();
           pmrem.dispose();
-          ktx2.dispose();
         };
       } catch {
         if (!cancelled) setFailed(true);
@@ -182,7 +203,7 @@ export function PresenterAvatar({ speaking, fallback }: {
   }, []);
 
   return (
-    <div className="relative w-40 h-44 md:w-48 md:h-52 shrink-0 select-none" aria-hidden>
+    <div className="relative w-52 h-60 md:w-72 md:h-80 shrink-0 select-none" aria-hidden>
       <span
         className="absolute inset-x-2 top-2 bottom-4 rounded-full pointer-events-none"
         style={{
