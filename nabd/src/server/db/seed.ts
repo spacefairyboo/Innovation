@@ -61,7 +61,9 @@ export function seed(d: DatabaseSync) {
 
 
 
-  const insTask = d.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+  const insTask = d.prepare(
+    "INSERT INTO tasks (id, owner_id, team_id, status, progress, priority, title_en, title_ar, due, updated_at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+  );
   const insUpd = d.prepare("INSERT INTO task_updates (task_id, ts, by_id, text_en, text_ar, status, progress) VALUES (?,?,?,?,?,?,?)");
   const insAudit = d.prepare("INSERT INTO audit_logs (task_id, changed_by, ts, field, old_value, new_value) VALUES (?,?,?,?,?,?)");
   const insNote = d.prepare("INSERT INTO task_notes (task_id, checklist_items) VALUES (?,?)");
@@ -128,7 +130,7 @@ export function seed(d: DatabaseSync) {
   );
   insSugg.run("e1", "Salem Al-Qahtani", "salem@acmecorp.example",
     "Urgent: payment gateway certificate expires Friday",
-    "Hi Yousef — the TLS certificate on the payment gateway expires this week. Please renew it by Friday; this is urgent for the launch.",
+    "Hi Yousef, the TLS certificate on the payment gateway expires this week. Please renew it by Friday; this is urgent for the launch.",
     ago(0, 2));
   insSugg.run("e1", "Sara Nasser", "sara.nasser@nabd.example",
     "Checkout assets ready for review",
@@ -143,12 +145,12 @@ export function seed(d: DatabaseSync) {
     "The board would like a one-page summary of the backend hiring pipeline by July 15. No need for slides.",
     ago(0, 4));
   insSugg.run("e8", "Gulf Retail Co.", "success@gulfretail.example",
-    "Onboarding feedback call — client wants a date",
+    "Onboarding feedback call: client wants a date",
     "Our team enjoyed the onboarding kit. Could we schedule the feedback call sometime next Wednesday? The client is keen.",
     ago(0, 9));
   insSugg.run("e6", "Media Buyer", "buyer@adnetwork.example",
     "Q3 campaign budgets due tomorrow",
-    "Reminder: the final Q3 campaign budget split is due tomorrow. Urgent — the network locks placements after that.",
+    "Reminder: the final Q3 campaign budget split is due tomorrow. Urgent: the network locks placements after that.",
     ago(0, 1));
 
   seedMeetings(d);
@@ -172,7 +174,7 @@ export function seedMeetings(d: DatabaseSync) {
   type M = [user: string, subject: string, location: string, url: string | null,
     orgName: string, orgEmail: string, start: number, end: number, body: string];
   const rows: M[] = [
-    ["e1", "Sprint planning — Development", "Room 2A, Tech floor", null,
+    ["e1", "Sprint planning: Development", "Room 2A, Tech floor", null,
       "Omar Hassan", "omar.hassan@nabd.example", ...at(0, 10), "Planning for the next sprint. Bring your estimates for the payment page work."],
     ["e1", "Payment gateway vendor call", "Microsoft Teams", teams,
       "Salem Al-Qahtani", "salem@acmecorp.example", ...at(1, 14), "Walkthrough of the certificate renewal process with the vendor's security team."],
@@ -180,21 +182,21 @@ export function seedMeetings(d: DatabaseSync) {
       "Omar Hassan", "omar.hassan@nabd.example", ...at(3, 9, 30), "Monthly one-to-one. Agenda: growth plan, API security review status."],
     ["e1", "Tech all-hands", "Auditorium", null,
       "Layla Al-Harbi", "layla.alharbi@nabd.example", ...at(8, 11, 90), "Quarterly all-hands for the Technology unit."],
-    ["m1", "Sprint planning — Development", "Room 2A, Tech floor", null,
+    ["m1", "Sprint planning: Development", "Room 2A, Tech floor", null,
       "Omar Hassan", "omar.hassan@nabd.example", ...at(0, 10), "Planning for the next sprint."],
-    ["m1", "Hiring panel — senior backend engineer", "Microsoft Teams", teams,
+    ["m1", "Hiring panel: senior backend engineer", "Microsoft Teams", teams,
       "HR Team", "hr@nabd.example", ...at(2, 13, 90), "Final-round interviews. Review the four candidate scorecards beforehand."],
     ["m1", "Leadership sync", "Boardroom", null,
       "Layla Al-Harbi", "layla.alharbi@nabd.example", ...at(4, 15), "Weekly managers' sync with the senior leadership."],
     ["s1", "Leadership sync", "Boardroom", null,
       "Layla Al-Harbi", "layla.alharbi@nabd.example", ...at(4, 15), "Weekly managers' sync. Review team health across all units."],
-    ["s1", "Board review — Q3 outlook", "Executive briefing room", null,
+    ["s1", "Board review: Q3 outlook", "Executive briefing room", null,
       "Board Office", "board@nabd.example", ...at(6, 9, 120), "Quarterly review with the board. Hiring update and Q3 campaign figures on the agenda."],
-    ["s1", "Enterprise client visit — Gulf Retail Co.", "Client HQ, King Fahd Rd", null,
+    ["s1", "Enterprise client visit: Gulf Retail Co.", "Client HQ, King Fahd Rd", null,
       "Gulf Retail Co.", "success@gulfretail.example", ...at(9, 12, 120), "On-site visit to review the onboarding rollout."],
     ["e6", "Q3 campaign kickoff", "Marketing studio", null,
       "Khalid Amin", "khalid.amin@nabd.example", ...at(1, 11), "Kickoff for the Q3 campaign launch. Creatives and budget split review."],
-    ["e8", "Onboarding feedback call — Gulf Retail", "Microsoft Teams", teams,
+    ["e8", "Onboarding feedback call: Gulf Retail", "Microsoft Teams", teams,
       "Gulf Retail Co.", "success@gulfretail.example", ...at(5, 13), "Feedback call on the enterprise onboarding kit."],
   ];
   for (const r of rows) ins.run(...r);

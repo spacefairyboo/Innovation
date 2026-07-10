@@ -240,6 +240,10 @@ body::after {
   0%, 100% { height: 6px; }
   50% { height: 22px; }
 }
+@keyframes eq-listen {
+  0%, 100% { height: 4px; }
+  50% { height: 15px; }
+}
 @keyframes mic-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgb(210 74 74 / 0.5); }
   50% { box-shadow: 0 0 0 12px rgb(210 74 74 / 0); }

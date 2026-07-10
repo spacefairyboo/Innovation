@@ -57,23 +57,23 @@ export function buildPodcastScript(user: User, lang: Lang, tasks: Task[], includ
 
   /* Opening — a person starting their update, not a report reading itself */
   lines.push(ar
-    ? `${greetingWord(lang)} يا ${firstName}. اليوم ${dateStr}. عندي لك آخر المستجدات — سأختصرها في دقيقتين.`
-    : `${greetingWord(lang)}, ${firstName}. It's ${dateStr}. Here's my update on where we stand — I'll keep it to two minutes.`);
+    ? `${greetingWord(lang)} يا ${firstName}. اليوم ${dateStr}. عندي لك آخر المستجدات، وسأختصرها في دقيقتين.`
+    : `${greetingWord(lang)}, ${firstName}. It's ${dateStr}. Here's my update on where we stand. I'll keep it to two minutes.`);
 
   /* The overall picture, owned by the speaker */
   if (s.total === 0) {
     lines.push(ar
-      ? "لا توجد مهام قيد المتابعة حاليًا — يوم هادئ عندنا."
-      : "We have nothing in flight at the moment — it's a quiet day on our side.");
+      ? "لا توجد مهام قيد المتابعة حاليًا. يوم هادئ عندنا."
+      : "We have nothing in flight at the moment. It's a quiet day on our side.");
   } else {
     const healthy = (s.done + s.ontrack) / s.total >= 0.6;
     lines.push(ar
       ? (healthy
         ? `نتابع حاليًا ${s.total} مهمة، وبصراحة الوضع مطمئن: أنجزنا ${s.done}، و${s.ontrack} تسير كما خططنا، و${s.pending} لم نبدأ بها بعد.`
-        : `نتابع حاليًا ${s.total} مهمة، وسأكون صريحًا معك — الوضع يحتاج انتباهًا: أنجزنا ${s.done} فقط، و${s.ontrack} تسير كما ينبغي، و${s.pending} لم تبدأ بعد.`)
+        : `نتابع حاليًا ${s.total} مهمة، وسأكون صريحًا معك، الوضع يحتاج انتباهًا: أنجزنا ${s.done} فقط، و${s.ontrack} تسير كما ينبغي، و${s.pending} لم تبدأ بعد.`)
       : (healthy
         ? `We're tracking ${s.total} items right now, and honestly, we're in good shape: ${s.done} are done, ${s.ontrack} are moving the way we planned, and ${s.pending} haven't kicked off yet.`
-        : `We're tracking ${s.total} items right now, and I'll be straight with you — it needs attention: only ${s.done} are done, ${s.ontrack} are moving properly, and ${s.pending} haven't even started.`));
+        : `We're tracking ${s.total} items right now, and I'll be straight with you, it needs attention: only ${s.done} are done, ${s.ontrack} are moving properly, and ${s.pending} haven't even started.`));
     if (s.blocked + s.delayed > 0) {
       lines.push(ar
         ? `وما أريدك أن تعرفه اليوم: ${s.blocked} ${s.blocked === 1 ? "مهمة متوقفة" : "مهام متوقفة"} عند عائق، و${s.delayed} تجاوزت موعدها.`
@@ -88,8 +88,8 @@ export function buildPodcastScript(user: User, lang: Lang, tasks: Task[], includ
     const owner = getUser(first.ownerId)!;
     const note = first.history.find((h) => h.text[lang])?.text[lang];
     lines.push(ar
-      ? `أبدأ بالإنجازات. ${owner.name.ar} أقفل «${first.title.ar}»${note ? ` — وآخر ما سجّله: «${note}»` : ""}.${recentDone.length > 1 ? ` وأقفلنا معها ${recentDone.length - 1} ${recentDone.length - 1 === 1 ? "مهمة أخرى" : "مهام أخرى"} هذا الأسبوع.` : ""}`
-      : `Let me start with the wins. ${owner.name.en} closed out "${first.title.en}"${note ? ` — the last note on it reads, "${note}"` : ""}.${recentDone.length > 1 ? ` We landed ${recentDone.length - 1} more ${recentDone.length - 1 === 1 ? "item" : "items"} this week on top of that.` : ""}`);
+      ? `أبدأ بالإنجازات. ${owner.name.ar} أقفل «${first.title.ar}»${note ? `، وآخر ما سجّله: «${note}»` : ""}.${recentDone.length > 1 ? ` وأقفلنا معها ${recentDone.length - 1} ${recentDone.length - 1 === 1 ? "مهمة أخرى" : "مهام أخرى"} هذا الأسبوع.` : ""}`
+      : `Let me start with the wins. ${owner.name.en} closed out "${first.title.en}"${note ? `. The last note on it reads, "${note}"` : ""}.${recentDone.length > 1 ? ` We landed ${recentDone.length - 1} more ${recentDone.length - 1 === 1 ? "item" : "items"} this week on top of that.` : ""}`);
   }
 
   /* Blockers — where the speaker asks for help or a decision */
@@ -101,13 +101,13 @@ export function buildPodcastScript(user: User, lang: Lang, tasks: Task[], includ
       const team = getTeam(x.teamId)!;
       const note = x.history.find((h) => h.text[lang])?.text[lang] ?? "";
       lines.push(ar
-        ? `«${x.title.ar}» متوقفة عند ${owner.name.ar} في وحدة ${team.name.ar}${note ? ` — يقول: «${note}»` : ""}. أرى أن كلمة منك ستحرّكها أسرع مني.`
-        : `"${x.title.en}" is stuck with ${owner.name.en} in ${team.name.en}${note ? ` — he tells me, "${note}"` : ""}. A word from you would move it faster than I can.`);
+        ? `«${x.title.ar}» متوقفة عند ${owner.name.ar} في وحدة ${team.name.ar}${note ? `، يقول: «${note}»` : ""}. أرى أن كلمة منك ستحرّكها أسرع مني.`
+        : `"${x.title.en}" is stuck with ${owner.name.en} in ${team.name.en}${note ? `. He tells me, "${note}"` : ""}. A word from you would move it faster than I can.`);
     }
     if (blocked.length > 3) {
       lines.push(ar
-        ? `وعندنا ${blocked.length - 3} ${blocked.length - 3 === 1 ? "مهمة متعثرة أخرى" : "مهام متعثرة أخرى"} — تفاصيلها كلها في لوحة المتابعة.`
-        : `We have ${blocked.length - 3 === 1 ? "one more blocked item" : `${blocked.length - 3} more blocked items`} — the details are all on the dashboard.`);
+        ? `وعندنا ${blocked.length - 3} ${blocked.length - 3 === 1 ? "مهمة متعثرة أخرى" : "مهام متعثرة أخرى"} ، وتفاصيلها كلها في لوحة المتابعة.`
+        : `We have ${blocked.length - 3 === 1 ? "one more blocked item" : `${blocked.length - 3} more blocked items`} . The details are all on the dashboard.`);
     }
   }
 
@@ -136,8 +136,8 @@ export function buildPodcastScript(user: User, lang: Lang, tasks: Task[], includ
       ? `${prose(byHealth.ok, lang)} أتابعها عن قرب هذا الأسبوع`
       : `I'm keeping a closer eye on ${prose(byHealth.ok, lang)} this week`);
     if (byHealth.risk.length) parts.push(ar
-      ? `${prose(byHealth.risk, lang)} في دائرة الخطر — أنصح بزيارتها اليوم`
-      : `${prose(byHealth.risk, lang)} ${byHealth.risk.length === 1 ? "is" : "are"} at risk — I'd suggest checking in with them today`);
+      ? `${prose(byHealth.risk, lang)} في دائرة الخطر، وأنصح بزيارتها اليوم`
+      : `${prose(byHealth.risk, lang)} ${byHealth.risk.length === 1 ? "is" : "are"} at risk. I'd suggest checking in with them today`);
     if (parts.length) {
       lines.push(ar
         ? `أما على مستوى الوحدات: ${parts.join("؛ ")}.`
@@ -153,8 +153,8 @@ export function buildPodcastScript(user: User, lang: Lang, tasks: Task[], includ
       : `That's everything from me. If you take one thing from this update: a quick word with ${owner.name.en} would clear our biggest blocker. I'll flag anything that changes.`);
   } else {
     lines.push(ar
-      ? "هذا كل ما عندي — يوم مستقر ولا شيء يستدعي تدخلك حاليًا. سأوافيك فورًا بأي مستجد."
-      : "That's everything from me — a steady day, and nothing needs your intervention right now. I'll flag it the moment anything changes.");
+      ? "هذا كل ما عندي. يوم مستقر ولا شيء يستدعي تدخلك حاليًا. سأوافيك فورًا بأي مستجد."
+      : "That's everything from me. A steady day, and nothing needs your intervention right now. I'll flag it the moment anything changes.");
   }
   return lines;
 }

@@ -74,13 +74,13 @@ export async function runDelegationSweep(): Promise<void> {
         toUser: from,
         kind: "delegation_ended",
         subject: `Your delegation to ${to.name.en} has ended`,
-        body: `Hello ${from.name.en.split(" ")[0]},\n\nYour delegation to ${to.name.en} reached its end date (${d.endDate}). The ${d.taskCount} delegated task${d.taskCount === 1 ? "" : "s"} have been assigned back to you.\n\n— Nabd, your team pulse`,
+        body: `Hello ${from.name.en.split(" ")[0]},\n\nYour delegation to ${to.name.en} reached its end date (${d.endDate}). The ${d.taskCount} delegated task${d.taskCount === 1 ? "" : "s"} have been assigned back to you.\n\nNabd, your team pulse`,
       });
       await sendEmail({
         toUser: to,
         kind: "delegation_ended",
         subject: `Delegation from ${from.name.en} has ended`,
-        body: `Hello ${to.name.en.split(" ")[0]},\n\nThe delegation from ${from.name.en} reached its end date (${d.endDate}). Their tasks have been handed back — thank you for covering.\n\n— Nabd, your team pulse`,
+        body: `Hello ${to.name.en.split(" ")[0]},\n\nThe delegation from ${from.name.en} reached its end date (${d.endDate}). Their tasks have been handed back. Thank you for covering.\n\nNabd, your team pulse`,
       });
       log.info(`delegation ${d.id} expired and was reverted`);
     } catch (err) {

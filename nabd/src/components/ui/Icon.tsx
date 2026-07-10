@@ -186,6 +186,18 @@ const PATHS: Record<string, ReactNode> = {
   "chevron-right": <path d="m9 18 6-6-6-6" />,
   "chevron-left": <path d="m15 18-6-6 6-6" />,
   "chevron-down": <path d="m6 9 6 6 6-6" />,
+  "skip-back": (
+    <>
+      <path d="M19 20 9 12l10-8Z" />
+      <path d="M5 19V5" />
+    </>
+  ),
+  "skip-forward": (
+    <>
+      <path d="m5 4 10 8-10 8Z" />
+      <path d="M19 5v14" />
+    </>
+  ),
   "message-circle": <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
   award: (
     <>

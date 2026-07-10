@@ -51,6 +51,9 @@ export interface TaskUpdate {
   progress: number;
 }
 
+/** Where a task came from: created by hand, from the AI mail scanner, or in chat. */
+export type TaskSource = "manual" | "email" | "chat";
+
 export interface Task {
   id: string;
   ownerId: string; // primary assignee (first of assigneeIds)
@@ -63,6 +66,7 @@ export interface Task {
   due: string | null; // YYYY-MM-DD
   updatedAt: number;
   createdAt: number;
+  source: TaskSource;
   history: TaskUpdate[];
 }
 

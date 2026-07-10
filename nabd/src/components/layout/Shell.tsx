@@ -45,18 +45,28 @@ export function Shell({ user, users, unreadCount, theme, palette, children }: {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const nav: { href: string; ico: string; label: string; badge?: number }[] = [
-    { href: "/", ico: "layout-dashboard", label: t("nav_dashboard") },
-    ...(user.role !== "senior" ? [{ href: "/tasks", ico: "clipboard-list", label: t("nav_mytasks") }] : []),
-    { href: "/advisor", ico: "lightbulb", label: t("nav_advisor") },
-    ...(user.role !== "employee" ? [{ href: "/stats", ico: "trending-up", label: t("nav_stats") }] : []),
-    { href: "/calendar", ico: "calendar", label: t("nav_calendar") },
-    ...(user.role !== "employee" ? [{ href: "/teams", ico: "users", label: t("nav_teams") }] : []),
-    ...(user.role === "senior" ? [{ href: "/podcast", ico: "headphones", label: t("nav_podcast") }] : []),
-    { href: "/notifications", ico: "bell", label: t("nav_notifications"), badge: unreadCount },
-    { href: "/profile", ico: "user", label: t("nav_profile") },
+  // The sidebar bundles similar destinations, separated by dividers:
+  // daily work, then analysis and planning, then the personal corner.
+  type NavItem = { href: string; ico: string; label: string; badge?: number };
+  const navGroups: NavItem[][] = [
+    [
+      { href: "/", ico: "layout-dashboard", label: t("nav_dashboard") },
+      ...(user.role !== "senior" ? [{ href: "/tasks", ico: "clipboard-list", label: t("nav_mytasks") }] : []),
+      { href: "/calendar", ico: "calendar", label: t("nav_calendar") },
+    ],
+    [
+      { href: "/advisor", ico: "lightbulb", label: t("nav_advisor") },
+      ...(user.role !== "employee" ? [{ href: "/stats", ico: "trending-up", label: t("nav_stats") }] : []),
+      ...(user.role !== "employee" ? [{ href: "/teams", ico: "users", label: t("nav_teams") }] : []),
+      ...(user.role === "senior" ? [{ href: "/podcast", ico: "headphones", label: t("nav_podcast") }] : []),
+    ],
+    [
+      { href: "/notifications", ico: "bell", label: t("nav_notifications"), badge: unreadCount },
+      { href: "/profile", ico: "user", label: t("nav_profile") },
+    ],
   ];
 
+  const nav = navGroups.flat();
   const roleLabel = t(`role_${user.role}`);
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
@@ -82,27 +92,32 @@ export function Shell({ user, users, unreadCount, theme, palette, children }: {
           </span>
         </div>
 
-        {nav.map((item) => {
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition ${active ? "shadow-lg" : "hover:bg-white/10"}`}
-              style={active
-                ? { background: "rgb(255 255 255 / 0.94)", color: "#0f2e29" }
-                : { color: "var(--side-ink)" }}
-            >
-              <Icon name={item.ico} size={17} />
-              {item.label}
-              {!!item.badge && (
-                <span className="ms-auto min-w-5 h-5 rounded-full grid place-items-center px-1.5 text-[0.68rem] font-bold text-white" style={{ background: "#d24a4a" }}>
-                  {item.badge}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+        {navGroups.filter((g) => g.length).map((group, gi) => (
+          <div key={gi} className="flex flex-col gap-1.5">
+            {gi > 0 && <hr className="border-0 my-2 mx-3 h-px" style={{ background: "var(--side-line)" }} />}
+            {group.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition ${active ? "shadow-lg" : "hover:bg-white/10"}`}
+                  style={active
+                    ? { background: "rgb(255 255 255 / 0.94)", color: "#0f2e29" }
+                    : { color: "var(--side-ink)" }}
+                >
+                  <Icon name={item.ico} size={17} />
+                  {item.label}
+                  {!!item.badge && (
+                    <span className="ms-auto min-w-5 h-5 rounded-full grid place-items-center px-1.5 text-[0.68rem] font-bold text-white" style={{ background: "#d24a4a" }}>
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
 
         <div className="mt-auto pt-3" style={{ borderTop: "1px solid var(--side-line)" }}>
           <button

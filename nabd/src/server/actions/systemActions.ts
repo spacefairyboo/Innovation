@@ -24,7 +24,7 @@ export async function emailMyBriefing() {
   await sendEmail({
     toUser: user,
     kind: "digest",
-    subject: lang === "ar" ? `ملخص نبض — ${dateStr}` : `Your Nabd briefing — ${dateStr}`,
+    subject: lang === "ar" ? `ملخص نبض ليوم ${dateStr}` : `Your Nabd briefing for ${dateStr}`,
     body: lines.join("\n\n"),
   });
   refresh();

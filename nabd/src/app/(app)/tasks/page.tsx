@@ -56,7 +56,8 @@ export default async function MyTasksPage({ searchParams }: {
       <EmailSuggestions suggestions={pendingSuggestions(user.id)} />
 
       <TaskTabs
-        myVms={tasks.filter((x) => !delegatedIn.has(x.id)).map(toVM)}
+        myVms={tasks.filter((x) => !delegatedIn.has(x.id) && x.source !== "email").map(toVM)}
+        emailVms={tasks.filter((x) => !delegatedIn.has(x.id) && x.source === "email").map(toVM)}
         delegatedVms={tasks.filter((x) => delegatedIn.has(x.id)).map(toVM)}
         mine
         withFilters

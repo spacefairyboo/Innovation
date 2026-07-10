@@ -6,7 +6,8 @@
 import Link from "next/link";
 import { ChartCard, Donut, StatusTable } from "@/components/charts";
 import { AttentionList, type AttentionItem } from "@/components/dashboard";
-import { PodcastPlayer } from "@/components/briefing";
+import { HomeBriefing } from "@/components/briefing";
+import { CheckinPanel } from "@/components/chat";
 import { Avatar, Icon, StatusChip } from "@/components/ui";
 import { buildPodcastScript, insightFor } from "@/server/services/briefingService";
 import { makeT } from "@/lib/i18n";
@@ -14,7 +15,7 @@ import { taskValue } from "@/lib/value";
 import { getTeam, getUser, listTeams, overseesTeam, scopeTasks, teamMembers, teamTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { HEALTH_META, countStatuses, effStatus, teamHealth, type Task } from "@/lib/types";
-import { greetingKey, recentActivity } from "@/server/vm";
+import { doneThisWeekCount, greetingKey, recentActivity } from "@/server/vm";
 import { TeamGlyph } from "@/components/teams";
 
 /** Blocked/delayed first; the remaining slots go to high-value open work. */
@@ -170,7 +171,6 @@ export default async function Dashboard({ searchParams }: {
     : "my_pulse",
   );
   const attention = mattersMost(tasks, lang, 5);
-  const briefingLines = buildPodcastScript(user, lang, tasks, user.role === "senior");
 
   const pulse = [
     { label: t("tasks_total"), val: stats.total, dot: "var(--accent-2)" },
@@ -232,15 +232,31 @@ export default async function Dashboard({ searchParams }: {
         </div>
       </div>
 
-      {/* ---- Centerpiece: the spoken update ---- */}
+      {/* ---- Centerpiece: seniors hear the briefing; everyone else
+             updates their tasks by voice or text ---- */}
       <div className="mb-5">
-        <PodcastPlayer
-          lines={briefingLines}
-          scopeOptions={null}
-          scope="all"
-          compact
-          moreHref={user.role === "senior" ? "/podcast" : undefined}
-        />
+        {user.role === "senior" ? (
+          <HomeBriefing lines={buildPodcastScript(user, lang, tasks, true)} />
+        ) : (
+          <div className="card">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="w-10 h-10 rounded-xl grid place-items-center bg-accent-soft text-primary shrink-0">
+                <Icon name="mic" size={18} />
+              </span>
+              <div>
+                <h3 className="m-0 text-base font-bold">{t("home_checkin_title")}</h3>
+                <p className="m-0 text-xs text-ink-3">{t("home_checkin_sub")}</p>
+              </div>
+            </div>
+            <CheckinPanel
+              tasks={tasks}
+              userFirstName={user.name[lang].split(" ")[0]}
+              doneThisWeek={doneThisWeekCount(tasks)}
+              startVoice={false}
+              compact
+            />
+          </div>
+        )}
       </div>
 
       {/* ---- The short list that matters ---- */}
