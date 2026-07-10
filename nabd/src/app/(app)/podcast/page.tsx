@@ -8,7 +8,7 @@ import { buildPodcastScript } from "@/server/services/briefingService";
 import { makeT } from "@/lib/i18n";
 import { allTasks, listTeams, listUnits, teamTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
-import type { Task } from "@/lib/types";
+import { countStatuses, type Task } from "@/lib/types";
 
 export default async function PodcastPage({ searchParams }: {
   searchParams: Promise<{ scope?: string }>;
@@ -32,6 +32,9 @@ export default async function PodcastPage({ searchParams }: {
   }
 
   const lines = buildPodcastScript(user, lang, tasks, scope === "all");
+  const stats = countStatuses(tasks);
+  const hour = new Date().getHours();
+  const heroTitle = t(hour < 12 ? "podcast_hero_morning" : hour < 17 ? "podcast_hero_afternoon" : "podcast_hero_evening");
 
   const scopeOptions = [
     { value: "all", label: t("org_pulse") },
@@ -49,7 +52,13 @@ export default async function PodcastPage({ searchParams }: {
         <div className="flex-1" />
         <EmailBriefingButton />
       </div>
-      <PodcastPlayer lines={lines} scopeOptions={scopeOptions} scope={scope} />
+      <PodcastPlayer
+        lines={lines}
+        scopeOptions={scopeOptions}
+        scope={scope}
+        title={heroTitle}
+        highlights={stats.blocked + stats.delayed}
+      />
     </>
   );
 }

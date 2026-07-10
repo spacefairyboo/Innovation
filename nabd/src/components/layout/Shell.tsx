@@ -145,7 +145,13 @@ export function Shell({ user, users, unreadCount, theme, palette, children }: {
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="glass-bar flex items-center gap-2.5 px-4 md:px-7 py-3 sticky top-0 z-40">
+        <header
+          className="flex items-center gap-2.5 px-4 md:px-6 py-3 sticky top-3 z-40 mx-3 mt-3 rounded-3xl shadow-2xl backdrop-blur-xl"
+          style={{
+            background: "color-mix(in srgb, var(--surface) 85%, transparent)",
+            border: "1px solid var(--glass-edge)",
+          }}
+        >
           <div className="min-w-0">
             <h1 className="m-0 text-base font-bold truncate">{nav.find((i) => isActive(i.href))?.label ?? t("appName")}</h1>
             <p className="m-0 text-[0.72rem] text-ink-3 truncate">
