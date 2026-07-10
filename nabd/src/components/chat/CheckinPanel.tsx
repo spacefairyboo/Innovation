@@ -9,18 +9,26 @@ import { applyCheckin, createTaskFromChat } from "@/app/actions";
 import { useI18n } from "@/components/providers";
 import { Icon } from "@/components/ui";
 import { isSummaryRequest, matchTask, parseCreateTask, parseUpdate, type ParsedUpdate } from "@/lib/parser";
-import { STATUS_META, effStatus, type Task, type TaskStatus } from "@/lib/types";
+import { STATUS_META, effStatus, isStale, type Task, type TaskStatus } from "@/lib/types";
 
 interface Msg {
   who: "bot" | "user";
   text: string;
   picks?: Task[]; // task disambiguation buttons
+  askTaskId?: string; // daily check-in: quick status chips for this task
 }
+
+const ASK_CHIPS: { status: TaskStatus; labelKey: string }[] = [
+  { status: "ontrack", labelKey: "st_ontrack" },
+  { status: "pending", labelKey: "st_pending" },
+  { status: "blocked", labelKey: "st_blocked" },
+];
 
 /* Minimal typings for the vendor-prefixed Web Speech API */
 interface SpeechRecognitionLike {
   lang: string;
   interimResults: boolean;
+  continuous: boolean;
   onresult: ((e: { results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }> }) => void) | null;
   onend: (() => void) | null;
   onerror: (() => void) | null;
@@ -45,11 +53,21 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
 }) {
   const { t, lang } = useI18n();
   const [, startTransition] = useTransition();
-  const [msgs, setMsgs] = useState<Msg[]>([{ who: "bot", text: t("chat_hello", { name: userFirstName }) }]);
+  const [msgs, setMsgs] = useState<Msg[]>(() => {
+    const opening: Msg[] = [{ who: "bot", text: t("chat_hello", { name: userFirstName }) }];
+    // Daily check-in: if something has gone quiet, ask about it up front.
+    const quiet = tasks.find((x) => x.status !== "done" && isStale(x));
+    if (quiet) {
+      opening.push({ who: "bot", text: t("checkin_ask", { task: quiet.title[lang] }), askTaskId: quiet.id });
+    }
+    return opening;
+  });
   const [input, setInput] = useState("");
   const [recording, setRecording] = useState(false);
   const pendingRef = useRef<{ parsed: ParsedUpdate; raw: string } | null>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
+  /** Finalized words heard so far in the current voice take. */
+  const heardRef = useRef("");
   const logRef = useRef<HTMLDivElement>(null);
   const completions = useRef(doneThisWeek);
 
@@ -132,27 +150,39 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
   };
 
   const toggleVoice = () => {
+    // Second tap on the mic ends the take; onend then applies the whole
+    // utterance in one go.
     if (recording) { recRef.current?.stop(); return; }
     const Rec = getRecognizer();
     if (!Rec) { push({ who: "bot", text: t("voice_unsupported") }); return; }
     const rec = new Rec();
     rec.lang = lang === "ar" ? "ar-SA" : "en-US";
-    // Interim results stream into the input as you speak, so you can see
-    // your words landing in real time.
+    // Keep listening across pauses so nobody gets cut off mid-sentence;
+    // interim words stream into the input so you can see it hearing you.
+    rec.continuous = true;
     rec.interimResults = true;
+    heardRef.current = "";
     rec.onresult = (e) => {
-      let interim = "";
       let final = "";
+      let interim = "";
       for (let i = 0; i < e.results.length; i++) {
         const r = e.results[i];
         if (r.isFinal) final += r[0].transcript;
         else interim += r[0].transcript;
       }
-      if (final) { setInput(""); handle(final); }
-      else if (interim) setInput(interim);
+      heardRef.current = final;
+      setInput(`${final} ${interim}`.replace(/\s+/g, " ").trim());
     };
-    rec.onend = () => setRecording(false);
-    rec.onerror = () => { setRecording(false); push({ who: "bot", text: t("voice_error") }); };
+    rec.onend = () => {
+      setRecording(false);
+      const text = heardRef.current.trim();
+      heardRef.current = "";
+      if (text) { setInput(""); handle(text); }
+    };
+    rec.onerror = () => {
+      setRecording(false);
+      if (!heardRef.current.trim()) push({ who: "bot", text: t("voice_error") });
+    };
     rec.start();
     recRef.current = rec;
     setRecording(true);
@@ -193,6 +223,26 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
                     <Icon name={STATUS_META[effStatus(p)].icon} size={13} /> {p.title[lang]}
                   </button>
                 ))}
+              </div>
+            )}
+            {m.askTaskId && (
+              <div className="mt-2 flex gap-1.5 flex-wrap">
+                {ASK_CHIPS.map((c) => {
+                  const asked = tasks.find((x) => x.id === m.askTaskId);
+                  if (!asked) return null;
+                  return (
+                    <button
+                      key={c.status}
+                      className="btn-ghost btn-sm"
+                      onClick={() => {
+                        push({ who: "user", text: t(c.labelKey) });
+                        apply(asked, { intent: c.status, pct: null }, t(c.labelKey));
+                      }}
+                    >
+                      <Icon name={STATUS_META[c.status].icon} size={13} /> {t(c.labelKey)}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
