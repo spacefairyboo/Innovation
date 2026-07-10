@@ -68,10 +68,12 @@ nabd/src/
     │   ├── delegationService.ts     # Handover orchestration + expiry sweep
     │   ├── mailerService.ts   # SMTP + stale-task reminder sweep
     │   ├── briefingService.ts # The spoken narrative + insights
-    │   └── advisorService.ts  # Per-role prioritized plans + email drafts
+    │   ├── advisorService.ts  # Per-role prioritized plans + email drafts
+    │   └── assistantService.ts# Check-in Q&A: Claude API + local engine
     └── actions/               # Controllers ("use server") — thin, validated
         ├── guards.ts          # Shared authorization + sanitizers
         ├── authActions.ts     # Sign in / sign out
+        ├── assistantActions.ts# Check-in assistant replies
         ├── taskActions.ts     # CRUD, check-in, chat-created tasks
         ├── delegationActions.ts
         ├── inboxActions.ts
@@ -124,6 +126,8 @@ repositories against the new driver; services, actions, and pages don't change.
 | `DATA_DIR` | SQLite location (default `./data`) |
 | `SMTP_HOST/PORT/USER/PASS/FROM` | Real email delivery (outbox works without) |
 | `OUTLOOK_TENANT_ID/CLIENT_ID/CLIENT_SECRET` | Microsoft Graph mail + calendar sync |
+| `ANTHROPIC_API_KEY` | Claude API for the check-in assistant (optional; a built-in engine answers without it) |
+| `ANTHROPIC_MODEL` | Claude model id (default `claude-opus-4-8`) |
 | `LOG_LEVEL` | `debug`/`info`/`warn`/`error` (default `info`) |
 
 ## External integrations
@@ -134,3 +138,4 @@ repositories against the new driver; services, actions, and pages don't change.
 | Outlook mail scan | `repositories/inbox.repo.ts` + `lib/nlp.ts` | Microsoft Graph `/messages` (demo inbox seeded) |
 | Outlook calendar | `repositories/meeting.repo.ts` | Microsoft Graph `calendarView` (demo calendar seeded) |
 | Speech | client-side Web Speech API | on-device; nothing uploaded |
+| Check-in assistant | `services/assistantService.ts` | Claude API (`@anthropic-ai/sdk`) when `ANTHROPIC_API_KEY` is set; bilingual local engine otherwise |

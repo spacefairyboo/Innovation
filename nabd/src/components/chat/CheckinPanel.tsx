@@ -5,10 +5,10 @@
    actions. Used inside the check-in modal and embedded on the home page. */
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { applyCheckin, createTaskFromChat } from "@/app/actions";
+import { applyCheckin, askAssistant, createTaskFromChat } from "@/app/actions";
 import { useI18n } from "@/components/providers";
 import { Icon } from "@/components/ui";
-import { isSummaryRequest, matchTask, parseCreateTask, parseUpdate, type ParsedUpdate } from "@/lib/parser";
+import { isQuestion, isSummaryRequest, matchTask, parseCreateTask, parseUpdate, type ParsedUpdate } from "@/lib/parser";
 import { STATUS_META, effStatus, isStale, type Task, type TaskStatus } from "@/lib/types";
 
 interface Msg {
@@ -64,6 +64,7 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
   });
   const [input, setInput] = useState("");
   const [recording, setRecording] = useState(false);
+  const [thinking, setThinking] = useState(false);
   const pendingRef = useRef<{ parsed: ParsedUpdate; raw: string } | null>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   /** Finalized words heard so far in the current voice take. */
@@ -75,7 +76,7 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });
-  }, [msgs]);
+  }, [msgs, thinking]);
 
   const summaryText = () =>
     `${t("chat_summary_head")}\n` +
@@ -136,17 +137,29 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
     const parsed = parseUpdate(text);
     const open = tasks.filter((x) => x.status !== "done");
     const task = matchTask(text, open.length ? open : tasks);
+    const question = isQuestion(text);
 
-    if (!parsed.intent && parsed.pct === null && !task) {
-      push({ who: "bot", text: t("chat_no_match"), picks: open.slice(0, 5) });
-      return;
-    }
-    if (!task) {
+    // A clear update ("payment page is 80%", "blocked on the review") is
+    // applied directly; anything that reads like a question, and anything
+    // the matcher can't place, goes to the assistant.
+    if ((parsed.intent || parsed.pct !== null) && !question) {
+      if (task) { apply(task, parsed, text); return; }
       pendingRef.current = { parsed, raw: text };
       push({ who: "bot", text: t("chat_which_task"), picks: open.slice(0, 5) });
       return;
     }
-    apply(task, parsed, text);
+
+    setThinking(true);
+    startTransition(async () => {
+      try {
+        const reply = await askAssistant(text);
+        push({ who: "bot", text: reply || t("chat_no_match") });
+      } catch {
+        push({ who: "bot", text: t("assistant_error") });
+      } finally {
+        setThinking(false);
+      }
+    });
   };
 
   const toggleVoice = () => {
@@ -259,6 +272,18 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
               ))}
             </span>
             <span className="text-sm text-ink-2">{t("voice_listening")}</span>
+          </div>
+        )}
+        {thinking && (
+          <div className="self-start px-3.5 py-2.5 rounded-2xl rounded-ss-sm bg-surface-2 border border-line inline-flex items-center gap-2" aria-live="polite">
+            {[0, 0.15, 0.3].map((d) => (
+              <span
+                key={d}
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ background: "var(--ink-3)", animation: `eq-listen 1s ease-in-out ${d}s infinite` }}
+              />
+            ))}
+            <span className="sr-only">{t("assistant_thinking")}</span>
           </div>
         )}
       </div>
