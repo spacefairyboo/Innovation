@@ -1,6 +1,7 @@
 "use client";
 
-/* My Tasks with a separate tab for tasks that arrived through delegation. */
+/* My Tasks with separate tabs for tasks that arrived through delegation
+   and tasks the AI mail scanner created from email. */
 
 import { useState } from "react";
 import { useI18n } from "@/components/providers";
@@ -8,10 +9,13 @@ import { Icon } from "@/components/ui";
 import { TaskListSection } from "./TaskList";
 import type { AssigneeOption, TaskVM } from "./types";
 
-/** My Tasks with a separate tab for tasks that arrived through delegation. */
-export function TaskTabs({ myVms, delegatedVms, ...listProps }: {
+type TabId = "mine" | "email" | "delegated";
+
+/** My Tasks with separate tabs for delegated and email-created tasks. */
+export function TaskTabs({ myVms, delegatedVms, emailVms = [], ...listProps }: {
   myVms: TaskVM[];
   delegatedVms: TaskVM[];
+  emailVms?: TaskVM[];
   mine?: boolean;
   withFilters?: boolean;
   valueFilter?: boolean;
@@ -19,16 +23,18 @@ export function TaskTabs({ myVms, delegatedVms, ...listProps }: {
   initialQuery?: string;
 }) {
   const { t } = useI18n();
-  const [tab, setTab] = useState<"mine" | "delegated">("mine");
-  if (!delegatedVms.length) return <TaskListSection vms={myVms} {...listProps} />;
+  const [tab, setTab] = useState<TabId>("mine");
+  if (!delegatedVms.length && !emailVms.length) return <TaskListSection vms={myVms} {...listProps} />;
 
-  const tabs = [
-    { id: "mine" as const, label: t("tab_my_tasks"), count: myVms.length, icon: "clipboard-list" },
-    { id: "delegated" as const, label: t("tab_delegated"), count: delegatedVms.length, icon: "user-check" },
+  const tabs: { id: TabId; label: string; count: number; icon: string }[] = [
+    { id: "mine", label: t("tab_my_tasks"), count: myVms.length, icon: "clipboard-list" },
+    ...(emailVms.length ? [{ id: "email" as const, label: t("tab_email"), count: emailVms.length, icon: "inbox" }] : []),
+    ...(delegatedVms.length ? [{ id: "delegated" as const, label: t("tab_delegated"), count: delegatedVms.length, icon: "user-check" }] : []),
   ];
+  const active = tab === "email" ? emailVms : tab === "delegated" ? delegatedVms : myVms;
   return (
     <>
-      <div className="flex gap-1.5 mb-3" role="tablist">
+      <div className="flex gap-1.5 mb-3 flex-wrap" role="tablist">
         {tabs.map((x) => (
           <button
             key={x.id}
@@ -45,7 +51,7 @@ export function TaskTabs({ myVms, delegatedVms, ...listProps }: {
           </button>
         ))}
       </div>
-      <TaskListSection key={tab} vms={tab === "mine" ? myVms : delegatedVms} {...listProps} />
+      <TaskListSection key={tab} vms={active} {...listProps} />
     </>
   );
 }

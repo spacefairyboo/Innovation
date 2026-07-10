@@ -58,7 +58,7 @@ function reminderText(user: User, task: Task): { subject: string; body: string }
       `A quick status update keeps your manager and teammates aligned. You can`,
       `update it from My Tasks, or simply tell the AI check-in what changed.`,
       ``,
-      `— Nabd, your team pulse`,
+      `Nabd, your team pulse`,
     ].join("\n"),
   };
 }

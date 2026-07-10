@@ -13,7 +13,7 @@ export async function addSuggestedTask(suggestionId: number) {
   const s = getSuggestion(suggestionId);
   if (!s || s.userId !== user.id) throw new Error("Not your suggestion");
   if (s.status !== "pending") return;
-  createTask({ title: s.title, assigneeIds: [user.id], due: s.due, priority: s.priority, createdBy: user.id });
+  createTask({ title: s.title, assigneeIds: [user.id], due: s.due, priority: s.priority, createdBy: user.id, source: "email" });
   setSuggestionStatus(suggestionId, "added");
   refresh();
 }

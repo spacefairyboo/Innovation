@@ -112,7 +112,7 @@ export async function createTaskFromChat(input: {
     : null;
   const assignee = match ?? user;
 
-  createTask({ title, assigneeIds: [assignee.id], due, priority, createdBy: user.id });
+  createTask({ title, assigneeIds: [assignee.id], due, priority, createdBy: user.id, source: "chat" });
   refresh();
   return { assignee: assignee.name, fellBack: !!wanted && !match };
 }

@@ -6,7 +6,7 @@ import { getDB, withTransaction } from "../db/connection";
 import { getUser } from "./orgRepository";
 import type {
   ActivityEvent, ChecklistItem, FieldChange, Priority,
-  Task, TaskStatus, TaskUpdate,
+  Task, TaskSource, TaskStatus, TaskUpdate,
 } from "@/lib/types";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -27,6 +27,7 @@ function mapTask(r: Record<string, unknown>, history: TaskUpdate[], assigneeIds:
     title: { en: r.title_en as string, ar: r.title_ar as string },
     due: (r.due as string) ?? null, updatedAt: Number(r.updated_at),
     createdAt: Number(r.created_at ?? r.updated_at),
+    source: ((r.source as string) ?? "manual") as TaskSource,
     history,
   };
 }
@@ -229,6 +230,7 @@ function updateTaskInner(
 
 export function createTask(input: {
   title: string; assigneeIds: string[]; due: string | null; priority: Priority; createdBy: string;
+  source?: TaskSource;
 }): Task {
   return withTransaction(() => {
     const db = getDB();
@@ -237,9 +239,11 @@ export function createTask(input: {
     if (!owner?.teamId) throw new Error("Assignee must belong to a team");
     const id = "k" + Math.random().toString(36).slice(2, 10);
     const now = Date.now();
-    db.prepare("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?,?,?)").run(
+    db.prepare(
+      "INSERT INTO tasks (id, owner_id, team_id, status, progress, priority, title_en, title_ar, due, updated_at, created_at, source) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+    ).run(
       id, owner.id, owner.teamId, "pending", 0, input.priority,
-      input.title, input.title, input.due, now, now,
+      input.title, input.title, input.due, now, now, input.source ?? "manual",
     );
     const ins = db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
     for (const uid of assignees) ins.run(id, uid);

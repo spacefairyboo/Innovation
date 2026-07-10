@@ -35,7 +35,8 @@ export function migrate(d: DatabaseSync) {
       priority TEXT NOT NULL DEFAULT 'med' CHECK (priority IN ('high','med','low')),
       title_en TEXT NOT NULL, title_ar TEXT NOT NULL,
       due TEXT, updated_at INTEGER NOT NULL,
-      created_at INTEGER
+      created_at INTEGER,
+      source TEXT NOT NULL DEFAULT 'manual'
     );
     CREATE INDEX IF NOT EXISTS idx_tasks_owner ON tasks(owner_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_team ON tasks(team_id);
@@ -137,6 +138,8 @@ export function migrate(d: DatabaseSync) {
   // Databases created before the creation-date release: backfill from the first update.
   const taskCols = d.prepare("SELECT name FROM pragma_table_info('tasks')").all() as { name: string }[];
   if (!taskCols.some((c) => c.name === "created_at")) d.exec("ALTER TABLE tasks ADD COLUMN created_at INTEGER");
+  // Databases created before task origins were tracked lack tasks.source.
+  if (!taskCols.some((c) => c.name === "source")) d.exec("ALTER TABLE tasks ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
   d.exec(`
     UPDATE tasks SET created_at = COALESCE(
       (SELECT MIN(ts) FROM task_updates u WHERE u.task_id = tasks.id), updated_at
