@@ -3,9 +3,9 @@
    Import from here in pages and actions; import concrete modules only
    inside the server layer itself. */
 
-export * from "./org.repo";
-export * from "./task.repo";
+export * from "./orgRepository";
+export * from "./taskRepository";
 export {
   scopeTasks, sectionTasks, overseesTeam,
   buildNotifications, unreadCount, markAllRead,
-} from "../services/access.service";
+} from "../services/accessService";

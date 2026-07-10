@@ -4,7 +4,7 @@
    existing databases upgrade in place with no external tooling. */
 
 import type { DatabaseSync } from "node:sqlite";
-import { deriveEmail, seedMeetings } from "./seed";
+import { deriveEmail, ensureDemoPasswords, seedMeetings } from "./seed";
 
 export function migrate(d: DatabaseSync) {
   d.exec(`
@@ -131,6 +131,9 @@ export function migrate(d: DatabaseSync) {
   const prefCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];
   if (!prefCols.some((c) => c.name === "pref_lang")) d.exec("ALTER TABLE users ADD COLUMN pref_lang TEXT");
   if (!prefCols.some((c) => c.name === "pref_theme")) d.exec("ALTER TABLE users ADD COLUMN pref_theme TEXT");
+  // Databases created before password sign-in lack users.password_hash.
+  const pwCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];
+  if (!pwCols.some((c) => c.name === "password_hash")) d.exec("ALTER TABLE users ADD COLUMN password_hash TEXT");
   // Databases created before the creation-date release: backfill from the first update.
   const taskCols = d.prepare("SELECT name FROM pragma_table_info('tasks')").all() as { name: string }[];
   if (!taskCols.some((c) => c.name === "created_at")) d.exec("ALTER TABLE tasks ADD COLUMN created_at INTEGER");
@@ -151,6 +154,7 @@ export function migrate(d: DatabaseSync) {
     const oldCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];
     const sectionCol = oldCols.some((c) => c.name === "section_id") ? "section_id" : "NULL";
     const emailCol = oldCols.some((c) => c.name === "email") ? "email" : "NULL";
+    const pwCol = oldCols.some((c) => c.name === "password_hash") ? "password_hash" : "NULL";
     d.exec("PRAGMA foreign_keys = OFF"); // table rebuild: children keep referencing "users" by name
     d.exec(`
       CREATE TABLE users_new (
@@ -159,10 +163,10 @@ export function migrate(d: DatabaseSync) {
         section_id TEXT REFERENCES units(id),
         name_en TEXT NOT NULL, name_ar TEXT NOT NULL,
         streak INTEGER NOT NULL DEFAULT 0,
-        email TEXT, pref_lang TEXT, pref_theme TEXT
+        email TEXT, pref_lang TEXT, pref_theme TEXT, password_hash TEXT
       );
-      INSERT INTO users_new (id, role, team_id, section_id, name_en, name_ar, streak, email, pref_lang, pref_theme)
-        SELECT id, role, team_id, ${sectionCol}, name_en, name_ar, streak, ${emailCol}, pref_lang, pref_theme FROM users;
+      INSERT INTO users_new (id, role, team_id, section_id, name_en, name_ar, streak, email, pref_lang, pref_theme, password_hash)
+        SELECT id, role, team_id, ${sectionCol}, name_en, name_ar, streak, ${emailCol}, pref_lang, pref_theme, ${pwCol} FROM users;
       DROP TABLE users;
       ALTER TABLE users_new RENAME TO users;
     `);
@@ -202,6 +206,8 @@ export function migrate(d: DatabaseSync) {
     const upd = d.prepare("UPDATE users SET email = ? WHERE id = ?");
     for (const u of noEmail) upd.run(deriveEmail(u.name_en), u.id);
   }
+  // Every account can sign in: users without credentials get the demo password.
+  ensureDemoPasswords(d);
   // Backfill: tasks created before multi-assignee support get their owner as assignee.
   d.exec(`
     INSERT OR IGNORE INTO task_assignees (task_id, user_id)

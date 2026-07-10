@@ -6,11 +6,12 @@
 export {
   applyCheckin, createTaskFromChat, quickDone, removeTask,
   saveTask, saveTaskChecklist,
-} from "@/server/actions/task.actions";
-export { addSuggestedTask, dismissSuggestion } from "@/server/actions/inbox.actions";
+} from "@/server/actions/taskActions";
+export { addSuggestedTask, dismissSuggestion } from "@/server/actions/inboxActions";
 export {
   delegateTaskAction, endDelegationAction, endTaskDelegationAction,
   startDelegationAction,
-} from "@/server/actions/delegation.actions";
-export { savePreferences, setLang, setTheme, switchUser } from "@/server/actions/profile.actions";
-export { emailMyBriefing, markNotificationsRead, resetDemo } from "@/server/actions/system.actions";
+} from "@/server/actions/delegationActions";
+export { savePreferences, setLang, setTheme, switchUser } from "@/server/actions/profileActions";
+export { emailMyBriefing, markNotificationsRead, resetDemo } from "@/server/actions/systemActions";
+export { loginAction, logoutAction } from "@/server/actions/authActions";
