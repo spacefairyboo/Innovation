@@ -1,7 +1,9 @@
 /* Home — a calm start to the day: a short greeting with one insight, the
    spoken briefing front and center, and only the handful of items that
-   truly matter. Deep analytics live on the Statistics page. Drilling into
-   a unit (?unit=…) still opens that unit's detailed overview. */
+   truly matter. Deep analytics live on the Statistics page. The overview
+   cascades down the responsibility hierarchy: the senior manager sees
+   sections (?section=… opens one), a section head sees units (?unit=…
+   opens one), a unit head their unit, a team member their own tasks. */
 
 import Link from "next/link";
 import { ChartCard, Donut, StatusTable } from "@/components/charts";
@@ -12,7 +14,10 @@ import { Avatar, Icon, StatusChip } from "@/components/ui";
 import { buildPodcastScript, insightFor } from "@/server/services/briefingService";
 import { makeT } from "@/lib/i18n";
 import { taskValue } from "@/lib/value";
-import { getTeam, getUser, listTeams, overseesTeam, scopeTasks, teamMembers, teamTasks } from "@/server/repositories";
+import {
+  getTeam, getUnit, getUser, listTeams, listUnits, listUsers,
+  overseesTeam, scopeTasks, sectionTasks, teamMembers, teamTasks,
+} from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { HEALTH_META, countStatuses, effStatus, teamHealth, type Task } from "@/lib/types";
 import { doneThisWeekCount, greetingKey, recentActivity } from "@/server/vm";
@@ -43,9 +48,9 @@ function mattersMost(tasks: Task[], lang: "en" | "ar", limit: number): Attention
 }
 
 export default async function Dashboard({ searchParams }: {
-  searchParams: Promise<{ unit?: string }>;
+  searchParams: Promise<{ unit?: string; section?: string }>;
 }) {
-  const { unit: unitParam } = await searchParams;
+  const { unit: unitParam, section: sectionParam } = await searchParams;
   const { user, lang } = await getSession();
   const t = makeT(lang);
 
@@ -54,8 +59,10 @@ export default async function Dashboard({ searchParams }: {
   const focusTeam = unitParam && (user.role === "senior" || user.role === "section") && overseesTeam(user, unitParam)
     ? getTeam(unitParam)
     : null;
+  // One level up: the senior manager can focus on a whole section (?section=…).
+  const focusSection = !focusTeam && sectionParam && user.role === "senior" ? getUnit(sectionParam) : null;
 
-  const tasks = focusTeam ? teamTasks(focusTeam.id) : scopeTasks(user);
+  const tasks = focusTeam ? teamTasks(focusTeam.id) : focusSection ? sectionTasks(focusSection.id) : scopeTasks(user);
   const stats = countStatuses(tasks);
   const insight = insightFor(tasks, lang);
   const greeting = t(greetingKey());
@@ -163,6 +170,125 @@ export default async function Dashboard({ searchParams }: {
     );
   }
 
+  /* ---------- Section drill-down: the units inside, then the detail ---------- */
+  if (focusSection) {
+    const attention = mattersMost(tasks, lang, 8).filter((x) => x.eff !== "value");
+    const sectionUnits = listTeams().filter((x) => x.unitId === focusSection.id).map((team) => {
+      const ts = countStatuses(teamTasks(team.id));
+      const head = getUser(team.managerId);
+      return {
+        id: team.id,
+        name: team.name[lang],
+        headName: head?.name[lang] ?? "",
+        members: teamMembers(team.id).length,
+        open: ts.total - ts.done,
+        health: HEALTH_META[teamHealth(ts)],
+      };
+    });
+    const kpis = [
+      { label: t("tasks_total"), icon: "clipboard-list", val: String(stats.total), edge: "var(--accent)" },
+      { label: t("st_ontrack"), icon: "trending-up", val: String(stats.ontrack), edge: "var(--ch-ontrack)" },
+      { label: t("needs_attention"), icon: "alert-triangle", val: String(stats.blocked + stats.delayed), edge: "var(--ch-blocked)" },
+      { label: t("st_done"), icon: "check-circle", val: String(stats.done), edge: "var(--ch-done)" },
+    ];
+    return (
+      <>
+        <div
+          className="relative overflow-hidden rounded-3xl p-6 md:p-7 mb-5 flex gap-6 items-center flex-wrap shadow-xl"
+          style={{ background: "var(--hero-bg)", color: "#d9efe9", border: "1px solid rgb(223 245 241 / 0.08)" }}
+        >
+          <span aria-hidden className="absolute -top-24 -end-16 w-72 h-72 rounded-full pointer-events-none" style={{ background: "rgb(70 199 180 / 0.22)", filter: "blur(70px)" }} />
+          <div className="flex-1 min-w-64 relative">
+            <div className="text-xs font-medium flex items-center gap-2 flex-wrap" style={{ color: "#7fa89e" }}>
+              {dateStr} · {t("section_pulse")} · {focusSection.name[lang]}
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.7rem] font-semibold no-underline text-white border border-white/20 bg-white/10 hover:bg-white/20 transition"
+              >
+                <Icon name={lang === "ar" ? "chevron-right" : "chevron-left"} size={11} /> {t("back_overview")}
+              </Link>
+            </div>
+            <h2 className="m-0 mt-1 text-2xl font-bold text-white">{focusSection.name[lang]}</h2>
+            <p className="m-0 mt-2.5 text-sm leading-6 flex items-start gap-2 max-w-xl" style={{ color: "#b7d9d0" }}>
+              <Icon name={insight.icon} size={16} className="mt-1" />
+              <span>{insight.text}</span>
+            </p>
+            <div className="flex items-center gap-2.5 mt-4 flex-wrap">
+              <Link
+                href={`/teams?section=${focusSection.id}`}
+                className="inline-flex items-center gap-2 rounded-full px-4.5 py-2.5 text-sm font-semibold no-underline text-white border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition"
+              >
+                <Icon name="building" size={16} /> {t("open_section")}
+              </Link>
+            </div>
+          </div>
+          <span
+            className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border border-white/15 bg-white/10 backdrop-blur-md relative"
+            style={{ color: health.color === "var(--st-done)" ? "#5fd3a5" : health.color === "var(--st-pending)" ? "#ecc25c" : "#f08c8c" }}
+          >
+            <Icon name={health.icon} size={14} /> {t("health_overall")}: {t(health.labelKey)}
+          </span>
+        </div>
+
+        <div className="grid gap-3 mb-5 [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]">
+          {kpis.map((x) => (
+            <div key={x.label} className="card relative overflow-hidden !p-4 flex flex-col gap-1">
+              <span className="absolute start-0 top-0 bottom-0 w-1" style={{ background: x.edge }} />
+              <span className="text-xs font-semibold text-ink-2 flex items-center gap-1.5">
+                <Icon name={x.icon} size={14} /> {x.label}
+              </span>
+              <span className="text-[1.8rem] font-bold leading-tight tabular-nums">{x.val}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="card mb-5">
+          <div className="mb-3">
+            <h3 className="m-0 text-base font-bold">{t("units_glance")}</h3>
+            <p className="m-0 text-xs text-ink-3">{t("units_glance_sub")}</p>
+          </div>
+          <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+            {sectionUnits.map((u) => (
+              <Link
+                key={u.id}
+                href={`/?unit=${u.id}`}
+                className="rounded-2xl border border-line bg-surface-2 p-4 no-underline flex items-center gap-3 transition hover:border-accent group"
+              >
+                <TeamGlyph name={u.name} />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-bold text-ink truncate group-hover:text-primary transition">{u.name}</span>
+                  <span className="block text-xs text-ink-3 truncate">
+                    {u.headName} · {u.members} {t("members")} · {u.open} {t("active_tasks")}
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-1 text-xs font-bold shrink-0" style={{ color: u.health.color }}>
+                  <Icon name={u.health.icon} size={13} /> {t(u.health.labelKey)}
+                </span>
+                <Icon name={lang === "ar" ? "chevron-left" : "chevron-right"} size={15} className="text-ink-3 shrink-0" />
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-5 lg:[grid-template-columns:1.55fr_1fr] items-start">
+          <div className="card">
+            <div className="mb-3">
+              <h3 className="m-0 text-base font-bold">{t("needs_attention")}</h3>
+              <p className="m-0 text-xs text-ink-3">{t("needs_attention_sub")}</p>
+            </div>
+            <AttentionList items={attention} canNudge />
+          </div>
+          <ChartCard
+            title={t("status_mix")}
+            sub={t("status_mix_sub")}
+            chart={<Donut stats={stats} centerLabel={t("tasks_total")} />}
+            table={<StatusTable stats={stats} />}
+          />
+        </div>
+      </>
+    );
+  }
+
   /* ---------- Default home: simple, voice-first ---------- */
   const scopeTitle = t(
     user.role === "senior" ? "org_pulse"
@@ -179,23 +305,46 @@ export default async function Dashboard({ searchParams }: {
     { label: t("st_done"), val: stats.done, dot: "var(--ch-done)" },
   ];
 
-  const visibleTeams = user.role === "senior"
-    ? listTeams()
+  // The glance strip cascades: the senior manager sees sections, a section
+  // head sees their units. Each card opens the next level down.
+  const glance = user.role === "senior"
+    ? {
+        title: t("sections_glance"),
+        sub: t("sections_glance_sub"),
+        cards: listUnits().map((section) => {
+          const teams = listTeams().filter((x) => x.unitId === section.id);
+          const ts = countStatuses(sectionTasks(section.id));
+          const head = listUsers().find((u) => u.role === "section" && u.sectionId === section.id);
+          return {
+            id: section.id,
+            href: `/?section=${section.id}`,
+            name: section.name[lang],
+            headName: head?.name[lang] ?? "",
+            members: teams.reduce((n, tm) => n + teamMembers(tm.id).length, 0),
+            open: ts.total - ts.done,
+            health: HEALTH_META[teamHealth(ts)],
+          };
+        }),
+      }
     : user.role === "section" && user.sectionId
-      ? listTeams().filter((x) => x.unitId === user.sectionId)
+      ? {
+          title: t("units_glance"),
+          sub: t("units_glance_sub"),
+          cards: listTeams().filter((x) => x.unitId === user.sectionId).map((team) => {
+            const ts = countStatuses(teamTasks(team.id));
+            const head = getUser(team.managerId);
+            return {
+              id: team.id,
+              href: `/?unit=${team.id}`,
+              name: team.name[lang],
+              headName: head?.name[lang] ?? "",
+              members: teamMembers(team.id).length,
+              open: ts.total - ts.done,
+              health: HEALTH_META[teamHealth(ts)],
+            };
+          }),
+        }
       : null;
-  const unitCards = visibleTeams?.map((team) => {
-    const ts = countStatuses(teamTasks(team.id));
-    const head = getUser(team.managerId);
-    return {
-      id: team.id,
-      name: team.name[lang],
-      headName: head?.name[lang] ?? "",
-      members: teamMembers(team.id).length,
-      open: ts.total - ts.done,
-      health: HEALTH_META[teamHealth(ts)],
-    };
-  }) ?? null;
 
   return (
     <>
@@ -274,18 +423,18 @@ export default async function Dashboard({ searchParams }: {
         <AttentionList items={attention} canNudge={user.role !== "employee"} />
       </div>
 
-      {/* ---- Units at a glance: click through to a unit's overview ---- */}
-      {unitCards && unitCards.length > 0 && (
+      {/* ---- At a glance: sections for the senior, units for a section head ---- */}
+      {glance && glance.cards.length > 0 && (
         <div className="card">
           <div className="mb-3">
-            <h3 className="m-0 text-base font-bold">{t("units_glance")}</h3>
-            <p className="m-0 text-xs text-ink-3">{t("units_glance_sub")}</p>
+            <h3 className="m-0 text-base font-bold">{glance.title}</h3>
+            <p className="m-0 text-xs text-ink-3">{glance.sub}</p>
           </div>
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
-            {unitCards.map((u) => (
+            {glance.cards.map((u) => (
               <Link
                 key={u.id}
-                href={`/?unit=${u.id}`}
+                href={u.href}
                 className="rounded-2xl border border-line bg-surface-2 p-4 no-underline flex items-center gap-3 transition hover:border-accent group"
               >
                 <TeamGlyph name={u.name} />

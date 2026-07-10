@@ -1,7 +1,11 @@
 "use client";
 
+/* The needs-attention list: plain rows with the task, a muted owner and
+   unit line, a status chip, and a quiet remind bell for leads. Theme
+   variables keep it right in both light and dark. */
+
 import { useI18n, useToast } from "@/components/providers";
-import { dueInfo, Icon, StatusChip } from "@/components/ui";
+import { Icon, StatusChip } from "@/components/ui";
 import type { EffStatus } from "@/lib/types";
 
 export interface AttentionItem {
@@ -14,14 +18,8 @@ export interface AttentionItem {
   due: string | null;
 }
 
-const ROW_META = {
-  blocked: { bg: "var(--st-blocked-bg)", color: "var(--st-blocked)", icon: "ban" },
-  delayed: { bg: "var(--st-delayed-bg)", color: "var(--st-delayed)", icon: "alert-triangle" },
-  value: { bg: "var(--accent-soft)", color: "var(--accent)", icon: "sparkles" },
-} as const;
-
-export function AttentionList({ items, canNudge }: { items: AttentionItem[]; canNudge: boolean }) {
-  const { t, lang } = useI18n();
+export function AttentionList({ items, canNudge = false }: { items: AttentionItem[]; canNudge?: boolean }) {
+  const { t } = useI18n();
   const toast = useToast();
   if (!items.length) {
     return (
@@ -32,28 +30,20 @@ export function AttentionList({ items, canNudge }: { items: AttentionItem[]; can
     );
   }
   return (
-    <div className="flex flex-col gap-1.5">
+    <div>
       {items.map((x) => (
-        <div
-          key={x.id}
-          className="flex gap-3.5 p-3.5 rounded-xl items-start"
-          style={{ background: ROW_META[x.eff].bg }}
-        >
-          <span
-            className="w-8 h-8 rounded-lg grid place-items-center shrink-0 mt-0.5 bg-surface"
-            style={{ color: ROW_META[x.eff].color }}
-          >
-            <Icon name={ROW_META[x.eff].icon} size={16} />
-          </span>
-          <div className="flex-1 text-sm min-w-0">
-            <b className="block">{x.title}</b>
-            <span className="text-ink-2 text-xs">
-              {x.eff === "value" && <>{t("high_value")} · </>}
-              {x.ownerName} · {x.teamLabel}
-              {x.due ? ` · ${dueInfo(x.due, t, lang).text}` : ""}
-            </span>
+        <div key={x.id} className="flex items-center gap-3 py-3.5 border-b border-grid last:border-b-0 last:pb-1 first:pt-1">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-bold truncate">{x.title}</div>
+            <div className="text-xs text-ink-3 truncate mt-0.5">{x.ownerName} · {x.teamLabel}</div>
           </div>
-          {x.eff !== "value" && <span className="sr-only"><StatusChip status={x.eff} /></span>}
+          {x.eff === "value" ? (
+            <span className="chip shrink-0" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+              <Icon name="sparkles" size={13} /> {t("high_value")}
+            </span>
+          ) : (
+            <span className="shrink-0"><StatusChip status={x.eff} /></span>
+          )}
           {canNudge && (
             <button
               className="btn-ghost btn-sm shrink-0"

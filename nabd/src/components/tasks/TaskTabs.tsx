@@ -18,7 +18,10 @@ export function TaskTabs({ myVms, delegatedVms, emailVms = [], ...listProps }: {
   emailVms?: TaskVM[];
   mine?: boolean;
   withFilters?: boolean;
+  showTeam?: boolean;
+  teamFilter?: boolean;
   valueFilter?: boolean;
+  pageSize?: number;
   assignees?: AssigneeOption[];
   initialQuery?: string;
 }) {
