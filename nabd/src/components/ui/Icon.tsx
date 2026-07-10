@@ -185,6 +185,7 @@ const PATHS: Record<string, ReactNode> = {
   ),
   "chevron-right": <path d="m9 18 6-6-6-6" />,
   "chevron-left": <path d="m15 18-6-6 6-6" />,
+  "chevron-down": <path d="m6 9 6 6 6-6" />,
   "message-circle": <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
   award: (
     <>

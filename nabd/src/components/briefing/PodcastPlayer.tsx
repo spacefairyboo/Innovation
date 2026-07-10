@@ -4,6 +4,7 @@
    synthesis API, highlighting the transcript line being read. */
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/providers";
 import { Icon } from "@/components/ui";
@@ -11,10 +12,14 @@ import { PresenterAvatar, presenterPulse } from "./PresenterAvatar";
 import { PresenterFace } from "./PresenterFace";
 import { naturalScore, voiceGender } from "./voiceUtils";
 
-export function PodcastPlayer({ lines, scopeOptions, scope }: {
+export function PodcastPlayer({ lines, scopeOptions, scope, compact = false, moreHref }: {
   lines: string[];
   scopeOptions: { value: string; label: string }[] | null;
   scope: string;
+  /** Slimmer embed (home page): transcript folds away behind a toggle. */
+  compact?: boolean;
+  /** Optional link to the full podcast page, shown next to the controls. */
+  moreHref?: string;
 }) {
   const { t, lang } = useI18n();
   const router = useRouter();
@@ -166,6 +171,14 @@ export function PodcastPlayer({ lines, scopeOptions, scope }: {
             >
               {[0.8, 1, 1.25, 1.5].map((r) => <option key={r} value={r}>{t("podcast_speed")} {r}×</option>)}
             </select>
+            {moreHref && (
+              <Link
+                href={moreHref}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold text-sm text-white no-underline border border-white/20 bg-white/10 hover:bg-white/20"
+              >
+                <Icon name="headphones" size={14} /> {t("nav_podcast")}
+              </Link>
+            )}
             {live && (
               <span className="inline-flex items-end gap-0.5 h-5.5">
                 {[0, 0.15, 0.3, 0.45].map((d) => (
@@ -180,18 +193,32 @@ export function PodcastPlayer({ lines, scopeOptions, scope }: {
         </div>
       </div>
 
-      <div className="card mt-4.5">
-        <div className="flex items-center gap-2.5 mb-3">
-          <h3 className="m-0 text-base font-bold inline-flex items-center gap-2"><Icon name="file-text" size={16} className="text-ink-3" /> {t("transcript")}</h3>
-          <div className="flex-1" />
-          <button className="btn-ghost btn-sm" onClick={download}><Icon name="download" size={13} /> {t("download_script")}</button>
+      {compact ? (
+        <details className="card mt-4.5 !py-3.5">
+          <summary className="cursor-pointer select-none text-sm font-bold inline-flex items-center gap-2 list-none [&::-webkit-details-marker]:hidden">
+            <Icon name="file-text" size={15} className="text-ink-3" /> {t("transcript")}
+            <Icon name="chevron-down" size={14} className="text-ink-3" />
+          </summary>
+          <div ref={transcriptRef} className="text-sm text-ink-2 leading-7 mt-3 max-h-72 overflow-y-auto pe-2">
+            {lines.map((l, i) => (
+              <p key={i} data-line={i} className={`m-0 mb-3 ${i === lineIdx ? "text-primary font-semibold" : ""}`}>{l}</p>
+            ))}
+          </div>
+        </details>
+      ) : (
+        <div className="card mt-4.5">
+          <div className="flex items-center gap-2.5 mb-3">
+            <h3 className="m-0 text-base font-bold inline-flex items-center gap-2"><Icon name="file-text" size={16} className="text-ink-3" /> {t("transcript")}</h3>
+            <div className="flex-1" />
+            <button className="btn-ghost btn-sm" onClick={download}><Icon name="download" size={13} /> {t("download_script")}</button>
+          </div>
+          <div ref={transcriptRef} className="text-sm text-ink-2 leading-7 max-h-104 overflow-y-auto pe-2">
+            {lines.map((l, i) => (
+              <p key={i} data-line={i} className={`m-0 mb-3 ${i === lineIdx ? "text-primary font-semibold" : ""}`}>{l}</p>
+            ))}
+          </div>
         </div>
-        <div ref={transcriptRef} className="text-sm text-ink-2 leading-7 max-h-104 overflow-y-auto pe-2">
-          {lines.map((l, i) => (
-            <p key={i} data-line={i} className={`m-0 mb-3 ${i === lineIdx ? "text-primary font-semibold" : ""}`}>{l}</p>
-          ))}
-        </div>
-      </div>
+      )}
     </>
   );
 }
