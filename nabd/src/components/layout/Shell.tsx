@@ -6,7 +6,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { setLang, setTheme } from "@/app/actions";
+import { logoutAction, setLang, setTheme } from "@/app/actions";
 import { useI18n, useToast } from "@/components/providers";
 import { Avatar, Icon } from "@/components/ui";
 import { CommandPalette, type PaletteItem } from "./CommandPalette";
@@ -117,6 +117,14 @@ export function Shell({ user, users, unreadCount, theme, palette, children }: {
               <span className="block text-[0.7rem] truncate" style={{ color: "var(--side-ink-dim)" }}>{roleLabel}</span>
             </span>
             <Icon name="switch-users" size={15} />
+          </button>
+          <button
+            className="w-full flex items-center gap-3 rounded-full px-2.5 py-2 mt-1 cursor-pointer transition hover:bg-white/10 text-start text-[0.8rem] font-medium"
+            style={{ color: "var(--side-ink)" }}
+            onClick={() => startTransition(() => logoutAction())}
+          >
+            <span className="w-7 h-7 grid place-items-center shrink-0"><Icon name="log-out" size={15} /></span>
+            {t("logout")}
           </button>
         </div>
       </aside>

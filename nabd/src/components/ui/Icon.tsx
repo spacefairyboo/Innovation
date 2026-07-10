@@ -304,6 +304,20 @@ const PATHS: Record<string, ReactNode> = {
       <rect x="2" y="6" width="14" height="12" rx="2" />
     </>
   ),
+  "log-in": (
+    <>
+      <path d="m10 17 5-5-5-5" />
+      <path d="M15 12H3" />
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+    </>
+  ),
+  "log-out": (
+    <>
+      <path d="m16 17 5-5-5-5" />
+      <path d="M21 12H9" />
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    </>
+  ),
   "user-check": (
     <>
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />

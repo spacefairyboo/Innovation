@@ -29,5 +29,11 @@ export async function getSession(): Promise<Session> {
 export async function setSessionCookie(key: "uid" | "lang" | "theme", value: string) {
   const jar = await cookies();
   const name = key === "uid" ? UID_COOKIE : key === "lang" ? LANG_COOKIE : THEME_COOKIE;
-  jar.set(name, value, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+  jar.set(name, value, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax", httpOnly: key === "uid" });
+}
+
+/** Signs the user out (language/theme cookies are kept for the login screen). */
+export async function clearSessionCookies() {
+  const jar = await cookies();
+  jar.delete(UID_COOKIE);
 }

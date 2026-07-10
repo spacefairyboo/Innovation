@@ -29,9 +29,12 @@ src/server/db/connection.ts  →  SQLite (node:sqlite), data/nabd.db (WAL)
 
 ```
 nabd/src/
+├── middleware.ts              # Route guard — no session cookie ⇒ /login
 ├── app/                       # Routes (framework-defined) — one folder per URL
 │   ├── actions.ts             # ★ Mutation API facade — what clients import
-│   └── …/page.tsx             # Server-rendered pages (read via repositories)
+│   ├── login/page.tsx         # Public sign-in page (outside the app shell)
+│   └── (app)/…/page.tsx       # Authenticated pages (shell layout; read via
+│                              #   repositories)
 ├── components/                # Client components ("use client") — UI only;
 │                              #   never touch the database directly
 ├── lib/                       # Shared / isomorphic code (safe on both sides)
@@ -45,32 +48,35 @@ nabd/src/
     ├── logger.ts              # Leveled, scoped logger (LOG_LEVEL)
     ├── validation.ts          # Input validation helpers for the API boundary
     ├── vm.ts                  # View-model builders (serializable page props)
-    ├── auth/session.ts        # Cookie session (swap for Auth.js in production)
+    ├── auth/
+    │   ├── session.ts         # Cookie session (swap for Auth.js in production)
+    │   └── passwords.ts       # scrypt hashing + constant-time verification
     ├── db/
     │   ├── connection.ts      # Single handle, PRAGMAs, withTransaction, shutdown
     │   ├── migrations.ts      # Idempotent startup migrations
     │   └── seed.ts            # Demo data + resetDB
     ├── repositories/          # Data access — the only SQL in the codebase
     │   ├── index.ts           # Facade the route layer imports
-    │   ├── org.repo.ts        # Sections, units, users, preferences
-    │   ├── task.repo.ts       # Tasks, history, audit log, checklists
-    │   ├── delegation.repo.ts # Delegation rows + task moves
-    │   ├── email.repo.ts      # The outbox
-    │   ├── inbox.repo.ts      # AI mail-scanner suggestions
-    │   └── meeting.repo.ts    # Outlook calendar events
+    │   ├── orgRepository.ts   # Sections, units, users, preferences
+    │   ├── taskRepository.ts  # Tasks, history, audit log, checklists
+    │   ├── delegationRepository.ts  # Delegation rows + task moves
+    │   ├── emailRepository.ts # The outbox
+    │   ├── inboxRepository.ts # AI mail-scanner suggestions
+    │   └── meetingRepository.ts     # Outlook calendar events
     ├── services/              # Business logic on top of repositories
-    │   ├── access.service.ts  # Visibility hierarchy + derived notifications
-    │   ├── delegation.service.ts  # Handover orchestration + expiry sweep
-    │   ├── mailer.service.ts  # SMTP + stale-task reminder sweep
-    │   ├── briefing.service.ts    # The spoken narrative + insights
-    │   └── advisor.service.ts # Per-role prioritized plans + email drafts
+    │   ├── accessService.ts   # Visibility hierarchy + derived notifications
+    │   ├── delegationService.ts     # Handover orchestration + expiry sweep
+    │   ├── mailerService.ts   # SMTP + stale-task reminder sweep
+    │   ├── briefingService.ts # The spoken narrative + insights
+    │   └── advisorService.ts  # Per-role prioritized plans + email drafts
     └── actions/               # Controllers ("use server") — thin, validated
         ├── guards.ts          # Shared authorization + sanitizers
-        ├── task.actions.ts    # CRUD, check-in, chat-created tasks
-        ├── delegation.actions.ts
-        ├── inbox.actions.ts
-        ├── profile.actions.ts # Identity + persisted preferences
-        └── system.actions.ts  # Notifications, digest, demo reset
+        ├── authActions.ts     # Sign in / sign out
+        ├── taskActions.ts     # CRUD, check-in, chat-created tasks
+        ├── delegationActions.ts
+        ├── inboxActions.ts
+        ├── profileActions.ts  # Identity + persisted preferences
+        └── systemActions.ts   # Notifications, digest, demo reset
 ```
 
 Layering rules enforced across the codebase:

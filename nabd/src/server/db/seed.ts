@@ -5,6 +5,18 @@
 import type { DatabaseSync } from "node:sqlite";
 import { DAY_MS } from "@/lib/constants";
 import { getDB } from "./connection";
+import { hashPassword } from "../auth/passwords";
+
+/** Every demo account signs in with this password (shown on the login page). */
+export const DEMO_PASSWORD = "nabd2026";
+
+/** Gives any user without credentials the demo password. */
+export function ensureDemoPasswords(d: DatabaseSync): void {
+  const missing = d.prepare("SELECT id FROM users WHERE password_hash IS NULL OR password_hash = ''").all() as { id: string }[];
+  if (!missing.length) return;
+  const upd = d.prepare("UPDATE users SET password_hash = ? WHERE id = ?");
+  for (const u of missing) upd.run(hashPassword(DEMO_PASSWORD), u.id);
+}
 
 export function isEmpty(d: DatabaseSync): boolean {
   const row = d.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number };
@@ -140,6 +152,7 @@ export function seed(d: DatabaseSync) {
     ago(0, 1));
 
   seedMeetings(d);
+  ensureDemoPasswords(d);
 }
 
 /* Demo Outlook calendar — meetings the Graph sync would pull from each
