@@ -5,7 +5,7 @@
 
 import { getSession } from "../auth/session";
 import { bumpStreak, listUsers, sectionTeams, teamMembers } from "../repositories/orgRepository";
-import { createTask, deleteTask, getTask, saveChecklist, updateTask } from "../repositories/taskRepository";
+import { createTask, deleteTask, saveChecklist, updateTask } from "../repositories/taskRepository";
 import { boundedText, clampProgress, validDate, validPriority, validStatus } from "../validation";
 import { assertCanEdit, refresh, sanitizeChecklist, vetAssignees } from "./guards";
 import type { ChecklistItem, Priority, TaskStatus } from "@/lib/types";
@@ -68,11 +68,10 @@ export async function quickDone(taskId: string) {
   refresh();
 }
 
-/** Applies a parsed chat/voice update to one of the caller's own tasks. */
+/** Applies a parsed chat/voice update to a task the caller may edit:
+    their own, or any task their role oversees. */
 export async function applyCheckin(taskId: string, patch: { status?: TaskStatus; progress?: number }, note: string) {
-  const { user } = await getSession();
-  const task = getTask(taskId);
-  if (!task || !task.assigneeIds.includes(user.id)) throw new Error("Not your task");
+  const { user } = await assertCanEdit(taskId);
   const text = boundedText(note, 2000);
   updateTask(
     taskId,
