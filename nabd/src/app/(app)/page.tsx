@@ -137,7 +137,7 @@ export default async function Dashboard({ searchParams }: {
                 <h3 className="m-0 text-base font-bold">{t("needs_attention")}</h3>
                 <p className="m-0 text-xs text-ink-3">{t("needs_attention_sub")}</p>
               </div>
-              <AttentionList items={attention} />
+              <AttentionList items={attention} canNudge />
             </div>
             <div className="card">
               <h3 className="m-0 mb-3 text-base font-bold">{t("updates_feed")}</h3>
@@ -276,7 +276,7 @@ export default async function Dashboard({ searchParams }: {
               <h3 className="m-0 text-base font-bold">{t("needs_attention")}</h3>
               <p className="m-0 text-xs text-ink-3">{t("needs_attention_sub")}</p>
             </div>
-            <AttentionList items={attention} />
+            <AttentionList items={attention} canNudge />
           </div>
           <ChartCard
             title={t("status_mix")}
@@ -420,7 +420,7 @@ export default async function Dashboard({ searchParams }: {
             {t("view_all")} <Icon name={lang === "ar" ? "chevron-left" : "chevron-right"} size={13} />
           </Link>
         </div>
-        <AttentionList items={attention} />
+        <AttentionList items={attention} canNudge={user.role !== "employee"} />
       </div>
 
       {/* ---- At a glance: sections for the senior, units for a section head ---- */}
