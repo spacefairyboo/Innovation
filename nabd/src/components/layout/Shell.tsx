@@ -51,7 +51,7 @@ export function Shell({ user, users, unreadCount, theme, palette, children }: {
   const navGroups: NavItem[][] = [
     [
       { href: "/", ico: "layout-dashboard", label: t("nav_dashboard") },
-      ...(user.role !== "senior" ? [{ href: "/tasks", ico: "clipboard-list", label: t("nav_mytasks") }] : []),
+      { href: "/tasks", ico: "clipboard-list", label: t(user.role === "senior" ? "all_tasks_title" : "nav_mytasks") },
       { href: "/calendar", ico: "calendar", label: t("nav_calendar") },
     ],
     [

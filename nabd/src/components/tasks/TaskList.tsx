@@ -13,29 +13,42 @@ import type { AssigneeOption, TaskVM } from "./types";
 type SortKey = "due" | "priority" | "updated";
 const PRIO_RANK: Record<Priority, number> = { high: 0, med: 1, low: 2 };
 
-export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFilters, valueFilter, assignees, initialQuery }: {
+export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFilters, teamFilter, valueFilter, pageSize, assignees, initialQuery }: {
   vms: TaskVM[];
   mine?: boolean;
   canEdit?: boolean;
   canNudge?: boolean;
   showTeam?: boolean;
   withFilters?: boolean;
+  /** Oversight roles: show a unit selector next to the other filters. */
+  teamFilter?: boolean;
   /** Managers: show the "High value only" toggle. */
   valueFilter?: boolean;
+  /** Long lists: page through pageSize rows at a time. */
+  pageSize?: number;
   assignees?: AssigneeOption[];
   initialQuery?: string;
 }) {
   const { t, lang } = useI18n();
   const [q, setQ] = useState(initialQuery ?? "");
   const [status, setStatus] = useState<EffStatus | "all">("all");
+  const [team, setTeam] = useState("all");
   const [sort, setSort] = useState<SortKey>("due");
   const [highOnly, setHighOnly] = useState(false);
+  const [page, setPage] = useState(0);
   const [editing, setEditing] = useState<TaskVM | null>(null);
+
+  const teamOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const v of vms) if (!seen.has(v.task.teamId)) seen.set(v.task.teamId, v.teamName[lang]);
+    return [...seen.entries()].map(([id, label]) => ({ id, label }));
+  }, [vms, lang]);
 
   const filtered = useMemo(() => {
     let out = vms;
     if (q) out = out.filter((v) => v.task.title[lang].toLowerCase().includes(q.toLowerCase()));
     if (status !== "all") out = out.filter((v) => effStatus(v.task) === status);
+    if (team !== "all") out = out.filter((v) => v.task.teamId === team);
     if (highOnly) out = out.filter((v) => v.value.high);
     const bySort = (a: TaskVM, b: TaskVM) =>
       sort === "priority" ? PRIO_RANK[a.task.priority] - PRIO_RANK[b.task.priority]
@@ -43,7 +56,7 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
       : (a.task.due ?? "9999").localeCompare(b.task.due ?? "9999");
     return [...out].sort((a, b) =>
       Number(a.task.status === "done") - Number(b.task.status === "done") || bySort(a, b));
-  }, [vms, q, status, sort, highOnly, lang]);
+  }, [vms, q, status, team, sort, highOnly, lang]);
 
   return (
     <div className="card">
@@ -65,6 +78,14 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
               <option key={s} value={s}>{t(STATUS_META[s].labelKey)}</option>
             ))}
           </select>
+          {teamFilter && teamOptions.length > 1 && (
+            <select className="field-input !w-auto !py-2 text-sm" value={team} onChange={(e) => setTeam(e.target.value)}>
+              <option value="all">{t("all_teams")}</option>
+              {teamOptions.map((o) => (
+                <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
+          )}
           <select className="field-input !w-auto !py-2 text-sm" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
             <option value="due">{t("sort_by")}: {t("sort_due")}</option>
             <option value="priority">{t("sort_by")}: {t("sort_priority")}</option>
@@ -84,21 +105,43 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
           )}
         </div>
       )}
-      {filtered.length ? (
-        filtered.map((vm) => (
-          <TaskRow
-            key={vm.task.id} vm={vm}
-            mine={mine} canEdit={canEdit} canNudge={canNudge}
-            showTeam={showTeam}
-            onOpen={setEditing}
-          />
-        ))
-      ) : (
-        <div className="text-center text-ink-3 py-10 text-sm">
-          <Icon name="inbox" size={32} className="mx-auto mb-2 opacity-60" />
-          {t("no_tasks")}
-        </div>
-      )}
+      {(() => {
+        const pages = pageSize ? Math.max(1, Math.ceil(filtered.length / pageSize)) : 1;
+        const safePage = Math.min(page, pages - 1);
+        const visible = pageSize ? filtered.slice(safePage * pageSize, (safePage + 1) * pageSize) : filtered;
+        return (
+          <>
+            {visible.length ? (
+              visible.map((vm) => (
+                <TaskRow
+                  key={vm.task.id} vm={vm}
+                  mine={mine} canEdit={canEdit} canNudge={canNudge}
+                  showTeam={showTeam}
+                  onOpen={setEditing}
+                />
+              ))
+            ) : (
+              <div className="text-center text-ink-3 py-10 text-sm">
+                <Icon name="inbox" size={32} className="mx-auto mb-2 opacity-60" />
+                {t("no_tasks")}
+              </div>
+            )}
+            {pageSize !== undefined && pages > 1 && (
+              <div className="flex items-center gap-3 pt-4 mt-1 border-t border-grid">
+                <button className="btn-ghost btn-sm" disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>
+                  <Icon name={lang === "ar" ? "chevron-right" : "chevron-left"} size={13} /> {t("page_prev")}
+                </button>
+                <span className="flex-1 text-center text-xs text-ink-3 tabular-nums">
+                  {t("page_of", { p: safePage + 1, n: pages })}
+                </span>
+                <button className="btn-ghost btn-sm" disabled={safePage >= pages - 1} onClick={() => setPage(safePage + 1)}>
+                  {t("page_next")} <Icon name={lang === "ar" ? "chevron-left" : "chevron-right"} size={13} />
+                </button>
+              </div>
+            )}
+          </>
+        );
+      })()}
       {editing && <TaskModal vm={editing} assignees={assignees} onClose={() => setEditing(null)} />}
     </div>
   );
