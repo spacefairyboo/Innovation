@@ -31,6 +31,15 @@ export function isSummaryRequest(text: string): boolean {
   return /\b(summary|status)\b|ملخص|وضعي/i.test(text);
 }
 
+/** Does this read like a question or request for information, rather than
+    a task update? Questions route to the assistant instead of the matcher. */
+export function isQuestion(text: string): boolean {
+  const s = text.trim();
+  if (/[?؟]\s*$/.test(s)) return true;
+  return /^(what|whats|what's|when|how|who|whos|who's|where|why|which|is|are|am|do|does|did|can|could|should|would|tell me|show me|give me|list|any)\b/i.test(s)
+    || /^(ما|ماذا|متى|كيف|من|أين|لماذا|هل|كم|أي|وش|شو|اعرض|أعطني)/.test(s);
+}
+
 /* ---------- "create a task" intent ----------
    e.g. "create a new task assign it to omar, to update the new policy
    by tomorrow max. its super important" → title, assignee name, due,
