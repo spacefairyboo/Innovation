@@ -20,8 +20,9 @@ const fmt = (sec: number): string => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
-export function PodcastPlayer({ lines, scopeOptions, scope, title, highlights = 0 }: {
-  lines: string[];
+export function PodcastPlayer({ script, scopeOptions, scope, title, highlights = 0 }: {
+  /** The narration in both languages; the listener picks which one to hear. */
+  script: { en: string[]; ar: string[] };
   scopeOptions: { value: string; label: string }[] | null;
   scope: string;
   /** Time-of-day heading, resolved server-side (e.g. "Morning briefing"). */
@@ -38,6 +39,9 @@ export function PodcastPlayer({ lines, scopeOptions, scope, title, highlights = 
   const [voiceURI, setVoiceURI] = useState("");
   const [rate, setRate] = useState(1);
   const [elapsed, setElapsed] = useState(0);
+  /** The narration language, independent of the app language. */
+  const [spoken, setSpoken] = useState<"en" | "ar">(lang === "ar" ? "ar" : "en");
+  const lines = script[spoken];
   // A run token: bumping it makes stale utterance callbacks no-ops, so a
   // cancel never chains into "play the next line".
   const runRef = useRef(0);
@@ -58,23 +62,22 @@ export function PodcastPlayer({ lines, scopeOptions, scope, title, highlights = 
   useEffect(() => {
     const synth = window.speechSynthesis;
     if (!synth) return;
-    const prefix = lang === "ar" ? "ar" : "en";
     const load = () => {
       const forLang = synth.getVoices()
-        .filter((v) => v.lang.toLowerCase().startsWith(prefix))
+        .filter((v) => v.lang.toLowerCase().startsWith(spoken))
         .sort((a, b) => naturalScore(a) - naturalScore(b) || a.name.localeCompare(b.name));
       setVoices(forLang);
-      const saved = localStorage.getItem(`nabd-voice-${prefix}`);
+      const saved = localStorage.getItem(`nabd-voice-${spoken}`);
       setVoiceURI(saved && forLang.some((v) => v.voiceURI === saved) ? saved : (forLang[0]?.voiceURI ?? ""));
     };
     load();
     synth.addEventListener("voiceschanged", load);
     return () => synth.removeEventListener("voiceschanged", load);
-  }, [lang]);
+  }, [spoken]);
 
   const pickVoice = (uri: string) => {
     setVoiceURI(uri);
-    localStorage.setItem(`nabd-voice-${lang === "ar" ? "ar" : "en"}`, uri);
+    localStorage.setItem(`nabd-voice-${spoken}`, uri);
   };
 
   useEffect(() => {
@@ -107,7 +110,7 @@ export function PodcastPlayer({ lines, scopeOptions, scope, title, highlights = 
     setLineIdx(clamped);
     setElapsed(words.slice(0, clamped).reduce((a, b) => a + b, 0) * (60 / (160 * atRate)));
     const utt = new SpeechSynthesisUtterance(lines[clamped]);
-    utt.lang = lang === "ar" ? "ar-SA" : "en-US";
+    utt.lang = spoken === "ar" ? "ar-SA" : "en-US";
     const voice = voices.find((v) => v.voiceURI === atVoiceURI) ?? voices[0] ?? null;
     if (voice) utt.voice = voice;
     utt.rate = atRate;
@@ -261,6 +264,20 @@ export function PodcastPlayer({ lines, scopeOptions, scope, title, highlights = 
           >
             <Icon name="stop" size={14} /> {t("podcast_stop")}
           </button>
+          {/* Narration language: hear the same briefing in either language. */}
+          <div className="inline-flex rounded-xl overflow-hidden border border-white/20" role="group" aria-label={t("podcast_lang")}>
+            {(["en", "ar"] as const).map((l) => (
+              <button
+                key={l}
+                className={`px-3 py-2 text-sm font-semibold cursor-pointer transition
+                  ${spoken === l ? "bg-white/25 text-white" : "bg-white/5 text-white/60 hover:bg-white/15"}`}
+                onClick={() => { if (l !== spoken) { stop(); setSpoken(l); } }}
+                aria-pressed={spoken === l}
+              >
+                {l === "en" ? "English" : "العربية"}
+              </button>
+            ))}
+          </div>
           {scopeOptions && (
             <select
               className="rounded-xl px-2.5 py-2 text-sm border border-white/20 bg-white/10 text-white [&>option]:text-ink [&>option]:bg-surface"
@@ -311,7 +328,7 @@ export function PodcastPlayer({ lines, scopeOptions, scope, title, highlights = 
           <div className="flex-1" />
           <button className="btn-ghost btn-sm" onClick={download}><Icon name="download" size={13} /> {t("download_script")}</button>
         </div>
-        <div ref={transcriptRef} className="text-sm text-ink-2 leading-7 max-h-104 overflow-y-auto pe-2">
+        <div ref={transcriptRef} dir={spoken === "ar" ? "rtl" : "ltr"} className="text-sm text-ink-2 leading-7 max-h-104 overflow-y-auto pe-2">
           {lines.map((l, i) => (
             <p key={i} data-line={i} className={`m-0 mb-3 ${i === lineIdx ? "text-primary font-semibold" : ""}`}>{l}</p>
           ))}

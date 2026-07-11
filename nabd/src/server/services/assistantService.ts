@@ -7,13 +7,23 @@ import OpenAI from "openai";
 import { config } from "../config";
 import { logger } from "../logger";
 import { getChecklist } from "../repositories/taskRepository";
-import { getTeam, getUser } from "../repositories/orgRepository";
+import { getTeam, getUser, listTeams, listUnits, teamMembers } from "../repositories/orgRepository";
+import { activeDelegationFrom, activeDelegationsTo } from "../repositories/delegationRepository";
+import { upcomingMeetings } from "../repositories/meetingRepository";
 import { matchTask } from "@/lib/parser";
 import { taskValue } from "@/lib/value";
 import {
-  DAY_MS, effStatus, isStale, todayISO,
+  DAY_MS, effStatus, isStale, todayISO, toISODate,
   type Lang, type Task, type User,
 } from "@/lib/types";
+
+/** Extra signals sent along with a question: the caller's timezone, the
+    task the conversation was last about, and the recent chat turns. */
+export interface AssistantOpts {
+  tz?: string;
+  lastTaskId?: string;
+  history?: { who: "bot" | "user"; text: string }[];
+}
 
 const log = logger("assistant");
 
@@ -24,10 +34,19 @@ const STATUS_WORDS: Record<Lang, Record<string, string>> = {
   ar: { done: "مكتملة", ontrack: "على المسار", pending: "معلقة", blocked: "متعثرة", delayed: "متأخرة" },
 };
 
-const fmtDate = (d: Date, lang: Lang) =>
-  d.toLocaleDateString(lang === "ar" ? "ar" : "en", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-const fmtTime = (d: Date, lang: Lang) =>
-  d.toLocaleTimeString(lang === "ar" ? "ar" : "en", { hour: "numeric", minute: "2-digit" });
+/** Drops a timezone the runtime doesn't know rather than crashing on it. */
+function safeTZ(tz?: string): string | undefined {
+  if (!tz) return undefined;
+  try { new Intl.DateTimeFormat("en", { timeZone: tz }); return tz; } catch { return undefined; }
+}
+
+const fmtDate = (d: Date, lang: Lang, tz?: string) =>
+  d.toLocaleDateString(lang === "ar" ? "ar" : "en", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: tz });
+const fmtTime = (d: Date, lang: Lang, tz?: string) =>
+  d.toLocaleTimeString(lang === "ar" ? "ar" : "en", { hour: "numeric", minute: "2-digit", timeZone: tz });
+
+/** Today's YYYY-MM-DD on the user's clock (server clock when tz is unknown). */
+const localToday = (tz?: string) => (tz ? new Date().toLocaleDateString("en-CA", { timeZone: tz }) : todayISO());
 
 /** One line of live context per task, for both ChatGPT and the local engine. */
 function taskLine(t: Task, lang: Lang): string {
@@ -50,32 +69,88 @@ function taskLine(t: Task, lang: Lang): string {
   return "- " + parts.join(" | ");
 }
 
+/* ---------------- Wider live context: org, meetings, delegations ---------------- */
+
+/** The whole org chart in one block: sections, their units, heads, members. */
+function orgLines(lang: Lang): string {
+  return listUnits().map((sec) => {
+    const units = listTeams().filter((tm) => tm.unitId === sec.id).map((tm) => {
+      const head = getUser(tm.managerId);
+      const members = teamMembers(tm.id).map((m) => m.name[lang]).join(", ");
+      return `${tm.name[lang]} (head: ${head?.name[lang] ?? "?"}${members ? `; members: ${members}` : ""})`;
+    });
+    return `- ${sec.name[lang]}: ${units.join(" | ")}`;
+  }).join("\n");
+}
+
+/** The user's calendar for the coming week, one line per meeting. */
+function meetingLines(user: User, lang: Lang, tz?: string): string {
+  return upcomingMeetings(user.id, 7).map((m) => {
+    const start = new Date(m.startTs);
+    return `- "${m.subject}" ${lang === "ar" ? "يوم" : "on"} ${fmtDate(start, lang, tz)}, ${fmtTime(start, lang, tz)}${m.location ? ` (${m.location})` : ""}`;
+  }).join("\n");
+}
+
+/** Active delegations involving the user, phrased as sentences. */
+function delegationNote(user: User, lang: Lang): string {
+  const ar = lang === "ar";
+  const out: string[] = [];
+  const from = activeDelegationFrom(user.id);
+  if (from) {
+    const to = getUser(from.toUser)?.name[lang] ?? "?";
+    out.push(ar
+      ? `فوّضت مهامك إلى ${to}${from.endDate ? ` حتى ${from.endDate}` : ""}.`
+      : `You have delegated your tasks to ${to}${from.endDate ? ` until ${from.endDate}` : ""}.`);
+  }
+  for (const d of activeDelegationsTo(user.id)) {
+    const who = getUser(d.fromUser)?.name[lang] ?? "?";
+    out.push(ar
+      ? `${who} فوّض ${d.scope === "all" ? "مهامه" : "مهمة"} إليك${d.endDate ? ` حتى ${d.endDate}` : ""}.`
+      : `${who} has delegated ${d.scope === "all" ? "their tasks" : "a task"} to you${d.endDate ? ` until ${d.endDate}` : ""}.`);
+  }
+  return out.join("\n");
+}
+
 /* ---------------- ChatGPT path ---------------- */
 
-async function askChatGPT(message: string, user: User, lang: Lang, tasks: Task[]): Promise<string | null> {
+async function askChatGPT(message: string, user: User, lang: Lang, tasks: Task[], opts: AssistantOpts): Promise<string | null> {
   if (!client) return null;
   const now = new Date();
+  const tz = opts.tz;
+  const meetings = meetingLines(user, lang, tz);
+  const delegations = delegationNote(user, lang);
   const instructions = [
     `You are the assistant inside Nabd, a bilingual task-management app. You help ${user.name[lang]} understand and manage their work.`,
-    `Right now it is ${fmtDate(now, "en")}, ${fmtTime(now, "en")} (the user's local time). Today's date in ISO form is ${todayISO()}.`,
+    `Right now it is ${fmtDate(now, "en", tz)}, ${fmtTime(now, "en", tz)} (the user's local time). Today's date in ISO form is ${localToday(tz)}.`,
     `The tasks the user can see, from live data:`,
     tasks.length ? tasks.map((t) => taskLine(t, lang)).join("\n") : "(none)",
+    ``,
+    `The organization (sections, then their units with heads and members):`,
+    orgLines(lang),
+    ...(meetings ? [``, `The user's meetings over the next 7 days:`, meetings] : []),
+    ...(delegations ? [``, `Active delegations:`, delegations] : []),
     ``,
     `Rules:`,
     `- Answer in ${lang === "ar" ? "Arabic" : "English"}, in a warm, human tone. Plain sentences only: no markdown headings, no bullets unless listing tasks, and never use an em dash.`,
     `- Be concise. A direct answer first, then at most a few supporting lines.`,
     `- When asked what is due or what to work on, use the real dates and statuses above.`,
     `- When asked how to do a task, give short practical steps grounded in its remaining checklist, priority, blockers, and last note.`,
+    `- Earlier turns of the chat are included; when the user says "it" or continues a thought, resolve it from that context.`,
     `- You cannot change tasks yourself; to update one, the user just types the update (for example "payment page is 80%") and the app applies it.`,
     `- If the question has nothing to do with work, still answer briefly and helpfully.`,
   ].join("\n");
+
+  const history = (opts.history ?? []).map((h) => ({
+    role: h.who === "user" ? ("user" as const) : ("assistant" as const),
+    content: h.text,
+  }));
 
   try {
     const response = await client.responses.create({
       model: config.openai.model,
       max_output_tokens: 1024,
       instructions,
-      input: message,
+      input: [...history, { role: "user", content: message }],
     });
     const text = response.output_text.trim();
     return text || null;
@@ -125,23 +200,65 @@ function miniPlan(t: Task, lang: Lang): string {
   return `${t.title[lang]}: ${steps.join(ar ? "؛ ثم " : "; then ")}`;
 }
 
-function answerLocally(message: string, user: User, lang: Lang, tasks: Task[]): string {
+function answerLocally(message: string, user: User, lang: Lang, tasks: Task[], opts: AssistantOpts): string {
   const ar = lang === "ar";
   const s = message.trim().toLowerCase();
+  const tz = opts.tz;
   const now = new Date();
-  const today = todayISO();
-  const tomorrow = new Date(now.getTime() + DAY_MS).toISOString().slice(0, 10);
-  const weekEnd = new Date(now.getTime() + 7 * DAY_MS).toISOString().slice(0, 10);
+  // All date arithmetic anchors on the user's calendar, not the server's.
+  const today = localToday(tz);
+  const anchor = new Date(`${today}T12:00`);
+  const tomorrow = toISODate(new Date(anchor.getTime() + DAY_MS));
+  const weekEnd = toISODate(new Date(anchor.getTime() + 7 * DAY_MS));
   const open = openTasks(tasks);
   const wantsHow = /\bhow\b|start|begin|approach|كيف|أبدأ|ابدأ/.test(s);
+  /** The task the conversation was last about, for "it"-style follow-ups. */
+  const last = opts.lastTaskId ? tasks.find((t) => t.id === opts.lastTaskId) ?? null : null;
 
   // What time is it?
   if (/what time|الساعة|الوقت الآن|كم الوقت/.test(s)) {
-    return ar ? `الساعة الآن ${fmtTime(now, lang)}.` : `It is ${fmtTime(now, lang)} right now.`;
+    return ar ? `الساعة الآن ${fmtTime(now, lang, tz)}.` : `It is ${fmtTime(now, lang, tz)} right now.`;
   }
   // What day / date is it?
   if (/what (day|date)|today'?s date|which day|اليوم كم|كم التاريخ|ما هو اليوم|أي يوم|وش اليوم/.test(s)) {
-    return ar ? `اليوم ${fmtDate(now, lang)}.` : `Today is ${fmtDate(now, lang)}.`;
+    return ar ? `اليوم ${fmtDate(now, lang, tz)}.` : `Today is ${fmtDate(now, lang, tz)}.`;
+  }
+
+  // Meetings this week / today
+  if (/meeting|call\b|calendar|اجتماع|مكالمة|اجتماعات/.test(s)) {
+    const lines = meetingLines(user, lang, tz);
+    if (!lines) return ar ? "لا توجد اجتماعات قادمة خلال الأسبوع." : "You have no meetings in the coming week.";
+    return (ar ? "اجتماعاتك خلال الأسبوع القادم:\n" : "Your meetings over the next week:\n") + lines;
+  }
+
+  // Who is in a unit / who leads it (match by any distinctive word of the name)
+  if (/who('s| is)? (in|on|part of|lead|leads|leading|the head)|team members|من في|من يقود|أعضاء/.test(s)) {
+    const generic = new Set(["unit", "team", "section", "the", "department", "وحدة", "الوحدة", "فريق", "قسم"]);
+    const qWords = new Set(s.split(/[^\p{L}\d]+/u).filter(Boolean));
+    const named = (name: { en: string; ar: string }) =>
+      [...name.en.toLowerCase().split(/\s+/), ...name.ar.split(/\s+/)]
+        .some((w) => !generic.has(w) && (w.length > 2 || /^\d+$/.test(w)) && qWords.has(w));
+    const tm = listTeams().find((x) => named(x.name));
+    if (tm) {
+      const head = getUser(tm.managerId);
+      const members = teamMembers(tm.id).map((m) => m.name[lang]).join(ar ? "، " : ", ");
+      return ar
+        ? `${tm.name.ar}: يقودها ${head?.name.ar ?? "؟"}. الأعضاء: ${members}.`
+        : `${tm.name.en}: led by ${head?.name.en ?? "?"}. Members: ${members}.`;
+    }
+    const sec = listUnits().find((x) => named(x.name));
+    if (sec) {
+      const units = listTeams().filter((x) => x.unitId === sec.id)
+        .map((x) => `${x.name[lang]} (${getUser(x.managerId)?.name[lang] ?? "?"})`)
+        .join(ar ? "، " : ", ");
+      return ar ? `قسم ${sec.name.ar} يضم: ${units}.` : `${sec.name.en} includes: ${units}.`;
+    }
+  }
+
+  // Delegations
+  if (/delegat|handover|covering for|تفويض|فوض|فوّض|مفوض/.test(s)) {
+    const note = delegationNote(user, lang);
+    return note || (ar ? "لا توجد تفويضات نشطة حاليًا." : "No active delegations right now.");
   }
 
   // Due today / tomorrow / this week / overdue
@@ -174,9 +291,9 @@ function answerLocally(message: string, user: User, lang: Lang, tasks: Task[]): 
       + (wantsHow ? "\n\n" + blocked.slice(0, 3).map((t) => "• " + miniPlan(t, lang)).join("\n") : "");
   }
 
-  // Progress / status of a specific task
+  // Progress / status of a specific task ("it" falls back to the last one discussed)
   if (/progress|how far|status of|where (is|are)|وين وصلت|كم نسبة|وضع مهمة/.test(s)) {
-    const t = matchTask(message, tasks);
+    const t = matchTask(message, tasks) ?? last;
     if (t) {
       const st = STATUS_WORDS[lang][effStatus(t)];
       const note = t.history.find((h) => h.text[lang])?.text[lang];
@@ -188,7 +305,7 @@ function answerLocally(message: string, user: User, lang: Lang, tasks: Task[]): 
 
   // Who owns / is assigned to a task
   if (/who('s| is)? (assigned|responsible|the owner|working)|من المسؤول|من يعمل|لمن/.test(s)) {
-    const t = matchTask(message, tasks);
+    const t = matchTask(message, tasks) ?? last;
     if (t) {
       const names = t.assigneeIds.map((id) => getUser(id)?.name[lang]).filter(Boolean).join(ar ? " و" : " and ");
       return ar ? `«${t.title.ar}» مع ${names}.` : `"${t.title.en}" is with ${names}.`;
@@ -246,7 +363,8 @@ function answerLocally(message: string, user: User, lang: Lang, tasks: Task[]): 
 
 /** Answers a free-form check-in message: ChatGPT when configured, the local
     engine otherwise (and as the safety net when the API call fails). */
-export async function assistantAnswer(message: string, user: User, lang: Lang, tasks: Task[]): Promise<string> {
-  const fromApi = await askChatGPT(message, user, lang, tasks);
-  return fromApi ?? answerLocally(message, user, lang, tasks);
+export async function assistantAnswer(message: string, user: User, lang: Lang, tasks: Task[], opts: AssistantOpts = {}): Promise<string> {
+  const o: AssistantOpts = { ...opts, tz: safeTZ(opts.tz) };
+  const fromApi = await askChatGPT(message, user, lang, tasks, o);
+  return fromApi ?? answerLocally(message, user, lang, tasks, o);
 }

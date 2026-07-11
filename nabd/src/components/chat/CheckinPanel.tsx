@@ -66,6 +66,9 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
   const [recording, setRecording] = useState(false);
   const [thinking, setThinking] = useState(false);
   const pendingRef = useRef<{ parsed: ParsedUpdate; raw: string } | null>(null);
+  /** The task the conversation is currently about — lets a follow-up like
+      "actually it's blocked" land on the right task without renaming it. */
+  const lastTaskRef = useRef<Task | null>(null);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   /** Finalized words heard so far in the current voice take. */
   const heardRef = useRef("");
@@ -83,6 +86,7 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
     tasks.map((x) => `${x.title[lang]} — ${t(STATUS_META[effStatus(x)].labelKey)} · ${x.progress}%`).join("\n");
 
   const apply = (task: Task, parsed: ParsedUpdate, raw: string) => {
+    lastTaskRef.current = task;
     const patch: { status?: TaskStatus; progress?: number } = {};
     if (parsed.intent) patch.status = parsed.intent;
     if (parsed.pct !== null) patch.progress = parsed.pct;
@@ -103,9 +107,12 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
       });
     } else if (parsed.pct !== null) {
       push({ who: "bot", text: t("chat_progress_set", { task: title, pct: parsed.pct }) });
+    } else if (parsed.intent) {
+      push({ who: "bot", text: t("chat_updated", { task: title, status: t(STATUS_META[parsed.intent].labelKey) }) });
     } else {
-      const st = patch.status ?? task.status;
-      push({ who: "bot", text: t("chat_updated", { task: title, status: t(STATUS_META[st].labelKey) }) });
+      // No status or percent in the message: it was saved as the task's
+      // progress update note.
+      push({ who: "bot", text: t("chat_noted", { task: title }) });
     }
     push({ who: "bot", text: t("chat_summary_q") });
   };
@@ -136,23 +143,33 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
 
     const parsed = parseUpdate(text);
     const open = tasks.filter((x) => x.status !== "done");
-    const task = matchTask(text, open.length ? open : tasks);
     const question = isQuestion(text);
+    // "it", "this one", … keep the conversation on the task discussed last.
+    const refersBack = /\b(it|its|this|that|same)\b|هذه|ذلك|نفسها|عليها|فيها/i.test(text);
+    const direct = matchTask(text, open.length ? open : tasks);
+    if (direct) lastTaskRef.current = direct;
+    const task = direct
+      ?? ((!question && (parsed.intent || parsed.pct !== null || refersBack)) ? lastTaskRef.current : null);
 
     // A clear update ("payment page is 80%", "blocked on the review") is
-    // applied directly; anything that reads like a question, and anything
-    // the matcher can't place, goes to the assistant.
+    // applied directly; a plain remark about a known task is saved as its
+    // progress update; questions and anything unplaced go to the assistant.
     if ((parsed.intent || parsed.pct !== null) && !question) {
       if (task) { apply(task, parsed, text); return; }
       pendingRef.current = { parsed, raw: text };
       push({ who: "bot", text: t("chat_which_task"), picks: open.slice(0, 5) });
       return;
     }
+    if (!question && task) { apply(task, parsed, text); return; }
 
     setThinking(true);
     startTransition(async () => {
       try {
-        const reply = await askAssistant(text);
+        const reply = await askAssistant(text, {
+          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          lastTaskId: lastTaskRef.current?.id,
+          history: msgs.slice(-8).map((m) => ({ who: m.who, text: m.text })),
+        });
         push({ who: "bot", text: reply || t("chat_no_match") });
       } catch {
         push({ who: "bot", text: t("assistant_error") });

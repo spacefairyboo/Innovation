@@ -1,7 +1,7 @@
 /* Natural-language helpers shared by the email scanner (server) and the
    AI check-in chat (client) — no database imports, safe everywhere. */
 
-import { DAY_MS, todayISO, type Priority } from "./types";
+import { DAY_MS, todayISO, toISODate, type Priority } from "./types";
 
 export const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 export const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
@@ -10,7 +10,7 @@ function nextWeekday(target: number): string {
   const now = new Date(`${todayISO()}T00:00`);
   let delta = (target - now.getDay() + 7) % 7;
   if (delta === 0) delta = 7;
-  return new Date(now.getTime() + delta * DAY_MS).toISOString().slice(0, 10);
+  return toISODate(new Date(now.getTime() + delta * DAY_MS));
 }
 
 /** Finds a deadline in natural language; returns YYYY-MM-DD or null. */
@@ -19,7 +19,7 @@ export function parseDeadline(text: string): string | null {
   const today = new Date(`${todayISO()}T00:00`);
 
   if (/\btoday\b|اليوم/.test(s)) return todayISO();
-  if (/\btomorrow\b|غدًا|غدا/.test(s)) return new Date(today.getTime() + DAY_MS).toISOString().slice(0, 10);
+  if (/\btomorrow\b|غدًا|غدا/.test(s)) return toISODate(new Date(today.getTime() + DAY_MS));
 
   for (let i = 0; i < 7; i++) {
     if (new RegExp(`\\b(?:by |before |on )?(?:next )?${WEEKDAYS[i]}\\b`).test(s)) return nextWeekday(i);

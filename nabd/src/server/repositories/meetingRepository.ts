@@ -43,6 +43,14 @@ export function meetingsForMonth(userId: string, year: number, month: number): M
   ).all(userId, from, to) as Record<string, unknown>[]).map(mapRow);
 }
 
+/** Meetings still ahead of us within the next `days` days. */
+export function upcomingMeetings(userId: string, days: number): Meeting[] {
+  const now = Date.now();
+  return (getDB().prepare(
+    "SELECT * FROM meetings WHERE user_id = ? AND end_ts >= ? AND start_ts < ? ORDER BY start_ts",
+  ).all(userId, now, now + days * 86_400_000) as Record<string, unknown>[]).map(mapRow);
+}
+
 export function getMeeting(id: number): Meeting | null {
   const r = getDB().prepare("SELECT * FROM meetings WHERE id = ?").get(id);
   return r ? mapRow(r) : null;

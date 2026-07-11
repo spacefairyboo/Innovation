@@ -31,7 +31,12 @@ export default async function PodcastPage({ searchParams }: {
     tasks = teamTasks(scope);
   }
 
-  const lines = buildPodcastScript(user, lang, tasks, scope === "all");
+  // Both narrations are generated so the listener can switch the spoken
+  // language on the player without a round trip.
+  const script = {
+    en: buildPodcastScript(user, "en", tasks, scope === "all"),
+    ar: buildPodcastScript(user, "ar", tasks, scope === "all"),
+  };
   const stats = countStatuses(tasks);
   const hour = new Date().getHours();
   const heroTitle = t(hour < 12 ? "podcast_hero_morning" : hour < 17 ? "podcast_hero_afternoon" : "podcast_hero_evening");
@@ -53,7 +58,7 @@ export default async function PodcastPage({ searchParams }: {
         <EmailBriefingButton />
       </div>
       <PodcastPlayer
-        lines={lines}
+        script={script}
         scopeOptions={scopeOptions}
         scope={scope}
         title={heroTitle}
