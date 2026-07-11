@@ -1,9 +1,9 @@
-/* The check-in assistant's brain. Free-form messages go to Claude when an
-   API key is configured (config.anthropic); otherwise a built-in bilingual
+/* The check-in assistant's brain. Free-form messages go to ChatGPT when an
+   OpenAI API key is configured (config.openai); otherwise a built-in bilingual
    understanding engine answers the common questions — dates, what is due
    and how to approach it, status, ownership, counts — from live task data. */
 
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { config } from "../config";
 import { logger } from "../logger";
 import { getChecklist } from "../repositories/taskRepository";
@@ -17,7 +17,7 @@ import {
 
 const log = logger("assistant");
 
-const client = config.anthropic.enabled ? new Anthropic({ apiKey: config.anthropic.apiKey }) : null;
+const client = config.openai.enabled ? new OpenAI({ apiKey: config.openai.apiKey }) : null;
 
 const STATUS_WORDS: Record<Lang, Record<string, string>> = {
   en: { done: "completed", ontrack: "on track", pending: "pending", blocked: "blocked", delayed: "overdue" },
@@ -29,7 +29,7 @@ const fmtDate = (d: Date, lang: Lang) =>
 const fmtTime = (d: Date, lang: Lang) =>
   d.toLocaleTimeString(lang === "ar" ? "ar" : "en", { hour: "numeric", minute: "2-digit" });
 
-/** One line of live context per task, for both Claude and the local engine. */
+/** One line of live context per task, for both ChatGPT and the local engine. */
 function taskLine(t: Task, lang: Lang): string {
   const owner = getUser(t.ownerId);
   const team = getTeam(t.teamId);
@@ -50,12 +50,12 @@ function taskLine(t: Task, lang: Lang): string {
   return "- " + parts.join(" | ");
 }
 
-/* ---------------- Claude path ---------------- */
+/* ---------------- ChatGPT path ---------------- */
 
-async function askClaude(message: string, user: User, lang: Lang, tasks: Task[]): Promise<string | null> {
+async function askChatGPT(message: string, user: User, lang: Lang, tasks: Task[]): Promise<string | null> {
   if (!client) return null;
   const now = new Date();
-  const system = [
+  const instructions = [
     `You are the assistant inside Nabd, a bilingual task-management app. You help ${user.name[lang]} understand and manage their work.`,
     `Right now it is ${fmtDate(now, "en")}, ${fmtTime(now, "en")} (the user's local time). Today's date in ISO form is ${todayISO()}.`,
     `The tasks the user can see, from live data:`,
@@ -71,21 +71,16 @@ async function askClaude(message: string, user: User, lang: Lang, tasks: Task[])
   ].join("\n");
 
   try {
-    const response = await client.messages.create({
-      model: config.anthropic.model,
-      max_tokens: 1024,
-      system,
-      messages: [{ role: "user", content: message }],
+    const response = await client.responses.create({
+      model: config.openai.model,
+      max_output_tokens: 1024,
+      instructions,
+      input: message,
     });
-    if (response.stop_reason === "refusal") return null;
-    const text = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("")
-      .trim();
+    const text = response.output_text.trim();
     return text || null;
   } catch (err) {
-    log.warn(`Claude request failed, using the local engine: ${err instanceof Error ? err.message : err}`);
+    log.warn(`ChatGPT request failed, using the local engine: ${err instanceof Error ? err.message : err}`);
     return null;
   }
 }
@@ -249,9 +244,9 @@ function answerLocally(message: string, user: User, lang: Lang, tasks: Task[]): 
 
 /* ---------------- Public API ---------------- */
 
-/** Answers a free-form check-in message: Claude when configured, the local
+/** Answers a free-form check-in message: ChatGPT when configured, the local
     engine otherwise (and as the safety net when the API call fails). */
 export async function assistantAnswer(message: string, user: User, lang: Lang, tasks: Task[]): Promise<string> {
-  const fromClaude = await askClaude(message, user, lang, tasks);
-  return fromClaude ?? answerLocally(message, user, lang, tasks);
+  const fromApi = await askChatGPT(message, user, lang, tasks);
+  return fromApi ?? answerLocally(message, user, lang, tasks);
 }

@@ -28,11 +28,11 @@ export const config = {
     get enabled() { return !!(this.tenantId && this.clientId && this.clientSecret); },
   },
 
-  /** Claude API for the check-in assistant (optional — a built-in
+  /** OpenAI (ChatGPT) API for the check-in assistant (optional — a built-in
       understanding engine answers when no key is configured). */
-  anthropic: {
-    apiKey: env("ANTHROPIC_API_KEY"),
-    model: env("ANTHROPIC_MODEL") ?? "claude-opus-4-8",
+  openai: {
+    apiKey: env("OPENAI_API_KEY"),
+    model: env("OPENAI_MODEL") ?? "gpt-5.4-mini",
     get enabled() { return !!this.apiKey; },
   },
 
