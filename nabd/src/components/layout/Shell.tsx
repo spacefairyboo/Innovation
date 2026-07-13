@@ -63,13 +63,13 @@ export function Shell({
         ico: 'clipboard-list',
         label: t(user.role === 'senior' ? 'all_tasks_title' : 'nav_mytasks'),
       },
-      { href: '/calendar', ico: 'calendar', label: t('nav_calendar') },
+      // { href: '/calendar', ico: 'calendar', label: t('nav_calendar') },
     ],
     [
-      { href: '/advisor', ico: 'lightbulb', label: t('nav_advisor') },
-      ...(user.role !== 'employee'
-        ? [{ href: '/stats', ico: 'trending-up', label: t('nav_stats') }]
-        : []),
+      // { href: '/advisor', ico: 'lightbulb', label: t('nav_advisor') },
+      // ...(user.role !== 'employee'
+      //   ? [{ href: '/stats', ico: 'trending-up', label: t('nav_stats') }]
+      //   : []),
       ...(user.role !== 'employee'
         ? [{ href: '/teams', ico: 'users', label: t('nav_teams') }]
         : []),
@@ -78,13 +78,13 @@ export function Shell({
         : []),
     ],
     [
-      {
-        href: '/notifications',
-        ico: 'bell',
-        label: t('nav_notifications'),
-        badge: unreadCount,
-      },
-      { href: '/profile', ico: 'user', label: t('nav_profile') },
+      // {
+      //   href: '/notifications',
+      //   ico: 'bell',
+      //   label: t('nav_notifications'),
+      //   badge: unreadCount,
+      // },
+      // { href: '/profile', ico: 'user', label: t('nav_profile') },
     ],
   ];
 
