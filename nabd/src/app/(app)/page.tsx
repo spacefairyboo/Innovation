@@ -68,6 +68,8 @@ export default async function Dashboard({ searchParams }: {
   const greeting = t(greetingKey());
   const health = HEALTH_META[teamHealth(stats)];
   const dateStr = new Date().toLocaleDateString(lang === "ar" ? "ar" : "en", { weekday: "long", day: "numeric", month: "long" });
+  const timeStr = new Date().toLocaleTimeString(lang === "ar" ? "ar" : "en", { hour: "numeric", minute: "2-digit" });
+  const firstName = user.name[lang].split(" ")[0];
 
   /* ---------- Unit drill-down: the detailed per-unit overview ---------- */
   if (focusTeam) {
@@ -298,11 +300,11 @@ export default async function Dashboard({ searchParams }: {
   );
   const attention = mattersMost(tasks, lang, 5);
 
-  const pulse = [
-    { label: t("tasks_total"), val: stats.total, dot: "var(--accent-2)" },
-    { label: t("st_ontrack"), val: stats.ontrack, dot: "var(--ch-ontrack)" },
-    { label: t("needs_attention"), val: stats.blocked + stats.delayed, dot: "var(--ch-blocked)" },
-    { label: t("st_done"), val: stats.done, dot: "var(--ch-done)" },
+  const kpis = [
+    { label: t("tasks_total"), icon: "clipboard-list", val: String(stats.total), edge: "var(--accent)" },
+    { label: t("st_ontrack"), icon: "trending-up", val: String(stats.ontrack), edge: "var(--ch-ontrack)" },
+    { label: t("needs_attention"), icon: "alert-triangle", val: String(stats.blocked + stats.delayed), edge: "var(--ch-blocked)" },
+    { label: t("st_done"), icon: "check-circle", val: String(stats.done), edge: "var(--ch-done)" },
   ];
 
   // The glance strip cascades: the senior manager sees sections, a section
@@ -348,36 +350,46 @@ export default async function Dashboard({ searchParams }: {
 
   return (
     <>
-      {/* ---- Greeting: one line of context, four quiet numbers ---- */}
-      <div className="mb-5 flex items-start gap-4 flex-wrap">
-        <div className="flex-1 min-w-64">
-          <div className="text-xs font-medium text-ink-3">{dateStr} · {scopeTitle}</div>
-          <h2 className="m-0 mt-1 text-2xl font-bold">{greeting}, {user.name[lang].split(" ")[0]}</h2>
-          <p className="m-0 mt-1.5 text-sm text-ink-2 flex items-start gap-2 max-w-xl">
-            <Icon name={insight.icon} size={15} className="mt-1 shrink-0" />
-            <span>{insight.text}</span>
-          </p>
-          <div className="flex items-center gap-4 mt-3 flex-wrap">
-            {pulse.map((k) => (
-              <span key={k.label} className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-2">
-                <span className="w-2 h-2 rounded-full" style={{ background: k.dot }} />
-                <b className="tabular-nums text-ink">{k.val}</b> {k.label}
-              </span>
-            ))}
+      {/* ---- Greeting: the moment, in full, then a clean row of numbers ---- */}
+      <div className="mb-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+          <div className="min-w-64">
+            <div className="text-xs font-semibold text-ink-3 uppercase tracking-wide">{scopeTitle}</div>
+            <div className="mt-1.5 text-[1.7rem] leading-tight font-bold tabular-nums text-ink-2">
+              {dateStr} <span className="text-ink-3">· {timeStr}</span>
+            </div>
+            <h2 className="m-0 text-[1.7rem] leading-tight font-bold text-ink">{greeting}, {firstName}</h2>
+          </div>
+          <div className="flex items-center gap-2.5 flex-wrap pt-1 shrink-0">
+            <span
+              className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border border-line bg-surface"
+              style={{ color: health.color }}
+            >
+              <Icon name={health.icon} size={14} /> {t(health.labelKey)}
+            </span>
+            {user.role !== "employee" && (
+              <Link href="/stats" className="btn-ghost btn-sm no-underline">
+                <Icon name="trending-up" size={14} /> {t("nav_stats")}
+              </Link>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2.5 flex-wrap pt-1">
-          <span
-            className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border border-line bg-surface"
-            style={{ color: health.color }}
-          >
-            <Icon name={health.icon} size={14} /> {t(health.labelKey)}
-          </span>
-          {user.role !== "employee" && (
-            <Link href="/stats" className="btn-ghost btn-sm no-underline">
-              <Icon name="trending-up" size={14} /> {t("nav_stats")}
-            </Link>
-          )}
+
+        <p className="m-0 mb-4 text-sm text-ink-2 flex items-start gap-2 max-w-xl">
+          <Icon name={insight.icon} size={15} className="mt-1 shrink-0 text-primary" />
+          <span>{insight.text}</span>
+        </p>
+
+        <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
+          {kpis.map((x) => (
+            <div key={x.label} className="card relative overflow-hidden !p-4 flex flex-col gap-1">
+              <span className="absolute start-0 top-0 bottom-0 w-1" style={{ background: x.edge }} />
+              <span className="text-xs font-semibold text-ink-2 flex items-center gap-1.5">
+                <Icon name={x.icon} size={14} /> {x.label}
+              </span>
+              <span className="text-[1.8rem] font-bold leading-tight tabular-nums">{x.val}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -399,7 +411,7 @@ export default async function Dashboard({ searchParams }: {
             </div>
             <CheckinPanel
               tasks={tasks}
-              userFirstName={user.name[lang].split(" ")[0]}
+              userFirstName={firstName}
               doneThisWeek={doneThisWeekCount(tasks)}
               startVoice={false}
               compact
