@@ -85,6 +85,9 @@ export function parseCreateTask(text: string): ParsedCreate | null {
     .replace(/[\s,;.!؟?،]+/g, " ")
     .trim()
     .replace(/^(?:to|that|for|عن|بأن|أن)\s+/i, "")
+    // Removing the deadline/priority phrases can leave connectives
+    // dangling at the end ("… and its due tomorrow" → "… and its").
+    .replace(/(?:\s+(?:and|or|its|it'?s|is|that|which|by|due|on|و|أو|وهي|وهو))+$/i, "")
     .trim()
     .replace(/^./, (c) => c.toUpperCase())
     .slice(0, 120);
