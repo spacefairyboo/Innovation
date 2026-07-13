@@ -1,24 +1,31 @@
-"use client";
+'use client';
 
 /* App shell: dark brand sidebar, clean topbar (theme/lang/search/bell/user),
    command palette (Ctrl/Cmd+K), mobile nav. */
 
-import { useEffect, useState, useTransition } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { logoutAction, setLang, setTheme } from "@/app/actions";
-import { useI18n, useToast } from "@/components/providers";
-import { Avatar, Icon } from "@/components/ui";
-import { CommandPalette, type PaletteItem } from "./CommandPalette";
-import { UserSwitcher } from "./UserSwitcher";
-import { resetDemo } from "@/app/actions";
-import type { Localized, Theme, User } from "@/lib/types";
+import { useEffect, useState, useTransition } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { logoutAction, setLang, setTheme } from '@/app/actions';
+import { useI18n, useToast } from '@/components/providers';
+import { Avatar, Icon } from '@/components/ui';
+import { CommandPalette, type PaletteItem } from './CommandPalette';
+import { UserSwitcher } from './UserSwitcher';
+import { resetDemo } from '@/app/actions';
+import type { Localized, Theme, User } from '@/lib/types';
 
 export interface ShellUser extends User {
   teamName: Localized | null;
 }
 
-export function Shell({ user, users, unreadCount, theme, palette, children }: {
+export function Shell({
+  user,
+  users,
+  unreadCount,
+  theme,
+  palette,
+  children,
+}: {
   user: ShellUser;
   users: ShellUser[];
   unreadCount: number;
@@ -36,13 +43,13 @@ export function Shell({ user, users, unreadCount, theme, palette, children }: {
   // Global Ctrl/Cmd+K opens the command palette.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setPaletteOpen((o) => !o);
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   // The sidebar bundles similar destinations, separated by dividers:
@@ -50,180 +57,261 @@ export function Shell({ user, users, unreadCount, theme, palette, children }: {
   type NavItem = { href: string; ico: string; label: string; badge?: number };
   const navGroups: NavItem[][] = [
     [
-      { href: "/", ico: "layout-dashboard", label: t("nav_dashboard") },
-      { href: "/tasks", ico: "clipboard-list", label: t(user.role === "senior" ? "all_tasks_title" : "nav_mytasks") },
-      { href: "/calendar", ico: "calendar", label: t("nav_calendar") },
+      { href: '/', ico: 'layout-dashboard', label: t('nav_dashboard') },
+      {
+        href: '/tasks',
+        ico: 'clipboard-list',
+        label: t(user.role === 'senior' ? 'all_tasks_title' : 'nav_mytasks'),
+      },
+      { href: '/calendar', ico: 'calendar', label: t('nav_calendar') },
     ],
     [
-      { href: "/advisor", ico: "lightbulb", label: t("nav_advisor") },
-      ...(user.role !== "employee" ? [{ href: "/stats", ico: "trending-up", label: t("nav_stats") }] : []),
-      ...(user.role !== "employee" ? [{ href: "/teams", ico: "users", label: t("nav_teams") }] : []),
-      ...(user.role === "senior" ? [{ href: "/podcast", ico: "headphones", label: t("nav_podcast") }] : []),
+      { href: '/advisor', ico: 'lightbulb', label: t('nav_advisor') },
+      ...(user.role !== 'employee'
+        ? [{ href: '/stats', ico: 'trending-up', label: t('nav_stats') }]
+        : []),
+      ...(user.role !== 'employee'
+        ? [{ href: '/teams', ico: 'users', label: t('nav_teams') }]
+        : []),
+      ...(user.role === 'senior'
+        ? [{ href: '/podcast', ico: 'headphones', label: t('nav_podcast') }]
+        : []),
     ],
     [
-      { href: "/notifications", ico: "bell", label: t("nav_notifications"), badge: unreadCount },
-      { href: "/profile", ico: "user", label: t("nav_profile") },
+      {
+        href: '/notifications',
+        ico: 'bell',
+        label: t('nav_notifications'),
+        badge: unreadCount,
+      },
+      { href: '/profile', ico: 'user', label: t('nav_profile') },
     ],
   ];
 
   const nav = navGroups.flat();
   const roleLabel = t(`role_${user.role}`);
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href);
 
   return (
-    <div className="flex min-h-screen">
+    <div className='flex min-h-screen'>
       {/* Sidebar — floating glass panel on the deep-green gradient */}
       <aside
-        className="hidden md:flex w-60 shrink-0 flex-col gap-1.5 p-4 sticky top-3 ms-3 my-3 rounded-3xl h-[calc(100vh-1.5rem)] shadow-2xl backdrop-blur-xl"
-        style={{ background: "var(--side-bg)", border: "1px solid rgb(223 245 241 / 0.08)" }}
+        className='hidden md:flex w-60 shrink-0 flex-col gap-1.5 p-4 sticky top-3 ms-3 my-3 rounded-3xl h-[calc(100vh-1.5rem)] shadow-2xl backdrop-blur-xl'
+        style={{
+          background: 'var(--side-bg)',
+          border: '1px solid rgb(223 245 241 / 0.08)',
+        }}
       >
-        <div className="flex items-center gap-3 px-2 pb-5 pt-1">
+        <div className='flex items-center gap-3 px-2 pb-5 pt-1'>
           <span
-            className="w-9 h-9 rounded-2xl grid place-items-center text-white font-bold text-base shadow-md"
-            style={{ background: "linear-gradient(135deg, #2a9686, #46c7b4)" }}
+            className='w-9 h-9 rounded-2xl grid place-items-center text-white font-bold text-base shadow-md'
+            style={{ background: 'linear-gradient(135deg, #2a9686, #46c7b4)' }}
           >
             N
           </span>
-          <span className="font-bold text-lg leading-tight" style={{ color: "#eefaf7" }}>
-            {t("appName")}
-            <small className="block text-[0.66rem] font-medium tracking-wider uppercase" style={{ color: "var(--side-ink-dim)" }}>
-              {t("appTag")}
+          <span
+            className='font-bold text-lg leading-tight'
+            style={{ color: '#eefaf7' }}
+          >
+            {t('appName')}
+            <small
+              className='block text-[0.66rem] font-medium tracking-wider uppercase'
+              style={{ color: 'var(--side-ink-dim)' }}
+            >
+              {t('appTag')}
             </small>
           </span>
         </div>
 
-        {navGroups.filter((g) => g.length).map((group, gi) => (
-          <div key={gi} className="flex flex-col gap-1.5">
-            {gi > 0 && <hr className="border-0 my-2 mx-3 h-px" style={{ background: "var(--side-line)" }} />}
-            {group.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition ${active ? "shadow-lg" : "hover:bg-white/10"}`}
-                  style={active
-                    ? { background: "rgb(255 255 255 / 0.94)", color: "#0f2e29" }
-                    : { color: "var(--side-ink)" }}
-                >
-                  <Icon name={item.ico} size={17} />
-                  {item.label}
-                  {!!item.badge && (
-                    <span className="ms-auto min-w-5 h-5 rounded-full grid place-items-center px-1.5 text-[0.68rem] font-bold text-white" style={{ background: "#d24a4a" }}>
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+        {navGroups
+          .filter((g) => g.length)
+          .map((group, gi) => (
+            <div key={gi} className='flex flex-col gap-1.5'>
+              {gi > 0 && (
+                <hr
+                  className='border-0 my-2 mx-3 h-px'
+                  style={{ background: 'var(--side-line)' }}
+                />
+              )}
+              {group.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition ${active ? 'shadow-lg' : 'hover:bg-white/10'}`}
+                    style={
+                      active
+                        ? {
+                            background: 'rgb(255 255 255 / 0.94)',
+                            color: '#0f2e29',
+                          }
+                        : { color: 'var(--side-ink)' }
+                    }
+                  >
+                    <Icon name={item.ico} size={17} />
+                    {item.label}
+                    {!!item.badge && (
+                      <span
+                        className='ms-auto min-w-5 h-5 rounded-full grid place-items-center px-1.5 text-[0.68rem] font-bold text-white'
+                        style={{ background: '#d24a4a' }}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
 
-        <div className="mt-auto pt-3" style={{ borderTop: "1px solid var(--side-line)" }}>
+        <div
+          className='mt-auto pt-3'
+          style={{ borderTop: '1px solid var(--side-line)' }}
+        >
           <button
-            className="w-full flex items-center gap-3 rounded-full px-2.5 py-2 cursor-pointer transition hover:bg-white/10 text-start"
-            style={{ color: "var(--side-ink)" }}
+            className='w-full flex items-center gap-3 rounded-full px-2.5 py-2 cursor-pointer transition hover:bg-white/10 text-start'
+            style={{ color: 'var(--side-ink)' }}
             onClick={() => setSwitcherOpen(true)}
-            title={t("switch_user")}
+            title={t('switch_user')}
           >
-            <Avatar name={user.name} size="sm" />
-            <span className="flex-1 min-w-0 leading-tight">
-              <b className="block text-[0.82rem] truncate" style={{ color: "#eefaf7" }}>{user.name[lang]}</b>
-              <span className="block text-[0.7rem] truncate" style={{ color: "var(--side-ink-dim)" }}>{roleLabel}</span>
+            <Avatar name={user.name} size='sm' />
+            <span className='flex-1 min-w-0 leading-tight'>
+              <b
+                className='block text-[0.82rem] truncate'
+                style={{ color: '#eefaf7' }}
+              >
+                {user.name[lang]}
+              </b>
+              <span
+                className='block text-[0.7rem] truncate'
+                style={{ color: 'var(--side-ink-dim)' }}
+              >
+                {roleLabel}
+              </span>
             </span>
-            <Icon name="switch-users" size={15} />
+            <Icon name='switch-users' size={15} />
           </button>
           <button
-            className="w-full flex items-center gap-3 rounded-full px-2.5 py-2 mt-1 cursor-pointer transition hover:bg-white/10 text-start text-[0.8rem] font-medium"
-            style={{ color: "var(--side-ink)" }}
+            className='w-full flex items-center gap-3 rounded-full px-2.5 py-2 mt-1 cursor-pointer transition hover:bg-white/10 text-start text-[0.8rem] font-medium'
+            style={{ color: 'var(--side-ink)' }}
             onClick={() => startTransition(() => logoutAction())}
           >
-            <span className="w-7 h-7 grid place-items-center shrink-0"><Icon name="log-out" size={15} /></span>
-            {t("logout")}
+            <span className='w-7 h-7 grid place-items-center shrink-0'>
+              <Icon name='log-out' size={15} />
+            </span>
+            {t('logout')}
           </button>
         </div>
       </aside>
 
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className='flex-1 min-w-0 flex flex-col'>
         <header
-          className="flex items-center gap-2.5 px-4 md:px-6 py-3 sticky top-3 z-40 mx-3 mt-3 rounded-3xl shadow-2xl backdrop-blur-xl"
+          className='flex items-center gap-2.5 px-4 md:px-6 py-3 sticky top-3 z-40 mx-3 mt-3 rounded-3xl shadow-md backdrop-blur-xl'
           style={{
-            background: "color-mix(in srgb, var(--surface) 85%, transparent)",
-            border: "1px solid var(--glass-edge)",
+            background: 'color-mix(in srgb, var(--surface) 85%, transparent)',
+            border: '1px solid var(--glass-edge)',
           }}
         >
-          <div className="min-w-0">
-            <h1 className="m-0 text-base font-bold truncate">{nav.find((i) => isActive(i.href))?.label ?? t("appName")}</h1>
-            <p className="m-0 text-[0.72rem] text-ink-3 truncate">
-              {roleLabel}{user.teamName ? ` · ${user.teamName[lang]}` : ""}
+          <div className='min-w-0'>
+            <h1 className='m-0 text-base font-bold truncate'>
+              {nav.find((i) => isActive(i.href))?.label ?? t('appName')}
+            </h1>
+            <p className='m-0 text-[0.72rem] text-ink-3 truncate'>
+              {roleLabel}
+              {user.teamName ? ` · ${user.teamName[lang]}` : ''}
             </p>
           </div>
-          <div className="flex-1" />
+          <div className='flex-1' />
           <button
-            className="icon-btn !w-auto !rounded-full px-3.5 gap-2 text-sm hidden sm:flex items-center"
+            className='icon-btn !w-auto !rounded-full px-3.5 gap-2 text-sm hidden sm:flex items-center'
             onClick={() => setPaletteOpen(true)}
-            title={`${t("search")} (${t("palette_hint")})`}
+            title={`${t('search')} (${t('palette_hint')})`}
           >
-            <Icon name="search" size={15} />
-            <span className="text-ink-3 text-xs font-medium">{t("search")}</span>
-            <kbd className="text-[0.6rem] font-semibold text-ink-3 border border-line rounded-md px-1 py-0.5">{t("palette_hint")}</kbd>
+            <Icon name='search' size={15} />
+            <span className='text-ink-3 text-xs font-medium'>
+              {t('search')}
+            </span>
+            <kbd className='text-[0.6rem] font-semibold text-ink-3 border border-line rounded-md px-1 py-0.5'>
+              {t('palette_hint')}
+            </kbd>
           </button>
           <button
-            className="icon-btn sm:hidden"
+            className='icon-btn sm:hidden'
             onClick={() => setPaletteOpen(true)}
-            title={t("search")}
-            aria-label={t("search")}
+            title={t('search')}
+            aria-label={t('search')}
           >
-            <Icon name="search" size={16} />
+            <Icon name='search' size={16} />
           </button>
           <button
-            className="icon-btn !w-auto px-3.5 text-sm font-semibold"
-            onClick={() => startTransition(() => setLang(lang === "en" ? "ar" : "en"))}
-            title={t("lang_toggle")}
+            className='icon-btn !w-auto px-3.5 text-sm font-semibold'
+            onClick={() =>
+              startTransition(() => setLang(lang === 'en' ? 'ar' : 'en'))
+            }
+            title={t('lang_toggle')}
           >
-            {t("lang_toggle")}
+            {t('lang_toggle')}
           </button>
           <button
-            className="icon-btn"
-            onClick={() => startTransition(() => setTheme(theme === "dark" ? "light" : "dark"))}
-            title={t("theme_toggle")}
-            aria-label={t("theme_toggle")}
+            className='icon-btn'
+            onClick={() =>
+              startTransition(() =>
+                setTheme(theme === 'dark' ? 'light' : 'dark'),
+              )
+            }
+            title={t('theme_toggle')}
+            aria-label={t('theme_toggle')}
           >
-            <Icon name={theme === "dark" ? "sun" : "moon"} size={17} />
+            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={17} />
           </button>
-          <Link href="/notifications" className="icon-btn" title={t("nav_notifications")} aria-label={t("nav_notifications")}>
-            <Icon name="bell" size={17} />
+          <Link
+            href='/notifications'
+            className='icon-btn'
+            title={t('nav_notifications')}
+            aria-label={t('nav_notifications')}
+          >
+            <Icon name='bell' size={17} />
             {!!unreadCount && (
-              <span className="absolute -top-1 -end-1 min-w-4.5 h-4.5 rounded-full grid place-items-center px-1 text-[0.62rem] font-bold text-white" style={{ background: "#d24a4a" }}>
+              <span
+                className='absolute -top-1 -end-1 min-w-4.5 h-4.5 rounded-full grid place-items-center px-1 text-[0.62rem] font-bold text-white'
+                style={{ background: '#d24a4a' }}
+              >
                 {unreadCount}
               </span>
             )}
           </Link>
           <button
-            className="flex items-center gap-2.5 rounded-full py-1 ps-1 pe-3 cursor-pointer border border-line bg-surface-2 hover:border-accent md:hidden"
+            className='flex items-center gap-2.5 rounded-full py-1 ps-1 pe-3 cursor-pointer border border-line bg-surface-2 hover:border-accent md:hidden'
             onClick={() => setSwitcherOpen(true)}
-            title={t("switch_user")}
+            title={t('switch_user')}
           >
-            <Avatar name={user.name} size="sm" />
+            <Avatar name={user.name} size='sm' />
           </button>
           <button
-            className="hidden md:flex items-center gap-2.5 rounded-full py-1.5 ps-1.5 pe-4 cursor-pointer border border-line bg-surface-2 hover:border-accent"
+            className='hidden md:flex items-center gap-2.5 rounded-full py-1.5 ps-1.5 pe-4 cursor-pointer border border-line bg-surface-2 hover:border-accent'
             onClick={() => setSwitcherOpen(true)}
-            title={t("switch_user")}
+            title={t('switch_user')}
           >
-            <Avatar name={user.name} size="sm" />
-            <span className="text-start leading-tight">
-              <b className="block text-[0.8rem]">{user.name[lang]}</b>
+            <Avatar name={user.name} size='sm' />
+            <span className='text-start leading-tight'>
+              <b className='block text-[0.8rem]'>{user.name[lang]}</b>
             </span>
           </button>
         </header>
 
-        <main className="p-4 md:p-7 max-w-7xl w-full mx-auto pb-28 md:pb-8">{children}</main>
+        <main className='p-4 md:p-7 max-w-7xl w-full mx-auto pb-28 md:pb-8'>
+          {children}
+        </main>
       </div>
 
       <nav
-        className="md:hidden fixed bottom-3 inset-x-3 z-50 flex justify-around rounded-full px-2 py-1.5 shadow-2xl backdrop-blur-xl"
-        style={{ background: "var(--side-bg)", border: "1px solid rgb(223 245 241 / 0.1)" }}
+        className='md:hidden fixed bottom-3 inset-x-3 z-50 flex justify-around rounded-full px-2 py-1.5 shadow-2xl backdrop-blur-xl'
+        style={{
+          background: 'var(--side-bg)',
+          border: '1px solid rgb(223 245 241 / 0.1)',
+        }}
       >
         {nav.map((item) => {
           const active = isActive(item.href);
@@ -233,12 +321,19 @@ export function Shell({ user, users, unreadCount, theme, palette, children }: {
               href={item.href}
               aria-label={item.label}
               title={item.label}
-              className="grid place-items-center w-11 h-11 rounded-full relative transition shrink-0"
-              style={active ? { background: "rgb(255 255 255 / 0.94)", color: "#0f2e29" } : { color: "var(--side-ink)" }}
+              className='grid place-items-center w-11 h-11 rounded-full relative transition shrink-0'
+              style={
+                active
+                  ? { background: 'rgb(255 255 255 / 0.94)', color: '#0f2e29' }
+                  : { color: 'var(--side-ink)' }
+              }
             >
               <Icon name={item.ico} size={20} />
               {!!item.badge && (
-                <span className="absolute top-0.5 end-0.5 min-w-4 h-4 rounded-full grid place-items-center px-1 text-[0.58rem] font-bold text-white" style={{ background: "#d24a4a" }}>
+                <span
+                  className='absolute top-0.5 end-0.5 min-w-4 h-4 rounded-full grid place-items-center px-1 text-[0.58rem] font-bold text-white'
+                  style={{ background: '#d24a4a' }}
+                >
                   {item.badge}
                 </span>
               )}
@@ -253,14 +348,20 @@ export function Shell({ user, users, unreadCount, theme, palette, children }: {
           currentId={user.id}
           onClose={() => setSwitcherOpen(false)}
           onReset={() => {
-            startTransition(async () => { await resetDemo(); });
+            startTransition(async () => {
+              await resetDemo();
+            });
             setSwitcherOpen(false);
-            toast(t("demo_reset"));
+            toast(t('demo_reset'));
           }}
         />
       )}
 
-      <CommandPalette items={palette} open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <CommandPalette
+        items={palette}
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+      />
     </div>
   );
 }
