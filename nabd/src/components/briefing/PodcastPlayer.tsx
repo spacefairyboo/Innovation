@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/providers";
 import { Icon } from "@/components/ui";
-import { naturalScore, voiceGender } from "./voiceUtils";
+import { matchesLang, naturalScore, voiceGender, voiceLabel } from "./voiceUtils";
 
 const BARS = 64;
 /** Deterministic pseudo-random bar heights so the waveform looks organic. */
@@ -64,7 +64,7 @@ export function PodcastPlayer({ script, scopeOptions, scope, title, highlights =
     if (!synth) return;
     const load = () => {
       const forLang = synth.getVoices()
-        .filter((v) => v.lang.toLowerCase().startsWith(spoken))
+        .filter((v) => matchesLang(v, spoken))
         .sort((a, b) => naturalScore(a) - naturalScore(b) || a.name.localeCompare(b.name));
       setVoices(forLang);
       const saved = localStorage.getItem(`nabd-voice-${spoken}`);
@@ -301,7 +301,7 @@ export function PodcastPlayer({ script, scopeOptions, scope, title, highlights =
                   <optgroup key={g} label={t(g === "female" ? "voice_female" : g === "male" ? "voice_male" : "voice_other")}>
                     {group.map((v) => (
                       <option key={v.voiceURI} value={v.voiceURI}>
-                        {v.name.replace(/^Microsoft |^Google |\(.*\)$/g, "").trim()}
+                        {voiceLabel(v, lang)}
                       </option>
                     ))}
                   </optgroup>
@@ -319,6 +319,13 @@ export function PodcastPlayer({ script, scopeOptions, scope, title, highlights =
           <p className="m-0 text-xs inline-flex items-center gap-1.5 basis-full" style={{ color: "#7fa89e" }}>
             <Icon name="lock" size={12} /> {t("podcast_voice_note")}
           </p>
+          {/* Voices are installed at the OS/browser level; point the listener
+              to where more Arabic ones come from when they have almost none. */}
+          {spoken === "ar" && voices.length <= 1 && (
+            <p className="m-0 text-xs inline-flex items-center gap-1.5 basis-full" style={{ color: "#7fa89e" }}>
+              <Icon name="lightbulb" size={12} /> {t("podcast_more_ar_voices")}
+            </p>
+          )}
         </div>
       </div>
 
