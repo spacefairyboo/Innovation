@@ -4,7 +4,7 @@
    repositories. Every action re-validates the session server-side. */
 
 export {
-  applyCheckin, createTaskFromChat, quickDone, removeTask,
+  applyCheckin, applyTaskEdit, createTaskFromChat, quickDone, removeTask,
   saveTask, saveTaskChecklist,
 } from "@/server/actions/taskActions";
 export { addSuggestedTask, dismissSuggestion } from "@/server/actions/inboxActions";

@@ -5,10 +5,31 @@
 
 import { getSession } from "../auth/session";
 import { bumpStreak, listUsers, sectionTeams, teamMembers } from "../repositories/orgRepository";
-import { createTask, deleteTask, saveChecklist, updateTask } from "../repositories/taskRepository";
+import { createTask, deleteTask, getChecklist, saveChecklist, updateTask } from "../repositories/taskRepository";
 import { boundedText, clampProgress, validDate, validPriority, validStatus } from "../validation";
 import { assertCanEdit, refresh, sanitizeChecklist, vetAssignees } from "./guards";
-import type { ChecklistItem, Priority, TaskStatus } from "@/lib/types";
+import type { ChecklistItem, Localized, Priority, TaskStatus, User } from "@/lib/types";
+
+/** People the caller may assign work to, per the responsibility hierarchy. */
+function assignableBy(user: User): User[] {
+  return user.role === "senior"
+    ? listUsers().filter((u) => u.teamId)
+    : user.role === "section" && user.sectionId
+      ? sectionTeams(user.sectionId).flatMap((tm) => teamMembers(tm.id))
+      : user.role === "manager" && user.teamId
+        ? teamMembers(user.teamId)
+        : [user];
+}
+
+/** Resolves a spoken/typed name ("omar", "مها") against the caller's authority. */
+function resolveAssignee(user: User, name: string): User | null {
+  const wanted = name.trim().toLowerCase();
+  if (!wanted) return null;
+  return assignableBy(user).find((u) =>
+    u.name.en.toLowerCase().split(/\s+/).includes(wanted) ||
+    u.name.ar.split(/\s+/).includes(name.trim()) ||
+    u.name.en.toLowerCase().startsWith(wanted)) ?? null;
+}
 
 export async function saveTask(input: {
   id?: string;
@@ -95,23 +116,86 @@ export async function createTaskFromChat(input: {
 
   // Members create for themselves; unit heads for their unit; section heads
   // for their section; the senior manager for anyone.
-  const candidates = user.role === "senior"
-    ? listUsers().filter((u) => u.teamId)
-    : user.role === "section" && user.sectionId
-      ? sectionTeams(user.sectionId).flatMap((tm) => teamMembers(tm.id))
-      : user.role === "manager" && user.teamId
-        ? teamMembers(user.teamId)
-        : [user];
-  const wanted = input.assigneeName?.trim().toLowerCase();
-  const match = wanted
-    ? candidates.find((u) =>
-        u.name.en.toLowerCase().split(/\s+/).includes(wanted) ||
-        u.name.ar.split(/\s+/).includes(input.assigneeName!.trim()) ||
-        u.name.en.toLowerCase().startsWith(wanted))
-    : null;
+  const match = input.assigneeName ? resolveAssignee(user, input.assigneeName) : null;
   const assignee = match ?? user;
 
   createTask({ title, assigneeIds: [assignee.id], due, priority, createdBy: user.id, source: "chat" });
   refresh();
-  return { assignee: assignee.name, fellBack: !!wanted && !match };
+  return { assignee: assignee.name, fellBack: !!input.assigneeName?.trim() && !match };
+}
+
+/** A chat/voice edit of any task field. Runs through the same validators
+    and authority checks as the task form; the raw message is recorded as
+    the update note so the activity trail shows what was said. */
+export async function applyTaskEdit(taskId: string, edit: {
+  title?: string;
+  due?: string | null;
+  progress?: number;
+  status?: TaskStatus;
+  priority?: Priority;
+  assigneeName?: string;
+  checklistAdd?: string;
+  checklistDone?: string;
+  note?: string;
+}): Promise<{ assignee: Localized | null; assigneeFailed: string | null; checklistMatched: string | null }> {
+  const { user } = await assertCanEdit(taskId);
+
+  // Resolve the assignee by name within the caller's authority, then vet
+  // the result exactly like the form path.
+  let assigneeIds: string[] | undefined;
+  let assignee: Localized | null = null;
+  let assigneeFailed: string | null = null;
+  if (edit.assigneeName !== undefined) {
+    const name = boundedText(edit.assigneeName, 80) ?? "";
+    const target = resolveAssignee(user, name);
+    if (target) {
+      assigneeIds = vetAssignees(user, [target.id]);
+      assignee = target.name;
+    } else {
+      assigneeFailed = name;
+    }
+  }
+
+  const patch = {
+    title: edit.title !== undefined ? boundedText(edit.title, 200) : undefined,
+    due: edit.due !== undefined ? (edit.due === null ? null : validDate(edit.due)) : undefined,
+    progress: edit.progress !== undefined ? clampProgress(edit.progress) : undefined,
+    status: validStatus(edit.status),
+    priority: edit.priority !== undefined ? validPriority(edit.priority) : undefined,
+    assigneeIds,
+  };
+  const note = boundedText(edit.note, 2000);
+  const changesAnything = Object.values(patch).some((v) => v !== undefined) || note;
+  if (changesAnything) {
+    updateTask(taskId, patch, note ? { en: note, ar: note } : null, user.id);
+  }
+
+  // Checklist edits: append a new item, or fuzzy-match one and mark it done.
+  let checklistMatched: string | null = null;
+  if (edit.checklistAdd !== undefined || edit.checklistDone !== undefined) {
+    const items = getChecklist(taskId);
+    const addText = boundedText(edit.checklistAdd, 300);
+    if (addText) items.push({ text: addText, done: false });
+    const doneText = boundedText(edit.checklistDone, 300)?.toLowerCase();
+    if (doneText) {
+      const words = doneText.split(/[\s،,]+/).filter((w) => w.length > 1);
+      let best = -1;
+      let bestScore = 0;
+      items.forEach((it, i) => {
+        const hay = it.text.toLowerCase();
+        let score = 0;
+        for (const w of words) if (hay.includes(w)) score += w.length;
+        if (score > bestScore) { bestScore = score; best = i; }
+      });
+      if (best >= 0 && bestScore >= 3) {
+        items[best].done = true;
+        checklistMatched = items[best].text;
+      }
+    }
+    saveChecklist(taskId, sanitizeChecklist(items));
+  }
+
+  bumpStreak(user.id);
+  refresh();
+  return { assignee, assigneeFailed, checklistMatched };
 }

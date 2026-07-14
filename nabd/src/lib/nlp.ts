@@ -4,6 +4,11 @@
 import { DAY_MS, todayISO, toISODate, type Priority } from "./types";
 
 export const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+/** Arabic weekday names (with common spelling variants), indexed like getDay(). */
+const AR_WEEKDAYS: string[][] = [
+  ["الأحد", "الاحد"], ["الاثنين", "الإثنين"], ["الثلاثاء"], ["الأربعاء", "الاربعاء"],
+  ["الخميس"], ["الجمعة"], ["السبت"],
+];
 export const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 
 function nextWeekday(target: number): string {
@@ -18,11 +23,19 @@ export function parseDeadline(text: string): string | null {
   const s = text.toLowerCase();
   const today = new Date(`${todayISO()}T00:00`);
 
+  // "in 3 days" / "بعد 3 أيام" / "بعد يومين"
+  const inDays = /\bin (\d{1,2}) days?\b/.exec(s) ?? /بعد (\d{1,2}) (?:يوم|أيام|ايام)/.exec(s);
+  if (inDays) return toISODate(new Date(today.getTime() + Number(inDays[1]) * DAY_MS));
+  if (/بعد يومين/.test(s) || /\bday after tomorrow\b/.test(s)) return toISODate(new Date(today.getTime() + 2 * DAY_MS));
+  if (/بعد غد|بعد الغد/.test(s)) return toISODate(new Date(today.getTime() + 2 * DAY_MS));
+
+  if (/\btomorrow\b|غدًا|غدا|الغد|بكرة|بكرا/.test(s)) return toISODate(new Date(today.getTime() + DAY_MS));
   if (/\btoday\b|اليوم/.test(s)) return todayISO();
-  if (/\btomorrow\b|غدًا|غدا/.test(s)) return toISODate(new Date(today.getTime() + DAY_MS));
+  if (/\bnext week\b|الأسبوع القادم|الاسبوع القادم|الأسبوع المقبل/.test(s)) return toISODate(new Date(today.getTime() + 7 * DAY_MS));
 
   for (let i = 0; i < 7; i++) {
     if (new RegExp(`\\b(?:by |before |on )?(?:next )?${WEEKDAYS[i]}\\b`).test(s)) return nextWeekday(i);
+    if (AR_WEEKDAYS[i].some((d) => text.includes(d))) return nextWeekday(i);
   }
 
   // "July 15" / "15 July"

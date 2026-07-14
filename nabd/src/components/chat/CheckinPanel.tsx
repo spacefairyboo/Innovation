@@ -5,10 +5,13 @@
    actions. Used inside the check-in modal and embedded on the home page. */
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { applyCheckin, askAssistant, createTaskFromChat } from "@/app/actions";
+import { applyCheckin, applyTaskEdit, askAssistant, createTaskFromChat } from "@/app/actions";
 import { useI18n } from "@/components/providers";
 import { Icon } from "@/components/ui";
-import { isQuestion, isSummaryRequest, matchTask, parseCreateTask, parseUpdate, type ParsedUpdate } from "@/lib/parser";
+import {
+  isQuestion, isSummaryRequest, matchTask, parseCreateTask, parseTaskEdit, parseUpdate,
+  type ParsedEdit, type ParsedUpdate,
+} from "@/lib/parser";
 import { STATUS_META, effStatus, isStale, type Task, type TaskStatus } from "@/lib/types";
 
 interface Msg {
@@ -65,7 +68,7 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
   const [input, setInput] = useState("");
   const [recording, setRecording] = useState(false);
   const [thinking, setThinking] = useState(false);
-  const pendingRef = useRef<{ parsed: ParsedUpdate; raw: string } | null>(null);
+  const pendingRef = useRef<{ parsed: ParsedUpdate; raw: string; edit?: ParsedEdit } | null>(null);
   /** The task the conversation is currently about — lets a follow-up like
       "actually it's blocked" land on the right task without renaming it. */
   const lastTaskRef = useRef<Task | null>(null);
@@ -117,6 +120,51 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
     push({ who: "bot", text: t("chat_summary_q") });
   };
 
+  /** Applies a parsed field edit (due/title/assignee/checklist/progress/priority)
+      plus any status carried in the same sentence, then confirms each field. */
+  const applyEdit = (task: Task, edit: ParsedEdit, parsed: ParsedUpdate, raw: string) => {
+    lastTaskRef.current = task;
+    const title = task.title[lang];
+    // "mark the step X as done" ticks the checklist item; the "done" in the
+    // sentence must not also complete the whole task.
+    const status = edit.checklistDone || edit.checklistAdd ? undefined : parsed.intent ?? undefined;
+    startTransition(async () => {
+      try {
+        const res = await applyTaskEdit(task.id, {
+          title: edit.title,
+          due: edit.due,
+          progress: edit.progress ?? parsed.pct ?? undefined,
+          status,
+          priority: edit.priority ?? undefined,
+          assigneeName: edit.assigneeName,
+          checklistAdd: edit.checklistAdd,
+          checklistDone: edit.checklistDone,
+          note: raw,
+        });
+        const lines: string[] = [];
+        if (edit.title) lines.push(t("chat_edit_title", { task: title, title: edit.title }));
+        if (edit.due === null) lines.push(t("chat_edit_due_removed", { task: title }));
+        else if (edit.due) lines.push(t("chat_edit_due", { task: title, due: edit.due }));
+        if (res.assignee) lines.push(t("chat_edit_assignee", { task: title, who: res.assignee[lang] }));
+        if (res.assigneeFailed) lines.push(t("chat_edit_assignee_fail", { name: res.assigneeFailed }));
+        if (edit.checklistAdd) lines.push(t("chat_edit_check_added", { item: edit.checklistAdd, task: title }));
+        if (edit.checklistDone) {
+          lines.push(res.checklistMatched
+            ? t("chat_edit_check_done", { item: res.checklistMatched })
+            : t("chat_edit_check_missing", { item: edit.checklistDone }));
+        }
+        if (edit.priority) lines.push(t("chat_edit_priority", { task: title, prio: t(`prio_${edit.priority}`) }));
+        const pct = edit.progress ?? parsed.pct;
+        if (pct !== null && pct !== undefined) lines.push(t("chat_progress_set", { task: title, pct }));
+        if (status) lines.push(t("chat_updated", { task: title, status: t(STATUS_META[status].labelKey) }));
+        push({ who: "bot", text: lines.join("\n") || t("chat_noted", { task: title }) });
+        push({ who: "bot", text: t("chat_summary_q") });
+      } catch {
+        push({ who: "bot", text: t("chat_edit_failed") });
+      }
+    });
+  };
+
   const handle = (raw: string) => {
     const text = raw.trim();
     if (!text) return;
@@ -146,10 +194,23 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
     const question = isQuestion(text);
     // "it", "this one", … keep the conversation on the task discussed last.
     const refersBack = /\b(it|its|this|that|same)\b|هذه|ذلك|نفسها|عليها|فيها/i.test(text);
-    const direct = matchTask(text, open.length ? open : tasks);
+
+    // Field edits: due date, title, assignee, checklist, progress, priority —
+    // matched before plain status updates so "postpone X to monday" doesn't
+    // read as a note. The task is found from what's left of the sentence.
+    const edit = question ? null : parseTaskEdit(text);
+    const direct = matchTask(edit?.taskRef || text, open.length ? open : tasks)
+      ?? (edit ? matchTask(text, open.length ? open : tasks) : null);
     if (direct) lastTaskRef.current = direct;
     const task = direct
-      ?? ((!question && (parsed.intent || parsed.pct !== null || refersBack)) ? lastTaskRef.current : null);
+      ?? ((!question && (edit || parsed.intent || parsed.pct !== null || refersBack)) ? lastTaskRef.current : null);
+
+    if (edit) {
+      if (task) { applyEdit(task, edit, parsed, text); return; }
+      pendingRef.current = { parsed, raw: text, edit };
+      push({ who: "bot", text: t("chat_which_task"), picks: open.slice(0, 5) });
+      return;
+    }
 
     // A clear update ("payment page is 80%", "blocked on the review") is
     // applied directly; a plain remark about a known task is saved as its
@@ -247,7 +308,8 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
                     onClick={() => {
                       const pend = pendingRef.current;
                       pendingRef.current = null;
-                      apply(p, pend?.parsed ?? { intent: "ontrack", pct: null }, pend?.raw ?? "");
+                      if (pend?.edit) applyEdit(p, pend.edit, pend.parsed, pend.raw);
+                      else apply(p, pend?.parsed ?? { intent: "ontrack", pct: null }, pend?.raw ?? "");
                     }}
                   >
                     <Icon name={STATUS_META[effStatus(p)].icon} size={13} /> {p.title[lang]}
