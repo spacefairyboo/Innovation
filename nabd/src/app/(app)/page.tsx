@@ -495,15 +495,6 @@ export default async function Dashboard({
   }
 
   /* ---------- Default home: simple, voice-first ---------- */
-  const scopeTitle = t(
-    user.role === 'senior'
-      ? 'org_pulse'
-      : user.role === 'section'
-        ? 'section_pulse'
-        : user.role === 'manager'
-          ? 'team_pulse'
-          : 'my_pulse',
-  );
   const attention = mattersMost(tasks, lang, 5);
 
   const kpis = [
