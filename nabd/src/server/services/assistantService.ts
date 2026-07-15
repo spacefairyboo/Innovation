@@ -27,7 +27,12 @@ export interface AssistantOpts {
 
 const log = logger("assistant");
 
-const client = config.openai.enabled ? new OpenAI({ apiKey: config.openai.apiKey }) : null;
+/* Fail fast: the built-in engine answers instantly, so a slow or failing
+   API call must not hold the chat hostage. No SDK retries (default is 2,
+   which turns one bad key into three slow failures), 12s ceiling. */
+const client = config.openai.enabled
+  ? new OpenAI({ apiKey: config.openai.apiKey, timeout: 12_000, maxRetries: 0 })
+  : null;
 
 const STATUS_WORDS: Record<Lang, Record<string, string>> = {
   en: { done: "completed", ontrack: "on track", pending: "pending", blocked: "blocked", delayed: "overdue" },
@@ -113,59 +118,8 @@ function delegationNote(user: User, lang: Lang): string {
 
 /* ---------------- ChatGPT path ---------------- */
 
-async function askChatGPT(message: string, user: User, lang: Lang, tasks: Task[], opts: AssistantOpts): Promise<string | null> {
-  if (!client) return null;
-  const now = new Date();
-  const tz = opts.tz;
-  const meetings = meetingLines(user, lang, tz);
-  const delegations = delegationNote(user, lang);
-  const instructions = [
-    `You are the assistant inside Nabd, a bilingual task-management app. You help ${user.name[lang]} understand and manage their work.`,
-    `Right now it is ${fmtDate(now, "en", tz)}, ${fmtTime(now, "en", tz)} (the user's local time). Today's date in ISO form is ${localToday(tz)}.`,
-    `The tasks the user can see, from live data:`,
-    tasks.length ? tasks.map((t) => taskLine(t, lang)).join("\n") : "(none)",
-    ``,
-    `The organization (sections, then their units with heads and members):`,
-    orgLines(lang),
-    ...(meetings ? [``, `The user's meetings over the next 7 days:`, meetings] : []),
-    ...(delegations ? [``, `Active delegations:`, delegations] : []),
-    ``,
-    `Rules:`,
-    `- Answer in ${lang === "ar" ? "Arabic" : "English"}, in a warm, human tone. Plain sentences only: no markdown headings, no bullets unless listing tasks, and never use an em dash.`,
-    `- Be concise. A direct answer first, then at most a few supporting lines.`,
-    `- When asked what is due or what to work on, use the real dates and statuses above.`,
-    `- When asked how to do a task, give short practical steps grounded in its remaining checklist, priority, blockers, and last note.`,
-    `- Earlier turns of the chat are included; when the user says "it" or continues a thought, resolve it from that context.`,
-    `- You cannot change tasks yourself; to update one, the user just types the update (for example "payment page is 80%") and the app applies it.`,
-    `- If the question has nothing to do with work, still answer briefly and helpfully.`,
-  ].join("\n");
-
-  const history = (opts.history ?? []).map((h) => ({
-    role: h.who === "user" ? ("user" as const) : ("assistant" as const),
-    content: h.text,
-  }));
-
-  try {
-    const response = await client.responses.create({
-      model: config.openai.model,
-      max_output_tokens: 1024,
-      instructions,
-      input: [...history, { role: "user", content: message }],
-    });
-    const text = response.output_text.trim();
-    return text || null;
-  } catch (err) {
-    log.warn(`ChatGPT request failed, using the local engine: ${err instanceof Error ? err.message : err}`);
-    return null;
-  }
-}
-
-/* ---------------- ChatGPT tool-calling: perform edits, not just answer ----------------
-   The regex engine on the client catches structured commands instantly and
-   free. Anything it misses lands here: when a key is configured, ChatGPT
-   reads the message with the live task list and, if it is a change request,
-   returns a structured edit that the action layer applies through the same
-   validators as the task form. */
+/* One round trip does everything: the model either answers in text or
+   calls update_task, so a chat message never waits on two API calls. */
 
 export interface ProposedEdit {
   taskId: string;
@@ -203,46 +157,85 @@ const EDIT_TOOL = {
   },
 };
 
-/** Asks ChatGPT whether the message is a change request; returns the
-    structured edit or null (no key, no change intent, or no matching task). */
-export async function proposeEditViaChatGPT(
+export type ChatGPTOutcome =
+  | { kind: "reply"; text: string }
+  | { kind: "edit"; edit: ProposedEdit }
+  | null;
+
+/** One API call: ChatGPT reads the message with full live context and
+    either answers in text or calls update_task with a structured edit.
+    Null means no key, an API failure, or an unmatchable task — the
+    caller falls back to the local engine. */
+export async function chatgptRespond(
   message: string, user: User, lang: Lang, tasks: Task[], opts: AssistantOpts,
-): Promise<ProposedEdit | null> {
+): Promise<ChatGPTOutcome> {
   if (!client) return null;
-  const tz = safeTZ(opts.tz);
+  const now = new Date();
+  const tz = opts.tz;
+  const meetings = meetingLines(user, lang, tz);
+  const delegations = delegationNote(user, lang);
+  const instructions = [
+    `You are the assistant inside Nabd, a bilingual task-management app. You help ${user.name[lang]} understand and manage their work.`,
+    `Right now it is ${fmtDate(now, "en", tz)}, ${fmtTime(now, "en", tz)} (the user's local time). Today's date in ISO form is ${localToday(tz)}.`,
+    `The tasks the user can see, from live data:`,
+    tasks.length ? tasks.map((t) => taskLine(t, lang)).join("\n") : "(none)",
+    ``,
+    `The organization (sections, then their units with heads and members):`,
+    orgLines(lang),
+    ...(meetings ? [``, `The user's meetings over the next 7 days:`, meetings] : []),
+    ...(delegations ? [``, `Active delegations:`, delegations] : []),
+    ``,
+    `Rules:`,
+    `- Answer in ${lang === "ar" ? "Arabic" : "English"}, in a warm, human tone. Plain sentences only: no markdown headings, no bullets unless listing tasks, and never use an em dash.`,
+    `- Be concise. A direct answer first, then at most a few supporting lines.`,
+    `- When asked what is due or what to work on, use the real dates and statuses above.`,
+    `- When asked how to do a task, give short practical steps grounded in its remaining checklist, priority, blockers, and last note.`,
+    `- Earlier turns of the chat are included; when the user says "it" or continues a thought, resolve it from that context.`,
+    `- When the user asks to change a task (deadline, rename, assignee, checklist, progress, status, priority), call update_task with only the fields they asked to change, resolving relative dates ("Thursday", "غدًا") to YYYY-MM-DD. Never call it for questions or remarks.`,
+    `- If the question has nothing to do with work, still answer briefly and helpfully.`,
+  ].join("\n");
+
+  const history = (opts.history ?? []).map((h) => ({
+    role: h.who === "user" ? ("user" as const) : ("assistant" as const),
+    content: h.text,
+  }));
+
   try {
     const response = await client.responses.create({
       model: config.openai.model,
-      max_output_tokens: 300,
-      instructions: [
-        `You extract task changes requested by ${user.name.en} in a task app. Today is ${localToday(tz)}.`,
-        `Their tasks (English / Arabic titles):`,
-        tasks.map((x) => `- "${x.title.en}" / "${x.title.ar}"`).join("\n"),
-        `If the message asks to change one of these tasks, call update_task with only the fields the user asked to change. Resolve relative dates ("Thursday", "غدًا") to YYYY-MM-DD. Otherwise, do not call any tool.`,
-      ].join("\n"),
-      input: [{ role: "user", content: message }],
+      max_output_tokens: 1024,
+      instructions,
+      input: [...history, { role: "user", content: message }],
       tools: [EDIT_TOOL],
     });
+
     const call = response.output.find((o) => o.type === "function_call" && o.name === "update_task");
-    if (!call || call.type !== "function_call") return null;
-    const args = JSON.parse(call.arguments) as Record<string, unknown>;
-    const task = matchTask(String(args.task_title ?? ""), tasks);
-    if (!task) return null;
-    const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
-    const due = str(args.due);
-    return {
-      taskId: task.id,
-      status: (["done", "ontrack", "pending", "blocked"] as const).find((v) => v === args.status),
-      progress: typeof args.progress === "number" ? args.progress : undefined,
-      due: due === undefined ? undefined : (/^remove$/i.test(due) ? null : due),
-      title: str(args.new_title),
-      assigneeName: str(args.assignee_name),
-      checklistAdd: str(args.checklist_add),
-      checklistDone: str(args.checklist_done),
-      priority: (["high", "med", "low"] as const).find((v) => v === args.priority),
-    };
+    if (call && call.type === "function_call") {
+      const args = JSON.parse(call.arguments) as Record<string, unknown>;
+      const task = matchTask(String(args.task_title ?? ""), tasks);
+      if (!task) return null;
+      const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+      const due = str(args.due);
+      return {
+        kind: "edit",
+        edit: {
+          taskId: task.id,
+          status: (["done", "ontrack", "pending", "blocked"] as const).find((v) => v === args.status),
+          progress: typeof args.progress === "number" ? args.progress : undefined,
+          due: due === undefined ? undefined : (/^remove$/i.test(due) ? null : due),
+          title: str(args.new_title),
+          assigneeName: str(args.assignee_name),
+          checklistAdd: str(args.checklist_add),
+          checklistDone: str(args.checklist_done),
+          priority: (["high", "med", "low"] as const).find((v) => v === args.priority),
+        },
+      };
+    }
+
+    const text = response.output_text.trim();
+    return text ? { kind: "reply", text } : null;
   } catch (err) {
-    log.warn(`ChatGPT edit extraction failed: ${err instanceof Error ? err.message : err}`);
+    log.warn(`ChatGPT request failed, using the local engine: ${err instanceof Error ? err.message : err}`);
     return null;
   }
 }
@@ -448,10 +441,8 @@ function answerLocally(message: string, user: User, lang: Lang, tasks: Task[], o
 
 /* ---------------- Public API ---------------- */
 
-/** Answers a free-form check-in message: ChatGPT when configured, the local
-    engine otherwise (and as the safety net when the API call fails). */
-export async function assistantAnswer(message: string, user: User, lang: Lang, tasks: Task[], opts: AssistantOpts = {}): Promise<string> {
-  const o: AssistantOpts = { ...opts, tz: safeTZ(opts.tz) };
-  const fromApi = await askChatGPT(message, user, lang, tasks, o);
-  return fromApi ?? answerLocally(message, user, lang, tasks, o);
+/** The local engine's answer, with the timezone sanitized. Exported for the
+    action layer, which uses it whenever ChatGPT is absent or fails. */
+export function assistantAnswer(message: string, user: User, lang: Lang, tasks: Task[], opts: AssistantOpts = {}): string {
+  return answerLocally(message, user, lang, tasks, { ...opts, tz: safeTZ(opts.tz) });
 }
