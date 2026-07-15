@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/providers";
 import { Icon } from "@/components/ui";
-import { naturalScore } from "./voiceUtils";
+import { matchesLang, naturalScore } from "./voiceUtils";
 
 export function HomeBriefing({ lines }: { lines: string[] }) {
   const { t, lang } = useI18n();
@@ -34,7 +34,7 @@ export function HomeBriefing({ lines }: { lines: string[] }) {
     // Same voice the podcast page saved, or the most natural one available.
     const prefix = lang === "ar" ? "ar" : "en";
     const forLang = synth.getVoices()
-      .filter((v) => v.lang.toLowerCase().startsWith(prefix))
+      .filter((v) => matchesLang(v, prefix))
       .sort((a, b) => naturalScore(a) - naturalScore(b));
     const saved = localStorage.getItem(`nabd-voice-${prefix}`);
     const voice = forLang.find((v) => v.voiceURI === saved) ?? forLang[0] ?? null;

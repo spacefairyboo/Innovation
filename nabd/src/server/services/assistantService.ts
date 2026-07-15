@@ -14,7 +14,7 @@ import { matchTask } from "@/lib/parser";
 import { taskValue } from "@/lib/value";
 import {
   DAY_MS, effStatus, isStale, todayISO, toISODate,
-  type Lang, type Task, type User,
+  type Lang, type Priority, type Task, type TaskStatus, type User,
 } from "@/lib/types";
 
 /** Extra signals sent along with a question: the caller's timezone, the
@@ -156,6 +156,93 @@ async function askChatGPT(message: string, user: User, lang: Lang, tasks: Task[]
     return text || null;
   } catch (err) {
     log.warn(`ChatGPT request failed, using the local engine: ${err instanceof Error ? err.message : err}`);
+    return null;
+  }
+}
+
+/* ---------------- ChatGPT tool-calling: perform edits, not just answer ----------------
+   The regex engine on the client catches structured commands instantly and
+   free. Anything it misses lands here: when a key is configured, ChatGPT
+   reads the message with the live task list and, if it is a change request,
+   returns a structured edit that the action layer applies through the same
+   validators as the task form. */
+
+export interface ProposedEdit {
+  taskId: string;
+  title?: string;
+  due?: string | null;
+  progress?: number;
+  status?: TaskStatus;
+  priority?: Priority;
+  assigneeName?: string;
+  checklistAdd?: string;
+  checklistDone?: string;
+}
+
+const EDIT_TOOL = {
+  type: "function" as const,
+  name: "update_task",
+  strict: false,
+  description:
+    "Apply a change the user explicitly requested to one of their tasks: status, progress, due date, title, assignee, priority, or a checklist item. Never call this for questions or remarks.",
+  parameters: {
+    type: "object",
+    properties: {
+      task_title: { type: "string", description: "Words from the target task's title, in English or Arabic" },
+      status: { type: "string", enum: ["done", "ontrack", "pending", "blocked"] },
+      progress: { type: "integer", minimum: 0, maximum: 100 },
+      due: { type: "string", description: "New due date as YYYY-MM-DD, or the word 'remove' to clear it" },
+      new_title: { type: "string", description: "New task title when the user renames it" },
+      assignee_name: { type: "string", description: "First name of the person the task should move to" },
+      checklist_add: { type: "string", description: "Text of a checklist item to add" },
+      checklist_done: { type: "string", description: "Words from an existing checklist item to mark done" },
+      priority: { type: "string", enum: ["high", "med", "low"] },
+    },
+    required: ["task_title"],
+    additionalProperties: false,
+  },
+};
+
+/** Asks ChatGPT whether the message is a change request; returns the
+    structured edit or null (no key, no change intent, or no matching task). */
+export async function proposeEditViaChatGPT(
+  message: string, user: User, lang: Lang, tasks: Task[], opts: AssistantOpts,
+): Promise<ProposedEdit | null> {
+  if (!client) return null;
+  const tz = safeTZ(opts.tz);
+  try {
+    const response = await client.responses.create({
+      model: config.openai.model,
+      max_output_tokens: 300,
+      instructions: [
+        `You extract task changes requested by ${user.name.en} in a task app. Today is ${localToday(tz)}.`,
+        `Their tasks (English / Arabic titles):`,
+        tasks.map((x) => `- "${x.title.en}" / "${x.title.ar}"`).join("\n"),
+        `If the message asks to change one of these tasks, call update_task with only the fields the user asked to change. Resolve relative dates ("Thursday", "غدًا") to YYYY-MM-DD. Otherwise, do not call any tool.`,
+      ].join("\n"),
+      input: [{ role: "user", content: message }],
+      tools: [EDIT_TOOL],
+    });
+    const call = response.output.find((o) => o.type === "function_call" && o.name === "update_task");
+    if (!call || call.type !== "function_call") return null;
+    const args = JSON.parse(call.arguments) as Record<string, unknown>;
+    const task = matchTask(String(args.task_title ?? ""), tasks);
+    if (!task) return null;
+    const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+    const due = str(args.due);
+    return {
+      taskId: task.id,
+      status: (["done", "ontrack", "pending", "blocked"] as const).find((v) => v === args.status),
+      progress: typeof args.progress === "number" ? args.progress : undefined,
+      due: due === undefined ? undefined : (/^remove$/i.test(due) ? null : due),
+      title: str(args.new_title),
+      assigneeName: str(args.assignee_name),
+      checklistAdd: str(args.checklist_add),
+      checklistDone: str(args.checklist_done),
+      priority: (["high", "med", "low"] as const).find((v) => v === args.priority),
+    };
+  } catch (err) {
+    log.warn(`ChatGPT edit extraction failed: ${err instanceof Error ? err.message : err}`);
     return null;
   }
 }
