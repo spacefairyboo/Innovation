@@ -76,6 +76,7 @@ export function Shell({
       ...(user.role === 'senior'
         ? [{ href: '/podcast', ico: 'headphones', label: t('nav_podcast') }]
         : []),
+      { href: '/tools', ico: 'wrench', label: t('nav_tools') },
     ],
     [
       // {

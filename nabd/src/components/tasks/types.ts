@@ -12,8 +12,12 @@ export interface TaskVM {
   activity: ActivityEvent[];
   checklist: ChecklistItem[];
   value: TaskValue;
+  /** Resolved from the task's projectId server-side. */
+  projectName: string | null;
   /** Set while the task sits with a delegate. */
   delegation: { fromName: Localized; toName: Localized; endDate: string | null; scope: "all" | "task" } | null;
 }
 
 export interface AssigneeOption { id: string; name: Localized; teamName: Localized }
+
+export interface ProjectOption { id: string; name: string }

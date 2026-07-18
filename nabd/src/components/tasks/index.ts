@@ -1,4 +1,4 @@
-export type { AssigneeOption, TaskVM } from "./types";
+export type { AssigneeOption, ProjectOption, TaskVM } from "./types";
 export { DelegationChip, ValueChip } from "./TaskChips";
 export { AssigneePicker } from "./AssigneePicker";
 export { TaskRow } from "./TaskRow";

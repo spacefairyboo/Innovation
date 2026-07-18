@@ -5,6 +5,7 @@
 
 import { getSession } from "../auth/session";
 import { bumpStreak, listUsers, sectionTeams, teamMembers } from "../repositories/orgRepository";
+import { createProject, getProject } from "../repositories/projectRepository";
 import { createTask, deleteTask, getChecklist, saveChecklist, updateTask } from "../repositories/taskRepository";
 import { boundedText, clampProgress, validDate, validPriority, validStatus } from "../validation";
 import { assertCanEdit, refresh, sanitizeChecklist, vetAssignees } from "./guards";
@@ -19,6 +20,25 @@ function assignableBy(user: User): User[] {
       : user.role === "manager" && user.teamId
         ? teamMembers(user.teamId)
         : [user];
+}
+
+/** Cleans a tag list: trimmed, deduplicated, bounded in count and length. */
+function sanitizeTags(tags: unknown): string[] | undefined {
+  if (!Array.isArray(tags)) return undefined;
+  const clean = [...new Set(tags
+    .filter((x): x is string => typeof x === "string")
+    .map((x) => x.trim().replace(/^#/, "").slice(0, 24))
+    .filter(Boolean))];
+  return clean.slice(0, 8);
+}
+
+/** Resolves the project for a save: an existing id, a new name, or null to clear. */
+function resolveProject(user: User, projectId: string | null | undefined, newName: string | undefined): string | null | undefined {
+  const name = boundedText(newName, 60);
+  if (name) return createProject(name, user.id).id;
+  if (projectId === null) return null;
+  if (typeof projectId === "string" && getProject(projectId)) return projectId;
+  return undefined; // untouched
 }
 
 /** Resolves a spoken/typed name ("omar", "مها") against the caller's authority. */
@@ -41,6 +61,11 @@ export async function saveTask(input: {
   assigneeIds?: string[];
   note?: string;
   checklist?: ChecklistItem[];
+  tags?: string[];
+  /** Existing project id, or null to detach the task from its project. */
+  projectId?: string | null;
+  /** Creates (or reuses) a project with this name and files the task under it. */
+  newProjectName?: string;
 }) {
   const { user } = await getSession();
   const title = boundedText(input.title, 200);
@@ -49,6 +74,8 @@ export async function saveTask(input: {
   const priority = validPriority(input.priority);
   const status = validStatus(input.status);
   const progress = input.progress !== undefined ? clampProgress(input.progress) : undefined;
+  const tags = sanitizeTags(input.tags);
+  const projectId = resolveProject(user, input.projectId, input.newProjectName);
 
   if (input.id) {
     const { user: editor } = await assertCanEdit(input.id);
@@ -56,7 +83,7 @@ export async function saveTask(input: {
     const note = boundedText(input.note, 2000);
     updateTask(
       input.id,
-      { title, due, priority, status, progress, assigneeIds },
+      { title, due, priority, status, progress, assigneeIds, tags, projectId },
       note ? { en: note, ar: note } : null,
       editor.id,
     );
@@ -65,7 +92,10 @@ export async function saveTask(input: {
     const assigneeIds = user.role === "employee"
       ? [user.id]
       : vetAssignees(user, input.assigneeIds?.length ? input.assigneeIds : [user.id]);
-    const task = createTask({ title, assigneeIds, due, priority, createdBy: user.id });
+    const task = createTask({
+      title, assigneeIds, due, priority, createdBy: user.id,
+      tags, projectId: projectId ?? null,
+    });
     if (input.checklist?.length) saveChecklist(task.id, sanitizeChecklist(input.checklist));
   }
   refresh();

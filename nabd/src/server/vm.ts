@@ -2,7 +2,7 @@
 
 import { taskDelegation } from "./repositories/delegationRepository";
 import { makeT } from "@/lib/i18n";
-import { getChecklist, getTeam, getUser, taskActivity } from "./repositories";
+import { getChecklist, getProject, getTeam, getUser, taskActivity } from "./repositories";
 import { taskValue } from "@/lib/value";
 import type { TaskVM } from "@/components/tasks";
 import { STATUS_META, effStatus, type Lang, type Task } from "@/lib/types";
@@ -27,6 +27,7 @@ export function toVM(task: Task): TaskVM {
     activity: taskActivity(task.id),
     checklist: getChecklist(task.id),
     value: taskValue(task),
+    projectName: task.projectId ? (getProject(task.projectId)?.name ?? null) : null,
     delegation: d ? {
       fromName: getUser(d.fromUser)!.name,
       toName: getUser(d.toUser)!.name,

@@ -4,6 +4,7 @@
    inside the server layer itself. */
 
 export * from "./orgRepository";
+export * from "./projectRepository";
 export * from "./taskRepository";
 export {
   scopeTasks, sectionTasks, overseesTeam,

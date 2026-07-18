@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useI18n } from "@/components/providers";
 import { Icon } from "@/components/ui";
 import { TaskListSection } from "./TaskList";
-import type { AssigneeOption, TaskVM } from "./types";
+import type { AssigneeOption, ProjectOption, TaskVM } from "./types";
 
 type TabId = "mine" | "email" | "delegated";
 
@@ -23,6 +23,7 @@ export function TaskTabs({ myVms, delegatedVms, emailVms = [], ...listProps }: {
   valueFilter?: boolean;
   pageSize?: number;
   assignees?: AssigneeOption[];
+  projects?: ProjectOption[];
   initialQuery?: string;
 }) {
   const { t } = useI18n();
