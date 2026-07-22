@@ -11,7 +11,9 @@ import { ActivityLog } from "./ActivityLog";
 import { AssigneePicker } from "./AssigneePicker";
 import { ChecklistEditor } from "./ChecklistEditor";
 import { STATUS_META, type ChecklistItem, type Priority, type TaskStatus } from "@/lib/types";
-import type { AssigneeOption, TaskVM } from "./types";
+import type { AssigneeOption, ProjectOption, TaskVM } from "./types";
+
+const NEW_PROJECT = "__new__";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -22,9 +24,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function TaskModal({ vm, assignees, onClose }: {
+export function TaskModal({ vm, assignees, projects, onClose }: {
   vm: TaskVM | null;
   assignees?: AssigneeOption[];
+  projects?: ProjectOption[];
   onClose: () => void;
 }) {
   const { t, lang } = useI18n();
@@ -41,6 +44,9 @@ export function TaskModal({ vm, assignees, onClose }: {
   );
   const [note, setNote] = useState("");
   const [checklist, setChecklist] = useState<ChecklistItem[]>(vm?.checklist ?? []);
+  const [tagsText, setTagsText] = useState((task?.tags ?? []).join(", "));
+  const [projectId, setProjectId] = useState(task?.projectId ?? "");
+  const [newProject, setNewProject] = useState("");
 
   const toggleAssignee = (id: string) =>
     setAssigneeIds((ids) => ids.includes(id)
@@ -57,6 +63,9 @@ export function TaskModal({ vm, assignees, onClose }: {
         assigneeIds: assigneeIds.length ? assigneeIds : undefined,
         note: note || undefined,
         checklist,
+        tags: tagsText.split(/[,،]/).map((x) => x.trim()).filter(Boolean),
+        projectId: projectId === NEW_PROJECT ? undefined : (projectId || null),
+        newProjectName: projectId === NEW_PROJECT ? newProject.trim() || undefined : undefined,
       });
       toast(t(task ? "task_updated" : "task_added"));
       onClose();
@@ -146,6 +155,35 @@ export function TaskModal({ vm, assignees, onClose }: {
             </select>
           </Field>
         </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label={t("project")}>
+            <select className="field-input" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+              <option value="">{t("project_none")}</option>
+              {(projects ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              <option value={NEW_PROJECT}>{t("project_new")}</option>
+            </select>
+          </Field>
+          <Field label={t("tags")}>
+            <input
+              className="field-input"
+              placeholder={t("tags_ph")}
+              value={tagsText}
+              onChange={(e) => setTagsText(e.target.value)}
+            />
+          </Field>
+        </div>
+        {projectId === NEW_PROJECT && (
+          <Field label={t("project_new")}>
+            <input
+              className="field-input"
+              placeholder={t("project_new_ph")}
+              value={newProject}
+              autoFocus
+              onChange={(e) => setNewProject(e.target.value)}
+            />
+          </Field>
+        )}
 
         {assignees && assignees.length > 0 && (
           <div>

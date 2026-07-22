@@ -28,15 +28,62 @@ const ASK_CHIPS: { status: TaskStatus; labelKey: string }[] = [
 ];
 
 /* Minimal typings for the vendor-prefixed Web Speech API */
+interface AlternativeList {
+  length: number;
+  isFinal: boolean;
+  [index: number]: { transcript: string };
+}
 interface SpeechRecognitionLike {
   lang: string;
   interimResults: boolean;
   continuous: boolean;
-  onresult: ((e: { results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }> }) => void) | null;
+  maxAlternatives: number;
+  onresult: ((e: { results: ArrayLike<AlternativeList> }) => void) | null;
   onend: (() => void) | null;
   onerror: (() => void) | null;
   start(): void;
   stop(): void;
+}
+
+/* Words the recognizer is likely to hear in this app: command vocabulary
+   plus every word of the caller's task titles. Used to pick the best of
+   the recognizer's alternative transcripts instead of blindly trusting
+   the first one. */
+const COMMAND_WORDS = [
+  "done", "blocked", "pending", "progress", "percent", "deadline", "due", "tomorrow", "today", "assign",
+  "rename", "checklist", "step", "item", "priority", "high", "low", "task", "postpone", "remove", "week",
+  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+  "أنجزت", "متعثرة", "معلقة", "النسبة", "موعد", "تسليم", "غدا", "اليوم", "أسند", "بند", "خطوة", "أولوية", "مهمة", "أجل",
+];
+
+function buildVocab(tasks: Task[]): Set<string> {
+  const vocab = new Set(COMMAND_WORDS);
+  for (const task of tasks) {
+    for (const w of `${task.title.en} ${task.title.ar}`.toLowerCase().split(/[\s،,.!؟?]+/)) {
+      if (w.length > 2) vocab.add(w);
+    }
+  }
+  return vocab;
+}
+
+/** Scores a transcript by how many known words it contains. */
+function vocabScore(text: string, vocab: Set<string>): number {
+  let score = 0;
+  for (const w of text.toLowerCase().split(/[\s،,.!؟?]+/)) if (vocab.has(w)) score += w.length;
+  return score;
+}
+
+/** The alternative that best matches the app's vocabulary (ties keep the
+    recognizer's own first choice). */
+function bestAlternative(result: AlternativeList, vocab: Set<string>): string {
+  let best = result[0]?.transcript ?? "";
+  let bestScore = vocabScore(best, vocab);
+  for (let j = 1; j < result.length; j++) {
+    const cand = result[j]?.transcript ?? "";
+    const s = vocabScore(cand, vocab);
+    if (s > bestScore) { best = cand; bestScore = s; }
+  }
+  return best;
 }
 
 function getRecognizer(): (new () => SpeechRecognitionLike) | null {
@@ -252,13 +299,17 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
     // interim words stream into the input so you can see it hearing you.
     rec.continuous = true;
     rec.interimResults = true;
+    // Several alternative transcripts per phrase; the one that best matches
+    // the task titles and command words wins over the recognizer's default.
+    rec.maxAlternatives = 4;
+    const vocab = buildVocab(tasks);
     heardRef.current = "";
     rec.onresult = (e) => {
       let final = "";
       let interim = "";
       for (let i = 0; i < e.results.length; i++) {
         const r = e.results[i];
-        if (r.isFinal) final += r[0].transcript;
+        if (r.isFinal) final += bestAlternative(r, vocab);
         else interim += r[0].transcript;
       }
       heardRef.current = final;
@@ -268,7 +319,12 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
       setRecording(false);
       const text = heardRef.current.trim();
       heardRef.current = "";
-      if (text) { setInput(""); handle(text); }
+      // The transcript stays in the input for a quick look: fix any word the
+      // recognizer got wrong, then press Enter or the send button.
+      if (text) {
+        setInput(text);
+        push({ who: "bot", text: t("voice_review") });
+      }
     };
     rec.onerror = () => {
       setRecording(false);

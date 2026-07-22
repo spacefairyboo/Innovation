@@ -8,12 +8,12 @@ import { Icon } from "@/components/ui";
 import { TaskRow } from "./TaskRow";
 import { TaskModal } from "./TaskModal";
 import { STATUS_META, STATUS_ORDER, effStatus, type EffStatus, type Priority } from "@/lib/types";
-import type { AssigneeOption, TaskVM } from "./types";
+import type { AssigneeOption, ProjectOption, TaskVM } from "./types";
 
 type SortKey = "due" | "priority" | "updated";
 const PRIO_RANK: Record<Priority, number> = { high: 0, med: 1, low: 2 };
 
-export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFilters, teamFilter, valueFilter, pageSize, assignees, initialQuery }: {
+export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFilters, teamFilter, valueFilter, pageSize, assignees, projects, initialQuery }: {
   vms: TaskVM[];
   mine?: boolean;
   canEdit?: boolean;
@@ -27,12 +27,15 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
   /** Long lists: page through pageSize rows at a time. */
   pageSize?: number;
   assignees?: AssigneeOption[];
+  projects?: ProjectOption[];
   initialQuery?: string;
 }) {
   const { t, lang } = useI18n();
   const [q, setQ] = useState(initialQuery ?? "");
   const [status, setStatus] = useState<EffStatus | "all">("all");
   const [team, setTeam] = useState("all");
+  const [tag, setTag] = useState("all");
+  const [project, setProject] = useState("all");
   const [sort, setSort] = useState<SortKey>("due");
   const [highOnly, setHighOnly] = useState(false);
   const [page, setPage] = useState(0);
@@ -44,11 +47,23 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
     return [...seen.entries()].map(([id, label]) => ({ id, label }));
   }, [vms, lang]);
 
+  const tagOptions = useMemo(
+    () => [...new Set(vms.flatMap((v) => v.task.tags))].sort(),
+    [vms],
+  );
+  const projectOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const v of vms) if (v.task.projectId && v.projectName) seen.set(v.task.projectId, v.projectName);
+    return [...seen.entries()].map(([id, label]) => ({ id, label }));
+  }, [vms]);
+
   const filtered = useMemo(() => {
     let out = vms;
     if (q) out = out.filter((v) => v.task.title[lang].toLowerCase().includes(q.toLowerCase()));
     if (status !== "all") out = out.filter((v) => effStatus(v.task) === status);
     if (team !== "all") out = out.filter((v) => v.task.teamId === team);
+    if (tag !== "all") out = out.filter((v) => v.task.tags.includes(tag));
+    if (project !== "all") out = out.filter((v) => v.task.projectId === project);
     if (highOnly) out = out.filter((v) => v.value.high);
     const bySort = (a: TaskVM, b: TaskVM) =>
       sort === "priority" ? PRIO_RANK[a.task.priority] - PRIO_RANK[b.task.priority]
@@ -56,7 +71,7 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
       : (a.task.due ?? "9999").localeCompare(b.task.due ?? "9999");
     return [...out].sort((a, b) =>
       Number(a.task.status === "done") - Number(b.task.status === "done") || bySort(a, b));
-  }, [vms, q, status, team, sort, highOnly, lang]);
+  }, [vms, q, status, team, tag, project, sort, highOnly, lang]);
 
   return (
     <div className="card">
@@ -83,6 +98,22 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
               <option value="all">{t("all_teams")}</option>
               {teamOptions.map((o) => (
                 <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
+          )}
+          {projectOptions.length > 0 && (
+            <select className="field-input !w-auto !py-2 text-sm" value={project} onChange={(e) => setProject(e.target.value)}>
+              <option value="all">{t("project_all")}</option>
+              {projectOptions.map((o) => (
+                <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
+          )}
+          {tagOptions.length > 0 && (
+            <select className="field-input !w-auto !py-2 text-sm" value={tag} onChange={(e) => setTag(e.target.value)}>
+              <option value="all">{t("tag_all")}</option>
+              {tagOptions.map((x) => (
+                <option key={x} value={x}>#{x}</option>
               ))}
             </select>
           )}
@@ -142,7 +173,7 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
           </>
         );
       })()}
-      {editing && <TaskModal vm={editing} assignees={assignees} onClose={() => setEditing(null)} />}
+      {editing && <TaskModal vm={editing} assignees={assignees} projects={projects} onClose={() => setEditing(null)} />}
     </div>
   );
 }

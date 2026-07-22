@@ -54,6 +54,14 @@ export interface TaskUpdate {
 /** Where a task came from: created by hand, from the AI mail scanner, or in chat. */
 export type TaskSource = "manual" | "email" | "chat";
 
+/** A named container for related tasks. */
+export interface Project {
+  id: string;
+  name: string;
+  createdBy: string | null;
+  ts: number;
+}
+
 export interface Task {
   id: string;
   ownerId: string; // primary assignee (first of assigneeIds)
@@ -67,6 +75,8 @@ export interface Task {
   updatedAt: number;
   createdAt: number;
   source: TaskSource;
+  tags: string[];
+  projectId: string | null;
   history: TaskUpdate[];
 }
 

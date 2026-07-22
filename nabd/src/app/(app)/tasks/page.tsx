@@ -11,7 +11,7 @@ import { NewTaskButton, TaskTabs, type AssigneeOption } from "@/components/tasks
 import { taskIdsDelegatedTo } from "@/server/repositories/delegationRepository";
 import { makeT } from "@/lib/i18n";
 import { pendingSuggestions } from "@/server/repositories/inboxRepository";
-import { getTeam, listTeams, scopeTasks, teamMembers, userTasks } from "@/server/repositories";
+import { getTeam, listProjects, listTeams, scopeTasks, teamMembers, userTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { countStatuses } from "@/lib/types";
 import { doneThisWeekCount, toVM } from "@/server/vm";
@@ -27,6 +27,7 @@ export default async function MyTasksPage({ searchParams }: {
   const stats = countStatuses(tasks);
   const doneThisWeek = doneThisWeekCount(tasks);
   const delegatedIn = taskIdsDelegatedTo(user.id);
+  const projects = listProjects().map((p) => ({ id: p.id, name: p.name }));
 
   const assignees: AssigneeOption[] | undefined = senior
     ? listTeams().flatMap((team) =>
@@ -54,7 +55,7 @@ export default async function MyTasksPage({ searchParams }: {
         </div>
         <div className="flex-1" />
         {!senior && <CheckinButtons tasks={tasks} userFirstName={user.name[lang].split(" ")[0]} doneThisWeek={doneThisWeek} />}
-        <NewTaskButton assignees={assignees} />
+        <NewTaskButton assignees={assignees} projects={projects} />
       </div>
 
       <StatTiles stats={stats} />
@@ -72,6 +73,7 @@ export default async function MyTasksPage({ searchParams }: {
         valueFilter={user.role === "manager" || senior}
         pageSize={10}
         assignees={assignees}
+        projects={projects}
         initialQuery={q}
         key={q ?? ""}
       />

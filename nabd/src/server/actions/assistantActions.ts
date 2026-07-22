@@ -7,7 +7,7 @@
 
 import { getSession } from "../auth/session";
 import { scopeTasks } from "../services/accessService";
-import { assistantAnswer, proposeEditViaChatGPT } from "../services/assistantService";
+import { assistantAnswer, chatgptRespond } from "../services/assistantService";
 import { boundedText } from "../validation";
 import { applyTaskEdit } from "./taskActions";
 import { makeT } from "@/lib/i18n";
@@ -37,10 +37,12 @@ export async function askAssistant(message: string, ctx?: AskContext): Promise<s
   const tasks = scopeTasks(user);
   const opts = { tz, lastTaskId, history };
 
-  // A change request the client parser missed? Let ChatGPT extract it and
-  // apply it through the same guarded path, then confirm in plain words.
-  const proposal = await proposeEditViaChatGPT(text, user, lang, tasks, opts);
-  if (proposal) {
+  // One ChatGPT round trip: it either answers, or hands back a structured
+  // edit that we apply through the same guarded path as the task form.
+  const outcome = await chatgptRespond(text, user, lang, tasks, opts);
+  if (outcome?.kind === "reply") return outcome.text;
+  if (outcome?.kind === "edit") {
+    const proposal = outcome.edit;
     const task = tasks.find((x) => x.id === proposal.taskId);
     if (task) {
       try {

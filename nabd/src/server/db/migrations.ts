@@ -127,6 +127,12 @@ export function migrate(d: DatabaseSync) {
       was_owner INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (delegation_id, task_id)
     );
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_by TEXT REFERENCES users(id),
+      ts INTEGER NOT NULL
+    );
   `);
   // Databases created before the profile release lack user preference columns.
   const prefCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];
@@ -140,6 +146,9 @@ export function migrate(d: DatabaseSync) {
   if (!taskCols.some((c) => c.name === "created_at")) d.exec("ALTER TABLE tasks ADD COLUMN created_at INTEGER");
   // Databases created before task origins were tracked lack tasks.source.
   if (!taskCols.some((c) => c.name === "source")) d.exec("ALTER TABLE tasks ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
+  // Databases created before tags and projects lack these columns.
+  if (!taskCols.some((c) => c.name === "tags")) d.exec("ALTER TABLE tasks ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'");
+  if (!taskCols.some((c) => c.name === "project_id")) d.exec("ALTER TABLE tasks ADD COLUMN project_id TEXT");
   d.exec(`
     UPDATE tasks SET created_at = COALESCE(
       (SELECT MIN(ts) FROM task_updates u WHERE u.task_id = tasks.id), updated_at

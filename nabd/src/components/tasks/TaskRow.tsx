@@ -54,6 +54,16 @@ export function TaskRow({ vm, mine, canEdit, canNudge, showTeam, onOpen }: {
           </span>
         </div>
         <div className="text-xs text-ink-3 mt-1 flex items-center gap-x-3 gap-y-1 flex-wrap">
+          {vm.projectName && (
+            <span className="inline-flex items-center gap-1 font-semibold text-primary">
+              <Icon name="folder" size={12} /> {vm.projectName}
+            </span>
+          )}
+          {task.tags.map((tag) => (
+            <span key={tag} className="inline-flex items-center rounded-full border border-line bg-surface-2 px-2 py-0.5 text-[0.68rem] font-semibold">
+              #{tag}
+            </span>
+          ))}
           <span className="inline-flex items-center gap-1">
             <Icon name="user" size={12} /> {vm.assignees.map((a) => a.name[lang]).join(lang === "ar" ? "، " : ", ")}
             {vm.assignees[0]?.managerName && (

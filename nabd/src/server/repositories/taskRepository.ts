@@ -16,6 +16,15 @@ const mapUpdate = (r: any): TaskUpdate => ({
 });
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+function parseTags(raw: unknown): string[] {
+  try {
+    const arr = JSON.parse(String(raw ?? "[]"));
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 function mapTask(r: Record<string, unknown>, history: TaskUpdate[], assigneeIds: string[]): Task {
   const owner = r.owner_id as string;
   return {
@@ -28,6 +37,8 @@ function mapTask(r: Record<string, unknown>, history: TaskUpdate[], assigneeIds:
     due: (r.due as string) ?? null, updatedAt: Number(r.updated_at),
     createdAt: Number(r.created_at ?? r.updated_at),
     source: ((r.source as string) ?? "manual") as TaskSource,
+    tags: parseTags(r.tags),
+    projectId: (r.project_id as string) ?? null,
     history,
   };
 }
@@ -153,9 +164,12 @@ export function saveChecklist(taskId: string, items: ChecklistItem[]): void {
 }
 
 /* ---------- writes ---------- */
+type TaskPatch = Partial<Pick<Task, "status" | "progress" | "priority" | "due" | "tags" | "projectId">>
+  & { title?: string; assigneeIds?: string[] };
+
 export function updateTask(
   taskId: string,
-  patch: Partial<Pick<Task, "status" | "progress" | "priority" | "due">> & { title?: string; assigneeIds?: string[] },
+  patch: TaskPatch,
   note: { en: string; ar: string } | null,
   changedBy: string,
 ): Task | null {
@@ -164,7 +178,7 @@ export function updateTask(
 
 function updateTaskInner(
   taskId: string,
-  patch: Partial<Pick<Task, "status" | "progress" | "priority" | "due">> & { title?: string; assigneeIds?: string[] },
+  patch: TaskPatch,
   note: { en: string; ar: string } | null,
   changedBy: string,
 ): Task | null {
@@ -194,6 +208,8 @@ function updateTaskInner(
     due: patch.due !== undefined ? patch.due : existing.due,
     title_en: patch.title ?? existing.title.en,
     title_ar: patch.title ?? existing.title.ar,
+    tags: patch.tags ?? existing.tags,
+    projectId: patch.projectId !== undefined ? patch.projectId : existing.projectId,
   };
   if (next.status === "done") next.progress = 100;
 
@@ -210,8 +226,8 @@ function updateTaskInner(
   for (const c of changes) logAudit(taskId, changedBy, now, c);
 
   db.prepare(
-    "UPDATE tasks SET owner_id=?, team_id=?, status=?, progress=?, priority=?, due=?, title_en=?, title_ar=?, updated_at=? WHERE id=?",
-  ).run(ownerId, teamId, next.status, next.progress, next.priority, next.due, next.title_en, next.title_ar, now, taskId);
+    "UPDATE tasks SET owner_id=?, team_id=?, status=?, progress=?, priority=?, due=?, title_en=?, title_ar=?, tags=?, project_id=?, updated_at=? WHERE id=?",
+  ).run(ownerId, teamId, next.status, next.progress, next.priority, next.due, next.title_en, next.title_ar, JSON.stringify(next.tags), next.projectId, now, taskId);
 
   if (nextAssignees) {
     db.prepare("DELETE FROM task_assignees WHERE task_id = ?").run(taskId);
@@ -230,7 +246,7 @@ function updateTaskInner(
 
 export function createTask(input: {
   title: string; assigneeIds: string[]; due: string | null; priority: Priority; createdBy: string;
-  source?: TaskSource;
+  source?: TaskSource; tags?: string[]; projectId?: string | null;
 }): Task {
   return withTransaction(() => {
     const db = getDB();
@@ -240,10 +256,11 @@ export function createTask(input: {
     const id = "k" + Math.random().toString(36).slice(2, 10);
     const now = Date.now();
     db.prepare(
-      "INSERT INTO tasks (id, owner_id, team_id, status, progress, priority, title_en, title_ar, due, updated_at, created_at, source) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO tasks (id, owner_id, team_id, status, progress, priority, title_en, title_ar, due, updated_at, created_at, source, tags, project_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     ).run(
       id, owner.id, owner.teamId, "pending", 0, input.priority,
       input.title, input.title, input.due, now, now, input.source ?? "manual",
+      JSON.stringify(input.tags ?? []), input.projectId ?? null,
     );
     const ins = db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
     for (const uid of assignees) ins.run(id, uid);
