@@ -36,6 +36,8 @@ export interface User {
   name: Localized;
   streak: number;
   email: string | null;
+  /** Internal phone extension, shown in the employee directory. */
+  phoneExt: string | null;
   /** Section heads only: the section (units-table id) they lead. */
   sectionId: string | null;
   /** Saved profile preferences; null = follow the session default. */

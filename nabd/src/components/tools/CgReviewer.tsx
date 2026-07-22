@@ -14,6 +14,8 @@ const KIND_META: Record<string, { icon: string; color: string; labelKey: string 
   missing: { icon: "ban", color: "var(--st-blocked)", labelKey: "cg_missing" },
   changed: { icon: "alert-triangle", color: "var(--st-pending)", labelKey: "cg_changed" },
   added: { icon: "plus", color: "var(--st-ontrack)", labelKey: "cg_added" },
+  spelling: { icon: "pencil", color: "var(--st-blocked)", labelKey: "cg_spelling" },
+  wordy: { icon: "sparkles", color: "var(--st-pending)", labelKey: "cg_wordy" },
 };
 
 const ACCEPT = ".docx,.txt,.md";

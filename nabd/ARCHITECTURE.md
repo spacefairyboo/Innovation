@@ -59,6 +59,7 @@ nabd/src/
     │   ├── index.ts           # Facade the route layer imports
     │   ├── orgRepository.ts   # Sections, units, users, preferences
     │   ├── taskRepository.ts  # Tasks, history, audit log, checklists
+    │   ├── projectRepository.ts     # Projects (task containers)
     │   ├── delegationRepository.ts  # Delegation rows + task moves
     │   ├── emailRepository.ts # The outbox
     │   ├── inboxRepository.ts # AI mail-scanner suggestions
@@ -69,11 +70,14 @@ nabd/src/
     │   ├── mailerService.ts   # SMTP + stale-task reminder sweep
     │   ├── briefingService.ts # The spoken narrative + insights
     │   ├── advisorService.ts  # Per-role prioritized plans + email drafts
-    │   └── assistantService.ts# Check-in Q&A: ChatGPT API + local engine
+    │   ├── assistantService.ts# Check-in Q&A: ChatGPT API + local engine
+    │   └── docReviewService.ts# CG Reviewer: template diff, spelling,
+    │                          #   wordiness → .docx with real Word comments
     └── actions/               # Controllers ("use server") — thin, validated
         ├── guards.ts          # Shared authorization + sanitizers
         ├── authActions.ts     # Sign in / sign out
         ├── assistantActions.ts# Check-in assistant replies
+        ├── toolActions.ts     # CG Reviewer uploads + reviewed downloads
         ├── taskActions.ts     # CRUD, check-in, chat-created tasks
         ├── delegationActions.ts
         ├── inboxActions.ts

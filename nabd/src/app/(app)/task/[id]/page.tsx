@@ -5,7 +5,7 @@
 import { notFound } from "next/navigation";
 import { TaskFullView } from "@/components/tasks";
 import type { AssigneeOption } from "@/components/tasks";
-import { getTask, getTeam, listUsers, overseesTeam, teamMembers } from "@/server/repositories";
+import { canUpdateTask, getTask, getTeam, listUsers, overseesTeam, teamMembers } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { toVM } from "@/server/vm";
 
@@ -16,8 +16,10 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   if (!task) notFound();
 
   // Visibility mirrors scopeTasks: assignees plus anyone overseeing the unit.
-  const canEdit = task.assigneeIds.includes(user.id) || overseesTeam(user, task.teamId);
-  if (!canEdit) notFound();
+  // Editing is narrower: assignees, delegates, and the line manager only.
+  const canView = task.assigneeIds.includes(user.id) || overseesTeam(user, task.teamId);
+  if (!canView) notFound();
+  const canEdit = canUpdateTask(user, task);
 
   const team = getTeam(task.teamId)!;
   const assignees: AssigneeOption[] | undefined =
@@ -32,5 +34,5 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
     .filter((u) => u.teamId)
     .map((u) => ({ id: u.id, name: u.name, teamName: getTeam(u.teamId!)!.name }));
 
-  return <TaskFullView vm={toVM(task)} canEdit={canEdit} assignees={assignees} colleagues={colleagues} backHref={backHref} />;
+  return <TaskFullView vm={toVM(task, user)} canEdit={canEdit} assignees={assignees} colleagues={colleagues} backHref={backHref} />;
 }

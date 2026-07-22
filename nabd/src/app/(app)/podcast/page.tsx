@@ -17,10 +17,33 @@ export default async function PodcastPage({ searchParams }: {
   const { user, lang } = await getSession();
   const t = makeT(lang);
 
-  // The audio briefing is the senior manager's channel only.
-  if (user.role !== "senior") notFound();
+  // The briefing is for every lead: the senior manager, section heads, and
+  // unit heads. Each hears only the scopes their role oversees.
+  if (user.role === "employee") notFound();
 
-  const scope = rawScope ?? "all";
+  const scopeOptions =
+    user.role === "senior"
+      ? [
+          { value: "all", label: t("org_pulse") },
+          ...listUnits().map((u) => ({ value: u.id, label: `${t("unit")}: ${u.name[lang]}` })),
+          ...listTeams().map((tm) => ({ value: tm.id, label: `${t("team")}: ${tm.name[lang]}` })),
+        ]
+      : user.role === "section" && user.sectionId
+        ? [
+            ...listUnits().filter((u) => u.id === user.sectionId)
+              .map((u) => ({ value: u.id, label: `${t("unit")}: ${u.name[lang]}` })),
+            ...listTeams().filter((tm) => tm.unitId === user.sectionId)
+              .map((tm) => ({ value: tm.id, label: `${t("team")}: ${tm.name[lang]}` })),
+          ]
+        : listTeams().filter((tm) => tm.id === user.teamId)
+            .map((tm) => ({ value: tm.id, label: `${t("team")}: ${tm.name[lang]}` }));
+  if (!scopeOptions.length) notFound();
+
+  // Only a scope the caller is allowed to hear; anything else falls back to
+  // their own default.
+  const scope = rawScope && scopeOptions.some((o) => o.value === rawScope)
+    ? rawScope
+    : scopeOptions[0].value;
   let tasks: Task[];
   if (scope === "all") {
     tasks = allTasks();
@@ -41,12 +64,6 @@ export default async function PodcastPage({ searchParams }: {
   const hour = new Date().getHours();
   const heroTitle = t(hour < 12 ? "podcast_hero_morning" : hour < 17 ? "podcast_hero_afternoon" : "podcast_hero_evening");
 
-  const scopeOptions = [
-    { value: "all", label: t("org_pulse") },
-    ...listUnits().map((u) => ({ value: u.id, label: `${t("unit")}: ${u.name[lang]}` })),
-    ...listTeams().map((tm) => ({ value: tm.id, label: `${t("team")}: ${tm.name[lang]}` })),
-  ];
-
   return (
     <>
       <div className="flex items-center gap-3.5 mb-5 flex-wrap">
@@ -59,7 +76,7 @@ export default async function PodcastPage({ searchParams }: {
       </div>
       <PodcastPlayer
         script={script}
-        scopeOptions={scopeOptions}
+        scopeOptions={scopeOptions.length > 1 ? scopeOptions : null}
         scope={scope}
         title={heroTitle}
         highlights={stats.blocked + stats.delayed}

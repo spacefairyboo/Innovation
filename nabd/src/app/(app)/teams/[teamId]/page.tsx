@@ -103,7 +103,7 @@ export default async function TeamPage({ params, searchParams }: {
 
       <div className="mt-5">
         <TaskListSection
-          vms={tasks.map(toVM)}
+          vms={tasks.map((x) => toVM(x, user))}
           canEdit={canManage}
           canNudge={canManage}
           withFilters

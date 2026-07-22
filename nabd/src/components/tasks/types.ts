@@ -14,6 +14,9 @@ export interface TaskVM {
   value: TaskValue;
   /** Resolved from the task's projectId server-side. */
   projectName: string | null;
+  /** Set when the view-model was built for a specific viewer: whether that
+      viewer may update this task (assignee, delegate, or line manager). */
+  editable?: boolean;
   /** Set while the task sits with a delegate. */
   delegation: { fromName: Localized; toName: Localized; endDate: string | null; scope: "all" | "task" } | null;
 }

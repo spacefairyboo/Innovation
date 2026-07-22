@@ -3,11 +3,14 @@
 import { taskDelegation } from "./repositories/delegationRepository";
 import { makeT } from "@/lib/i18n";
 import { getChecklist, getProject, getTeam, getUser, taskActivity } from "./repositories";
+import { canUpdateTask } from "./services/accessService";
 import { taskValue } from "@/lib/value";
 import type { TaskVM } from "@/components/tasks";
-import { STATUS_META, effStatus, type Lang, type Task } from "@/lib/types";
+import { STATUS_META, effStatus, type Lang, type Task, type User } from "@/lib/types";
 
-export function toVM(task: Task): TaskVM {
+/** `viewer` decides row-level edit rights: only an assignee (delegates are
+    assignees while delegated) or the task's line manager may update it. */
+export function toVM(task: Task, viewer?: User): TaskVM {
   const owner = getUser(task.ownerId)!;
   const team = getTeam(task.teamId)!;
   const assignees = task.assigneeIds
@@ -28,6 +31,7 @@ export function toVM(task: Task): TaskVM {
     checklist: getChecklist(task.id),
     value: taskValue(task),
     projectName: task.projectId ? (getProject(task.projectId)?.name ?? null) : null,
+    editable: viewer ? canUpdateTask(viewer, task) : undefined,
     delegation: d ? {
       fromName: getUser(d.fromUser)!.name,
       toName: getUser(d.toUser)!.name,

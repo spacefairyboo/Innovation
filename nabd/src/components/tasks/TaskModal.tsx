@@ -10,7 +10,7 @@ import { Icon, Modal } from "@/components/ui";
 import { ActivityLog } from "./ActivityLog";
 import { AssigneePicker } from "./AssigneePicker";
 import { ChecklistEditor } from "./ChecklistEditor";
-import { STATUS_META, type ChecklistItem, type Priority, type TaskStatus } from "@/lib/types";
+import { STATUS_META, todayISO, type ChecklistItem, type Priority, type TaskStatus } from "@/lib/types";
 import type { AssigneeOption, ProjectOption, TaskVM } from "./types";
 
 const NEW_PROJECT = "__new__";
@@ -52,6 +52,12 @@ export function TaskModal({ vm, assignees, projects, onClose }: {
     setAssigneeIds((ids) => ids.includes(id)
       ? (ids.length > 1 ? ids.filter((x) => x !== id) : ids) // at least one assignee stays
       : [...ids, id]);
+
+  // An overdue task is Delayed and stays Delayed: only completing it or
+  // moving the due date (the form's due field counts) unlocks the status.
+  const delayLocked = !!task && task.status !== "done"
+    && !!task.due && task.due < todayISO()
+    && (!due || due < todayISO());
 
   const submit = () => {
     if (!title.trim()) return;
@@ -116,20 +122,30 @@ export function TaskModal({ vm, assignees, projects, onClose }: {
         {task && (
           <Field label={t("quick_status")}>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              {(["ontrack", "pending", "blocked", "done"] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  aria-pressed={status === s}
-                  className={`flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-semibold cursor-pointer transition
-                    ${status === s ? "border-transparent" : "border-line bg-surface-2 text-ink-2 hover:border-accent"}`}
-                  style={status === s ? { background: `var(--st-${s}-bg)`, color: `var(--st-${s})`, boxShadow: `inset 0 0 0 1.5px var(--st-${s})` } : undefined}
-                  onClick={() => { setStatus(s); if (s === "done") setProgress(100); }}
-                >
-                  <Icon name={STATUS_META[s].icon} size={14} /> {t(STATUS_META[s].labelKey)}
-                </button>
-              ))}
+              {(["ontrack", "pending", "blocked", "done"] as const).map((s) => {
+                const lockedOut = delayLocked && s !== "done" && s !== task.status;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    aria-pressed={status === s}
+                    disabled={lockedOut}
+                    className={`flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-semibold transition
+                      ${lockedOut ? "border-line bg-surface-2 text-ink-3 opacity-50 cursor-not-allowed"
+                        : status === s ? "border-transparent cursor-pointer" : "border-line bg-surface-2 text-ink-2 hover:border-accent cursor-pointer"}`}
+                    style={status === s ? { background: `var(--st-${s}-bg)`, color: `var(--st-${s})`, boxShadow: `inset 0 0 0 1.5px var(--st-${s})` } : undefined}
+                    onClick={() => { setStatus(s); if (s === "done") setProgress(100); }}
+                  >
+                    <Icon name={STATUS_META[s].icon} size={14} /> {t(STATUS_META[s].labelKey)}
+                  </button>
+                );
+              })}
             </div>
+            {delayLocked && (
+              <p className="m-0 mt-1.5 text-xs font-medium flex items-start gap-1.5" style={{ color: "var(--st-delayed)" }}>
+                <Icon name="alert-triangle" size={13} className="mt-0.5 shrink-0" /> {t("delayed_locked_hint")}
+              </p>
+            )}
           </Field>
         )}
 

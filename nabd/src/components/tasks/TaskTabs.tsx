@@ -17,6 +17,7 @@ export function TaskTabs({ myVms, delegatedVms, emailVms = [], ...listProps }: {
   delegatedVms: TaskVM[];
   emailVms?: TaskVM[];
   mine?: boolean;
+  canNudge?: boolean;
   withFilters?: boolean;
   showTeam?: boolean;
   teamFilter?: boolean;
