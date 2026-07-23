@@ -33,6 +33,53 @@ export function isEmpty(d: DatabaseSync): boolean {
   return row.c === 0;
 }
 
+/** The 2026 org expansion: Corporate Governance 2 (four units), BCO (three
+    numbered units plus QA and Engagement), and DSS (one unit). Idempotent,
+    so it runs on every boot: fresh databases get it via seed(), existing
+    ones via the migrations. */
+export function ensureExpandedOrg(d: DatabaseSync): void {
+  const insUnit = d.prepare("INSERT OR IGNORE INTO units VALUES (?,?,?,?)");
+  insUnit.run("u3", "G", "Corporate Governance 2", "الحوكمة المؤسسية 2");
+  insUnit.run("u4", "O", "BCO", "مكتب استمرارية الأعمال");
+  insUnit.run("u5", "S", "DSS", "خدمات دعم القرار");
+
+  const insTeam = d.prepare("INSERT OR IGNORE INTO teams VALUES (?,?,?,?,?,?)");
+  insTeam.run("t5", "u3", "1", "m5", "Unit 1", "الوحدة الأولى");
+  insTeam.run("t6", "u3", "2", "m6", "Unit 2", "الوحدة الثانية");
+  insTeam.run("t7", "u3", "3", "m7", "Unit 3", "الوحدة الثالثة");
+  insTeam.run("t8", "u3", "4", "m8", "Unit 4", "الوحدة الرابعة");
+  insTeam.run("t9", "u4", "1", "m9", "Unit 1", "الوحدة الأولى");
+  insTeam.run("t10", "u4", "2", "m10", "Unit 2", "الوحدة الثانية");
+  insTeam.run("t11", "u4", "3", "m11", "Unit 3", "الوحدة الثالثة");
+  insTeam.run("t12", "u4", "Q", "m12", "QA", "ضمان الجودة");
+  insTeam.run("t13", "u4", "E", "m13", "Engagement Unit", "وحدة المشاركة");
+  insTeam.run("t14", "u5", "1", "m14", "Unit 1", "الوحدة الأولى");
+
+  const insUser = d.prepare(
+    "INSERT OR IGNORE INTO users (id, role, team_id, section_id, name_en, name_ar, streak, email) VALUES (?,?,?,?,?,?,?,?)",
+  );
+  const people: [string, string, string | null, string | null, string, string][] = [
+    ["h3", "section", null, "u3", "Faisal Anzi", "فيصل العنزي"],
+    ["h4", "section", null, "u4", "Lina Shammari", "لينا الشمري"],
+    ["h5", "section", null, "u5", "Majed Harthi", "ماجد الحارثي"],
+    ["m5", "manager", "t5", "u3", "Nasser Qahtani", "ناصر القحطاني"],
+    ["m6", "manager", "t6", "u3", "Huda Salem", "هدى سالم"],
+    ["m7", "manager", "t7", "u3", "Bader Otaibi", "بدر العتيبي"],
+    ["m8", "manager", "t8", "u3", "Rania Yousef", "رانيا يوسف"],
+    ["m9", "manager", "t9", "u4", "Talal Harbi", "طلال الحربي"],
+    ["m10", "manager", "t10", "u4", "Munira Dossary", "منيرة الدوسري"],
+    ["m11", "manager", "t11", "u4", "Sami Farhan", "سامي فرحان"],
+    ["m12", "manager", "t12", "u4", "Abeer Nasser", "عبير ناصر"],
+    ["m13", "manager", "t13", "u4", "Jawaher Saad", "جواهر سعد"],
+    ["m14", "manager", "t14", "u5", "Adel Mutairi", "عادل المطيري"],
+  ];
+  for (const [id, role, teamId, sectionId, en, ar] of people) {
+    insUser.run(id, role, teamId, sectionId, en, ar, 0, deriveEmail(en));
+  }
+  ensureDemoPasswords(d);
+  ensurePhoneExts(d);
+}
+
 const ago = (days: number, hours = 0) => Date.now() - days * DAY_MS - hours * 3_600_000;
 const inDays = (n: number) => new Date(Date.now() + n * DAY_MS).toISOString().slice(0, 10);
 export const deriveEmail = (en: string) => `${en.toLowerCase().replace(/[^a-z ]/g, "").trim().replace(/ +/g, ".")}@nabd.example`;
@@ -166,6 +213,7 @@ export function seed(d: DatabaseSync) {
   seedMeetings(d);
   ensureDemoPasswords(d);
   ensurePhoneExts(d);
+  ensureExpandedOrg(d);
 }
 
 /* Demo Outlook calendar — meetings the Graph sync would pull from each

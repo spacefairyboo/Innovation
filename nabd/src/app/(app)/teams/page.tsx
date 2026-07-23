@@ -16,7 +16,7 @@ import {
 } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { toVM } from "@/server/vm";
-import { HEALTH_META, countStatuses, teamHealth, type Team } from "@/lib/types";
+import { countStatuses, teamHealth, type Team } from "@/lib/types";
 
 export default async function TeamsPage({ searchParams }: {
   searchParams: Promise<{ section?: string }>;
@@ -30,20 +30,15 @@ export default async function TeamsPage({ searchParams }: {
     <div className="grid gap-4 md:grid-cols-2">
       {teams.map((team) => {
         const stats = countStatuses(teamTasks(team.id));
-        const members = teamMembers(team.id);
-        const manager = getUser(team.managerId)!;
-        const h = HEALTH_META[teamHealth(stats)];
         return (
           <TeamCard
             key={team.id}
             teamId={team.id}
             teamName={team.name[lang]}
-            managerName={manager.name[lang]}
-            memberCount={members.length}
+            managerName={getUser(team.managerId)!.name[lang]}
+            memberCount={teamMembers(team.id).length}
             stats={stats}
-            healthIcon={h.icon}
-            healthLabel={t(h.labelKey)}
-            healthColor={h.color}
+            health={teamHealth(stats)}
           />
         );
       })}
@@ -105,7 +100,6 @@ export default async function TeamsPage({ searchParams }: {
             const stats = countStatuses(sectionTasks(section.id));
             const members = teams.reduce((n, team) => n + teamMembers(team.id).length, 0);
             const head = heads.find((u) => u.sectionId === section.id);
-            const h = HEALTH_META[teamHealth(stats)];
             return (
               <SectionCard
                 key={section.id}
@@ -115,9 +109,7 @@ export default async function TeamsPage({ searchParams }: {
                 unitCount={teams.length}
                 memberCount={members}
                 stats={stats}
-                healthIcon={h.icon}
-                healthLabel={t(h.labelKey)}
-                healthColor={h.color}
+                health={teamHealth(stats)}
               />
             );
           })}

@@ -4,14 +4,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChartCard, Donut, MiniBars, StatTiles, StatusTable } from "@/components/charts";
 import { ExportCsvButton } from "@/components/dashboard";
-import { Icon } from "@/components/ui";
+import { HealthChip, Icon } from "@/components/ui";
 import { TaskListSection, type AssigneeOption } from "@/components/tasks";
 import { TeamGlyph } from "@/components/teams";
 import { Avatar } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
 import { bySeniority, getTeam, getUnit, overseesTeam, teamMembers, teamTasks, userTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
-import { HEALTH_META, countStatuses, teamHealth } from "@/lib/types";
+import { countStatuses, teamHealth } from "@/lib/types";
 import { csvRows, toVM } from "@/server/vm";
 
 export default async function TeamPage({ params, searchParams }: {
@@ -34,7 +34,7 @@ export default async function TeamPage({ params, searchParams }: {
   const stats = countStatuses(tasks);
   const members = teamMembers(team.id);
   const unit = getUnit(team.unitId)!;
-  const h = HEALTH_META[teamHealth(stats)];
+  const h = teamHealth(stats);
 
   const assignees: AssigneeOption[] | undefined = canManage
     ? [...members].sort(bySeniority).map((m) => ({ id: m.id, name: m.name, teamName: team.name }))
@@ -50,10 +50,7 @@ export default async function TeamPage({ params, searchParams }: {
         <div>
           <h2 className="m-0 text-xl font-bold">{team.name[lang]}</h2>
           <p className="m-0 mt-0.5 text-sm text-ink-2 flex items-center gap-1.5">
-            {unit.name[lang]} · {t("team_health")}:
-            <b className="inline-flex items-center gap-1" style={{ color: h.color }}>
-              <Icon name={h.icon} size={13} /> {t(h.labelKey)}
-            </b>
+            {unit.name[lang]} · {t("team_health")}: <HealthChip health={h} />
           </p>
         </div>
         <div className="flex-1" />

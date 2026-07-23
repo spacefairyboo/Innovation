@@ -10,7 +10,7 @@ import { ChartCard, Donut, StatusTable } from '@/components/charts';
 import { AttentionList, type AttentionItem } from '@/components/dashboard';
 import { HomeBriefing } from '@/components/briefing';
 import { CheckinPanel } from '@/components/chat';
-import { Avatar, Icon, StatusChip } from '@/components/ui';
+import { Avatar, HealthChip, Icon, StatusChip } from '@/components/ui';
 import {
   buildPodcastScript,
   insightFor,
@@ -24,23 +24,22 @@ import {
   canUpdateTask,
   listTeams,
   listUnits,
-  listUsers,
   overseesTeam,
   scopeTasks,
   sectionTasks,
-  teamMembers,
   teamTasks,
 } from '@/server/repositories';
 import { getSession } from '@/server/auth/session';
 import {
-  HEALTH_META,
   countStatuses,
   effStatus,
   teamHealth,
   type Task,
 } from '@/lib/types';
-import { doneThisWeekCount, greetingKey, recentActivity } from '@/server/vm';
-import { TeamGlyph } from '@/components/teams';
+import {
+  doneThisWeekCount, greetingKey, recentActivity, sectionCardVMs, unitCardVMs,
+} from '@/server/vm';
+import { OrgCardGrid } from '@/components/teams';
 
 /** Blocked/delayed first; the remaining slots go to high-value open work. */
 function mattersMost(
@@ -104,7 +103,7 @@ export default async function Dashboard({
   const stats = countStatuses(tasks);
   const insight = insightFor(tasks, lang);
   const greeting = t(greetingKey());
-  const health = HEALTH_META[teamHealth(stats)];
+  const health = teamHealth(stats);
   const dateStr = new Date().toLocaleDateString(lang === 'ar' ? 'ar' : 'en', {
     weekday: 'long',
     day: 'numeric',
@@ -202,19 +201,8 @@ export default async function Dashboard({
               </Link>
             </div>
           </div>
-          <span
-            className='inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border border-white/15 bg-white/10 backdrop-blur-md relative'
-            style={{
-              color:
-                health.color === 'var(--st-done)'
-                  ? '#5fd3a5'
-                  : health.color === 'var(--st-pending)'
-                    ? '#ecc25c'
-                    : '#f08c8c',
-            }}
-          >
-            <Icon name={health.icon} size={14} /> {t('health_overall')}:{' '}
-            {t(health.labelKey)}
+          <span className='relative'>
+            <HealthChip health={health} pill onDark prefix={`${t('health_overall')}: `} />
           </span>
         </div>
 
@@ -304,20 +292,7 @@ export default async function Dashboard({
     const attention = mattersMost(tasks, lang, 8).filter(
       (x) => x.eff !== 'value',
     );
-    const sectionUnits = listTeams()
-      .filter((x) => x.unitId === focusSection.id)
-      .map((team) => {
-        const ts = countStatuses(teamTasks(team.id));
-        const head = getUser(team.managerId);
-        return {
-          id: team.id,
-          name: team.name[lang],
-          headName: head?.name[lang] ?? '',
-          members: teamMembers(team.id).length,
-          open: ts.total - ts.done,
-          health: HEALTH_META[teamHealth(ts)],
-        };
-      });
+    const sectionUnits = unitCardVMs(focusSection.id, lang, (id) => `/?unit=${id}`);
     const kpis = [
       {
         label: t('tasks_total'),
@@ -398,19 +373,8 @@ export default async function Dashboard({
               </Link>
             </div>
           </div>
-          <span
-            className='inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border border-white/15 bg-white/10 backdrop-blur-md relative'
-            style={{
-              color:
-                health.color === 'var(--st-done)'
-                  ? '#5fd3a5'
-                  : health.color === 'var(--st-pending)'
-                    ? '#ecc25c'
-                    : '#f08c8c',
-            }}
-          >
-            <Icon name={health.icon} size={14} /> {t('health_overall')}:{' '}
-            {t(health.labelKey)}
+          <span className='relative'>
+            <HealthChip health={health} pill onDark prefix={`${t('health_overall')}: `} />
           </span>
         </div>
 
@@ -439,37 +403,7 @@ export default async function Dashboard({
             <h3 className='m-0 text-base font-bold'>{t('units_glance')}</h3>
             <p className='m-0 text-xs text-ink-3'>{t('units_glance_sub')}</p>
           </div>
-          <div className='grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]'>
-            {sectionUnits.map((u) => (
-              <Link
-                key={u.id}
-                href={`/?unit=${u.id}`}
-                className='rounded-2xl border border-line bg-surface-2 p-4 no-underline flex items-center gap-3 transition hover:border-accent group'
-              >
-                <TeamGlyph name={u.name} />
-                <span className='flex-1 min-w-0'>
-                  <span className='block text-sm font-bold text-ink truncate group-hover:text-primary transition'>
-                    {u.name}
-                  </span>
-                  <span className='block text-xs text-ink-3 truncate'>
-                    {u.headName} · {u.members} {t('members')} · {u.open}{' '}
-                    {t('active_tasks')}
-                  </span>
-                </span>
-                <span
-                  className='inline-flex items-center gap-1 text-xs font-bold shrink-0'
-                  style={{ color: u.health.color }}
-                >
-                  <Icon name={u.health.icon} size={13} /> {t(u.health.labelKey)}
-                </span>
-                <Icon
-                  name={lang === 'ar' ? 'chevron-left' : 'chevron-right'}
-                  size={15}
-                  className='text-ink-3 shrink-0'
-                />
-              </Link>
-            ))}
-          </div>
+          <OrgCardGrid cards={sectionUnits} />
         </div>
 
         <div className='grid gap-5 lg:[grid-template-columns:1.55fr_1fr] items-start'>
@@ -563,45 +497,13 @@ export default async function Dashboard({
       ? {
           title: t('sections_glance'),
           sub: t('sections_glance_sub'),
-          cards: listUnits().map((section) => {
-            const teams = listTeams().filter((x) => x.unitId === section.id);
-            const ts = countStatuses(sectionTasks(section.id));
-            const head = listUsers().find(
-              (u) => u.role === 'section' && u.sectionId === section.id,
-            );
-            return {
-              id: section.id,
-              href: `/?section=${section.id}`,
-              name: section.name[lang],
-              headName: head?.name[lang] ?? '',
-              members: teams.reduce(
-                (n, tm) => n + teamMembers(tm.id).length,
-                0,
-              ),
-              open: ts.total - ts.done,
-              health: HEALTH_META[teamHealth(ts)],
-            };
-          }),
+          cards: sectionCardVMs(lang, (id) => `/?section=${id}`),
         }
       : user.role === 'section' && user.sectionId
         ? {
             title: t('units_glance'),
             sub: t('units_glance_sub'),
-            cards: listTeams()
-              .filter((x) => x.unitId === user.sectionId)
-              .map((team) => {
-                const ts = countStatuses(teamTasks(team.id));
-                const head = getUser(team.managerId);
-                return {
-                  id: team.id,
-                  href: `/?unit=${team.id}`,
-                  name: team.name[lang],
-                  headName: head?.name[lang] ?? '',
-                  members: teamMembers(team.id).length,
-                  open: ts.total - ts.done,
-                  health: HEALTH_META[teamHealth(ts)],
-                };
-              }),
+            cards: unitCardVMs(user.sectionId, lang, (id) => `/?unit=${id}`),
           }
         : null;
 
@@ -614,12 +516,7 @@ export default async function Dashboard({
             {/* {scopeTitle} */}
           </div>
           <div className='flex items-center gap-2.5 flex-wrap pt-1 shrink-0'>
-            <span
-              className='inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border border-line bg-surface'
-              style={{ color: health.color }}
-            >
-              <Icon name={health.icon} size={14} /> {t(health.labelKey)}
-            </span>
+            <HealthChip health={health} pill />
             {user.role !== 'employee' && (
               <Link href='/stats' className='btn-ghost btn-sm no-underline'>
                 <Icon name='trending-up' size={14} /> {t('nav_stats')}
@@ -736,38 +633,7 @@ export default async function Dashboard({
             <h3 className='m-0 text-base font-bold'>{glance.title}</h3>
           </div>
           <div className='card'>
-            <div className='grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]'>
-              {glance.cards.map((u) => (
-                <Link
-                  key={u.id}
-                  href={u.href}
-                  className='rounded-2xl border border-line bg-surface-2 p-4 no-underline flex items-center gap-3 transition hover:border-accent group'
-                >
-                  <TeamGlyph name={u.name} />
-                  <span className='flex-1 min-w-0'>
-                    <span className='block text-sm font-bold text-ink truncate group-hover:text-primary transition'>
-                      {u.name}
-                    </span>
-                    <span className='block text-xs text-ink-3 truncate'>
-                      {u.headName} · {u.members} {t('members')} · {u.open}{' '}
-                      {t('active_tasks')}
-                    </span>
-                  </span>
-                  <span
-                    className='inline-flex items-center gap-1 text-xs font-bold shrink-0'
-                    style={{ color: u.health.color }}
-                  >
-                    <Icon name={u.health.icon} size={13} />{' '}
-                    {t(u.health.labelKey)}
-                  </span>
-                  <Icon
-                    name={lang === 'ar' ? 'chevron-left' : 'chevron-right'}
-                    size={15}
-                    className='text-ink-3 shrink-0'
-                  />
-                </Link>
-              ))}
-            </div>
+            <OrgCardGrid cards={glance.cards} />
           </div>
         </div>
       )}

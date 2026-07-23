@@ -1,21 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Icon } from "@/components/ui";
+import { HealthChip, Icon } from "@/components/ui";
 import { MiniBars } from "@/components/charts";
 import { useI18n } from "@/components/providers";
 import { TeamGlyph } from "./TeamGlyph";
-import { STATUS_META, STATUS_ORDER, type StatusCounts } from "@/lib/types";
+import { STATUS_META, STATUS_ORDER, type Health, type StatusCounts } from "@/lib/types";
 
-export function TeamCard({ teamId, teamName, managerName, memberCount, stats, healthIcon, healthLabel, healthColor }: {
+export function TeamCard({ teamId, teamName, managerName, memberCount, stats, health }: {
   teamId: string;
   teamName: string;
   managerName: string;
   memberCount: number;
   stats: StatusCounts;
-  healthIcon: string;
-  healthLabel: string;
-  healthColor: string;
+  health: Health;
 }) {
   const { t, lang } = useI18n();
   return (
@@ -26,9 +24,7 @@ export function TeamCard({ teamId, teamName, managerName, memberCount, stats, he
           <b className="block truncate">{teamName}</b>
           <div className="text-xs text-ink-3 truncate">{managerName} · {memberCount} {t("members")}</div>
         </div>
-        <span className="ms-auto text-xs font-bold flex items-center gap-1 shrink-0" style={{ color: healthColor }}>
-          <Icon name={healthIcon} size={14} /> {healthLabel}
-        </span>
+        <span className="ms-auto shrink-0"><HealthChip health={health} /></span>
       </div>
       <div className="my-3 [&>div]:w-full [&>div]:h-3">
         <MiniBars stats={stats} label={teamName} />

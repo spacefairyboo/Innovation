@@ -16,6 +16,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/components/providers";
+import { downloadCsv } from "@/lib/csv";
 import { Icon } from "./Icon";
 
 export interface DataColumn<T> {
@@ -128,20 +129,10 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportN
     setSort((s) => (s?.id !== id ? { id, dir: "asc" } : s.dir === "asc" ? { id, dir: "desc" } : null));
   };
 
-  const exportCsv = () => {
-    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const lines = [
-      visible.map((c) => esc(c.header)).join(","),
-      ...filtered.map((r) => visible.map((c) => esc(c.value(r))).join(",")),
-    ];
-    // The BOM keeps Arabic text intact when Excel opens the file.
-    const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${exportName ?? "export"}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
+  const exportCsv = () => downloadCsv(exportName ?? "export", [
+    visible.map((c) => c.header),
+    ...filtered.map((r) => visible.map((c) => c.value(r))),
+  ]);
 
   return (
     <div className="card">
@@ -207,7 +198,7 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportN
         </div>
         {exportName && (
           <button className="btn-ghost btn-sm" onClick={exportCsv}>
-            <Icon name="download" size={14} /> {t("table_export")}
+            <Icon name="download" size={14} /> {t("export_csv")}
           </button>
         )}
       </div>

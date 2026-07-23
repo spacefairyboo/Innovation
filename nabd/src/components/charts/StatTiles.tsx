@@ -8,16 +8,19 @@ import { useI18n } from "@/components/providers";
 import { Icon } from "@/components/ui";
 import { STATUS_META, STATUS_ORDER, type StatusCounts } from "@/lib/types";
 
-export function StatTiles({ stats }: { stats: StatusCounts }) {
+export interface StatTileExtra { label: string; icon: string; val: string; edge: string }
+
+export function StatTiles({ stats, extras = [] }: { stats: StatusCounts; extras?: StatTileExtra[] }) {
   const { t } = useI18n();
   const pct = stats.total ? Math.round((stats.done / stats.total) * 100) : 0;
-  const tiles: { label: string; icon: string; val: string; edge: string }[] = [
+  const tiles: StatTileExtra[] = [
     { label: t("tasks_total"), icon: "clipboard-list", val: String(stats.total), edge: "var(--accent)" },
     ...STATUS_ORDER.map((s) => ({
       label: t(STATUS_META[s].labelKey), icon: STATUS_META[s].icon,
       val: String(stats[s]), edge: STATUS_META[s].chartVar,
     })),
     { label: t("completion_rate"), icon: "trending-up", val: `${pct}%`, edge: "var(--primary)" },
+    ...extras,
   ];
   return (
     <div className="grid gap-3 mb-5 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">

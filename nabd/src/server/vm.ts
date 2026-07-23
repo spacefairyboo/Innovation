@@ -2,11 +2,15 @@
 
 import { taskDelegation } from "./repositories/delegationRepository";
 import { makeT } from "@/lib/i18n";
-import { getChecklist, getProject, getTeam, getUser, taskActivity } from "./repositories";
+import {
+  getChecklist, getProject, getTeam, getUser, listUnits, listUsers,
+  sectionTasks, sectionTeams, taskActivity, teamMembers, teamTasks,
+} from "./repositories";
 import { canUpdateTask } from "./services/accessService";
 import { taskValue } from "@/lib/value";
 import type { TaskVM } from "@/components/tasks";
-import { STATUS_META, effStatus, type Lang, type Task, type User } from "@/lib/types";
+import type { OrgCardVM } from "@/components/teams/OrgCardGrid";
+import { STATUS_META, countStatuses, effStatus, teamHealth, type Lang, type Task, type User } from "@/lib/types";
 
 /** `viewer` decides row-level edit rights: only an assignee (delegates are
     assignees while delegated) or the task's line manager may update it. */
@@ -40,6 +44,40 @@ export function toVM(task: Task, viewer?: User): TaskVM {
     } : null,
   };
 }
+
+/* ---------- organization "at a glance" cards ---------- */
+
+/** One card per section, for the department-wide overview. */
+export const sectionCardVMs = (lang: Lang, href: (id: string) => string): OrgCardVM[] =>
+  listUnits().map((section) => {
+    const teams = sectionTeams(section.id);
+    const ts = countStatuses(sectionTasks(section.id));
+    const head = listUsers().find((u) => u.role === "section" && u.sectionId === section.id);
+    return {
+      id: section.id,
+      href: href(section.id),
+      name: section.name[lang],
+      headName: head?.name[lang] ?? "",
+      members: teams.reduce((n, tm) => n + teamMembers(tm.id).length, 0),
+      open: ts.total - ts.done,
+      health: teamHealth(ts),
+    };
+  });
+
+/** One card per unit inside a section. */
+export const unitCardVMs = (sectionId: string, lang: Lang, href: (id: string) => string): OrgCardVM[] =>
+  sectionTeams(sectionId).map((team) => {
+    const ts = countStatuses(teamTasks(team.id));
+    return {
+      id: team.id,
+      href: href(team.id),
+      name: team.name[lang],
+      headName: getUser(team.managerId)?.name[lang] ?? "",
+      members: teamMembers(team.id).length,
+      open: ts.total - ts.done,
+      health: teamHealth(ts),
+    };
+  });
 
 export function csvRows(tasks: Task[], lang: Lang): string[][] {
   const t = makeT(lang);

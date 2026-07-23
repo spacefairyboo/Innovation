@@ -1,4 +1,5 @@
-export { StatTiles } from "./StatTiles";
+export { StatTiles, type StatTileExtra } from "./StatTiles";
+export { BreakdownTable, type BreakdownRow } from "./BreakdownTable";
 export { StatusTable } from "./StatusTable";
 export { ChartCard } from "./ChartCard";
 export { Donut } from "./Donut";
