@@ -81,6 +81,38 @@ const shorten = (s: string, n = 160) => (s.length > n ? `${s.slice(0, n).trimEnd
 
 /* ---------------- pass 1: template diff ---------------- */
 
+/** Word-level diff (LCS) between a template paragraph and its counterpart:
+    which words the document added and which it dropped. */
+function wordDiff(a: string, b: string): { removed: string[]; added: string[] } {
+  const wa = a.split(/\s+/);
+  const wb = b.split(/\s+/);
+  const n = wa.length;
+  const m = wb.length;
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i][j] = wa[i].toLowerCase() === wb[j].toLowerCase()
+        ? dp[i + 1][j + 1] + 1
+        : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  const removed: string[] = [];
+  const added: string[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (wa[i].toLowerCase() === wb[j].toLowerCase()) { i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) removed.push(wa[i++]);
+    else added.push(wb[j++]);
+  }
+  removed.push(...wa.slice(i));
+  added.push(...wb.slice(j));
+  return { removed, added };
+}
+
+const phrase = (words: string[]) =>
+  words.slice(0, 12).join(" ") + (words.length > 12 ? "…" : "");
+
 function templateDiff(tplParas: string[], docParas: string[], lang: Lang): Finding[] {
   const ar = lang === "ar";
   const findings: Finding[] = [];
@@ -96,16 +128,49 @@ function templateDiff(tplParas: string[], docParas: string[], lang: Lang): Findi
     });
     if (best >= 0 && bestSim >= 0.55) {
       usedDoc.add(best);
+      // Even a close match gets reviewed word by word: swapping "audit
+      // committee" for "manager" keeps the paragraph 90% similar and must
+      // still be commented on.
+      const d = wordDiff(tpl, docParas[best]);
+      if (d.added.length || d.removed.length) {
+        const detailEn = [
+          d.added.length ? `Added: "${phrase(d.added)}".` : "",
+          d.removed.length ? `Removed from the template text: "${phrase(d.removed)}".` : "",
+        ].filter(Boolean).join(" ");
+        const detailAr = [
+          d.added.length ? `أُضيف: "${phrase(d.added)}".` : "",
+          d.removed.length ? `حُذف من نص القالب: "${phrase(d.removed)}".` : "",
+        ].filter(Boolean).join(" ");
+        findings.push({
+          kind: "changed",
+          excerpt: shorten(docParas[best]),
+          templateExcerpt: shorten(tpl),
+          para: best, start: 0, end: docParas[best].length,
+          comment: ar
+            ? `هذه الفقرة تختلف عن نص القالب المعتمد. ${detailAr} الإجراء التصحيحي: طابق الصياغة مع القالب أو وثّق سبب الاختلاف.`.replace(/\s+/g, " ")
+            : `This wording differs from the approved template. ${detailEn} Corrective action: align it with the template text, or record the approved reason for deviating.`.replace(/\s+/g, " "),
+        });
+      }
     } else if (best >= 0 && bestSim >= 0.22) {
       usedDoc.add(best);
+      // Name the exact changes, not just "this differs".
+      const d = wordDiff(tpl, docParas[best]);
+      const detailEn = [
+        d.added.length ? `Added: "${phrase(d.added)}".` : "",
+        d.removed.length ? `Removed from the template text: "${phrase(d.removed)}".` : "",
+      ].filter(Boolean).join(" ");
+      const detailAr = [
+        d.added.length ? `أُضيف: "${phrase(d.added)}".` : "",
+        d.removed.length ? `حُذف من نص القالب: "${phrase(d.removed)}".` : "",
+      ].filter(Boolean).join(" ");
       findings.push({
         kind: "changed",
         excerpt: shorten(docParas[best]),
         templateExcerpt: shorten(tpl),
         para: best, start: 0, end: docParas[best].length,
         comment: ar
-          ? `هذه الفقرة تختلف عن نص القالب المعتمد. الإجراء التصحيحي: طابق الصياغة مع القالب: "${shorten(tpl)}" أو وثّق سبب الاختلاف.`
-          : `This wording differs from the approved template. Corrective action: align it with the template text: "${shorten(tpl)}", or record the approved reason for deviating.`,
+          ? `هذه الفقرة تختلف عن نص القالب المعتمد. ${detailAr} الإجراء التصحيحي: طابق الصياغة مع القالب أو وثّق سبب الاختلاف.`.replace(/\s+/g, " ")
+          : `This wording differs from the approved template. ${detailEn} Corrective action: align it with the template text, or record the approved reason for deviating.`.replace(/\s+/g, " "),
       });
     } else {
       findings.push({
@@ -168,7 +233,16 @@ function getSpeller(): Promise<Speller | null> {
   return spellerPromise;
 }
 
-const MAX_SPELLING = 25;
+const MAX_SPELLING = 60;
+
+/* Typos the dictionary handles badly: either its first suggestion is wrong
+   ("teh" → "ten"), or the typo happens to be a real word ("asses",
+   "mangers") that a plain dictionary check would wave through. */
+const COMMON_TYPOS: Record<string, string> = {
+  teh: "the", adn: "and", taht: "that", thier: "their", recieved: "received",
+  asses: "assess", mangers: "managers", manger: "manager", pubic: "public",
+  singed: "signed",
+};
 
 async function spellingPass(templateText: string, docParas: string[], lang: Lang): Promise<Finding[]> {
   const spell = await getSpeller();
@@ -177,27 +251,31 @@ async function spellingPass(templateText: string, docParas: string[], lang: Lang
   // Words the template itself uses are domain vocabulary, never misspellings.
   const domain = wordSet(templateText);
   const findings: Finding[] = [];
-  const flagged = new Set<string>();
 
   docParas.forEach((p, paraIdx) => {
+    // Every occurrence gets its own comment: a reviewer marks each instance.
     for (const m of p.matchAll(/[A-Za-z][A-Za-z']{2,}/g)) {
       if (findings.length >= MAX_SPELLING) return;
-      const word = m[0];
+      const word = m[0].replace(/'+$/, "");
       const lower = word.toLowerCase();
-      if (domain.has(lower) || flagged.has(lower)) continue;
+      if (domain.has(lower)) continue;
       if (/[A-Z]/.test(word.slice(1))) continue; // acronyms, product names
-      if (spell.correct(word) || spell.correct(lower)) continue;
-      const suggestion = spell.suggest(word)[0] ?? spell.suggest(lower)[0];
-      if (!suggestion || suggestion.toLowerCase() === lower) continue;
-      flagged.add(lower);
+      const knownTypo = COMMON_TYPOS[lower];
+      if (!knownTypo && (spell.correct(word) || spell.correct(lower))) continue;
+      const suggestion = knownTypo ?? spell.suggest(word)[0] ?? spell.suggest(lower)[0];
+      const hasFix = !!suggestion && suggestion.toLowerCase() !== lower;
       findings.push({
         kind: "spelling",
         excerpt: word,
         templateExcerpt: "",
         para: paraIdx, start: m.index, end: m.index + word.length,
-        comment: ar
-          ? `يبدو أن كلمة "${word}" مكتوبة خطأ. الإجراء التصحيحي: صححها إلى "${suggestion}".`
-          : `The word "${word}" appears to be misspelled. Corrective action: correct it to "${suggestion}".`,
+        comment: hasFix
+          ? (ar
+              ? `يبدو أن كلمة "${word}" مكتوبة خطأ. الإجراء التصحيحي: صححها إلى "${suggestion}".`
+              : `The word "${word}" appears to be misspelled. Corrective action: correct it to "${suggestion}".`)
+          : (ar
+              ? `كلمة "${word}" غير معروفة في القاموس. الإجراء التصحيحي: تحقق من إملائها أو أكد أنها مصطلح معتمد.`
+              : `The word "${word}" is not recognized. Corrective action: check its spelling, or confirm it is an approved term.`),
       });
     }
   });
@@ -210,13 +288,25 @@ const WORDY_PHRASES: { find: RegExp; use: string }[] = [
   { find: /\bin order to\b/gi, use: "to" },
   { find: /\bdue to the fact that\b/gi, use: "because" },
   { find: /\bat this point in time\b/gi, use: "now" },
+  { find: /\bat the present time\b/gi, use: "now" },
+  { find: /\bin the near future\b/gi, use: "soon" },
   { find: /\bin the event that\b/gi, use: "if" },
   { find: /\bfor the purpose of\b/gi, use: "for" },
   { find: /\bwith regard to\b/gi, use: "regarding" },
+  { find: /\bin relation to\b/gi, use: "about" },
   { find: /\bit should be noted that\b/gi, use: "" },
+  { find: /\bit is important to note that\b/gi, use: "" },
+  { find: /\bas a matter of fact\b/gi, use: "" },
+  { find: /\bthe fact that\b/gi, use: "that" },
   { find: /\beach and every\b/gi, use: "every" },
   { find: /\bin spite of the fact that\b/gi, use: "although" },
   { find: /\bon a regular basis\b/gi, use: "regularly" },
+  { find: /\bin a timely manner\b/gi, use: "promptly" },
+  { find: /\ba large number of\b/gi, use: "many" },
+  { find: /\bthe majority of\b/gi, use: "most" },
+  { find: /\bprior to\b/gi, use: "before" },
+  { find: /\bsubsequent to\b/gi, use: "after" },
+  { find: /\buntil such time as\b/gi, use: "until" },
 ];
 
 function wordinessPass(docParas: string[], lang: Lang): Finding[] {
@@ -239,6 +329,18 @@ function wordinessPass(docParas: string[], lang: Lang): Finding[] {
                 : `Filler phrase that adds no meaning. Corrective action: delete "${m[0]}".`),
         });
       }
+    }
+    // A word accidentally typed twice in a row ("the the", "shall shall").
+    for (const m of p.matchAll(/\b([A-Za-z؀-ۿ]+)\s+\1\b/gi)) {
+      findings.push({
+        kind: "wordy",
+        excerpt: m[0],
+        templateExcerpt: "",
+        para: paraIdx, start: m.index, end: m.index + m[0].length,
+        comment: ar
+          ? `كلمة مكررة: "${m[0]}". الإجراء التصحيحي: احذف التكرار.`
+          : `Duplicated word: "${m[0]}". Corrective action: remove the extra word.`,
+      });
     }
   });
   return findings;

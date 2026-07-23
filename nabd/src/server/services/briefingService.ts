@@ -26,11 +26,15 @@ export function insightFor(tasks: Task[], lang: Lang): Insight {
   return { icon: "sparkles", text: t("insight_great", { pct }) };
 }
 
-function greetingWord(lang: Lang): string {
+function daySegment(lang: Lang): string {
   const h = new Date().getHours();
-  if (lang === "ar") return h < 12 ? "صباح الخير" : "مساء الخير";
-  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+  if (lang === "ar") return h < 12 ? "الصباح" : h < 17 ? "بعد الظهر" : "المساء";
+  return h < 12 ? "Morning" : h < 17 ? "Afternoon" : "Evening";
 }
+
+/** Collapses accidentally repeated words and stray spacing in a spoken line. */
+const tidy = (s: string) =>
+  s.replace(/\b([\p{L}]+)(\s+\1\b)+/giu, "$1").replace(/\s+([،؛,;.])/g, "$1").replace(/\s+/g, " ").trim();
 
 const daysPastDue = (due: string | null): number =>
   due ? Math.max(0, Math.round((new Date(`${todayISO()}T00:00`).getTime() - new Date(`${due}T00:00`).getTime()) / DAY_MS)) : 0;
@@ -44,85 +48,79 @@ function prose(items: string[], lang: Lang): string {
 }
 
 /**
- * The briefing is spoken in the voice of a manager giving their senior a
- * status update — first person, accountable, and to the point: here's where
- * we stand, here's what I've handled, here's where I need you.
+ * The briefing reads like a written status report spoken aloud: factual,
+ * one point per line, no direct address and no conversational filler.
+ * Every line passes through tidy() so no word is accidentally doubled.
  */
 export function buildPodcastScript(user: User, lang: Lang, tasks: Task[], includeTeamRoundup: boolean): string[] {
   const ar = lang === "ar";
   const s = countStatuses(tasks);
   const lines: string[] = [];
+  const say = (line: string) => lines.push(tidy(line));
   const dateStr = new Date().toLocaleDateString(ar ? "ar" : "en", { weekday: "long", day: "numeric", month: "long" });
-  const firstName = user.name[lang].split(" ")[0];
 
-  /* Opening — a person starting their update, not a report reading itself */
-  lines.push(ar
-    ? `${greetingWord(lang)} يا ${firstName}. اليوم ${dateStr}. عندي لك آخر المستجدات، وسأختصرها في دقيقتين.`
-    : `${greetingWord(lang)}, ${firstName}. It's ${dateStr}. Here's my update on where we stand. I'll keep it to two minutes.`);
+  /* Opening: what this is and when */
+  say(ar
+    ? `ملخص ${daySegment(lang)} ليوم ${dateStr}.`
+    : `${daySegment(lang)} briefing for ${dateStr}.`);
 
-  /* The overall picture, owned by the speaker */
+  /* The numbers, once, in one line */
   if (s.total === 0) {
-    lines.push(ar
-      ? "لا توجد مهام قيد المتابعة حاليًا. يوم هادئ عندنا."
-      : "We have nothing in flight at the moment. It's a quiet day on our side.");
+    say(ar
+      ? "لا توجد مهام قيد المتابعة حاليًا."
+      : "Nothing is in flight at the moment.");
   } else {
-    const healthy = (s.done + s.ontrack) / s.total >= 0.6;
-    lines.push(ar
-      ? (healthy
-        ? `نتابع حاليًا ${s.total} مهمة، وبصراحة الوضع مطمئن: أنجزنا ${s.done}، و${s.ontrack} تسير كما خططنا، و${s.pending} لم نبدأ بها بعد.`
-        : `نتابع حاليًا ${s.total} مهمة، وسأكون صريحًا معك، الوضع يحتاج انتباهًا: أنجزنا ${s.done} فقط، و${s.ontrack} تسير كما ينبغي، و${s.pending} لم تبدأ بعد.`)
-      : (healthy
-        ? `We're tracking ${s.total} items right now, and honestly, we're in good shape: ${s.done} are done, ${s.ontrack} are moving the way we planned, and ${s.pending} haven't kicked off yet.`
-        : `We're tracking ${s.total} items right now, and I'll be straight with you, it needs attention: only ${s.done} are done, ${s.ontrack} are moving properly, and ${s.pending} haven't even started.`));
-    if (s.blocked + s.delayed > 0) {
-      lines.push(ar
-        ? `وما أريدك أن تعرفه اليوم: ${s.blocked} ${s.blocked === 1 ? "مهمة متوقفة" : "مهام متوقفة"} عند عائق، و${s.delayed} تجاوزت موعدها.`
-        : `What I want on your radar today: ${s.blocked} ${s.blocked === 1 ? "item is" : "items are"} blocked, and ${s.delayed} ${s.delayed === 1 ? "has" : "have"} slipped past ${s.delayed === 1 ? "its" : "their"} deadline.`);
-    }
+    const extras = [
+      s.blocked ? (ar ? `و${s.blocked} متعثرة` : `${s.blocked} blocked`) : "",
+      s.delayed ? (ar ? `و${s.delayed} متأخرة عن موعدها` : `${s.delayed} past due`) : "",
+    ].filter(Boolean);
+    say(ar
+      ? `قيد المتابعة ${s.total} مهمة: ${s.done} مكتملة، و${s.ontrack} على المسار، و${s.pending} لم تبدأ بعد${extras.length ? "، " + extras.join("، ") : ""}.`
+      : `${s.total} tasks in flight: ${s.done} completed, ${s.ontrack} on track, ${s.pending} not started${extras.length ? ", " + extras.join(", ") : ""}.`);
   }
 
-  /* Wins first — a manager leads with what landed */
+  /* Completions */
   const recentDone = tasks.filter((x) => x.status === "done" && Date.now() - x.updatedAt < 3 * DAY_MS);
   if (recentDone.length) {
     const first = recentDone[0];
     const owner = getUser(first.ownerId)!;
     const note = first.history.find((h) => h.text[lang])?.text[lang];
-    lines.push(ar
-      ? `أبدأ بالإنجازات. ${owner.name.ar} أقفل «${first.title.ar}»${note ? `، وآخر ما سجّله: «${note}»` : ""}.${recentDone.length > 1 ? ` وأقفلنا معها ${recentDone.length - 1} ${recentDone.length - 1 === 1 ? "مهمة أخرى" : "مهام أخرى"} هذا الأسبوع.` : ""}`
-      : `Let me start with the wins. ${owner.name.en} closed out "${first.title.en}"${note ? `. The last note on it reads, "${note}"` : ""}.${recentDone.length > 1 ? ` We landed ${recentDone.length - 1} more ${recentDone.length - 1 === 1 ? "item" : "items"} this week on top of that.` : ""}`);
+    say(ar
+      ? `أُنجز مؤخرًا: «${first.title.ar}» بواسطة ${owner.name.ar}${recentDone.length > 1 ? `، ومعها ${recentDone.length - 1} ${recentDone.length - 1 === 1 ? "إنجاز آخر" : "إنجازات أخرى"} هذا الأسبوع` : ""}.${note ? ` آخر ملاحظة مسجلة: «${note}».` : ""}`
+      : `Recently completed: "${first.title.en}" by ${owner.name.en}${recentDone.length > 1 ? `, with ${recentDone.length - 1} more ${recentDone.length - 1 === 1 ? "completion" : "completions"} this week` : ""}.${note ? ` Closing note: "${note}".` : ""}`);
   }
 
-  /* Blockers — where the speaker asks for help or a decision */
+  /* Blockers, one line each */
   const blocked = tasks.filter((x) => effStatus(x) === "blocked");
   if (blocked.length) {
-    lines.push(ar ? "الآن، النقاط التي أحتاج دعمك فيها." : "Now, the items where I need your help.");
+    say(ar ? "المتعثرات التي تحتاج قرارًا:" : "Blocked and waiting on a decision:");
     for (const x of blocked.slice(0, 3)) {
       const owner = getUser(x.ownerId)!;
       const team = getTeam(x.teamId)!;
       const note = x.history.find((h) => h.text[lang])?.text[lang] ?? "";
-      lines.push(ar
-        ? `«${x.title.ar}» متوقفة عند ${owner.name.ar} في وحدة ${team.name.ar}${note ? `، يقول: «${note}»` : ""}. أرى أن كلمة منك ستحرّكها أسرع مني.`
-        : `"${x.title.en}" is stuck with ${owner.name.en} in ${team.name.en}${note ? `. He tells me, "${note}"` : ""}. A word from you would move it faster than I can.`);
+      say(ar
+        ? `«${x.title.ar}»، مع ${owner.name.ar} في ${team.name.ar}${note ? `. السبب المسجل: «${note}»` : ""}.`
+        : `"${x.title.en}", with ${owner.name.en} in ${team.name.en}${note ? `. Recorded reason: "${note}"` : ""}.`);
     }
     if (blocked.length > 3) {
-      lines.push(ar
-        ? `وعندنا ${blocked.length - 3} ${blocked.length - 3 === 1 ? "مهمة متعثرة أخرى" : "مهام متعثرة أخرى"} ، وتفاصيلها كلها في لوحة المتابعة.`
-        : `We have ${blocked.length - 3 === 1 ? "one more blocked item" : `${blocked.length - 3} more blocked items`} . The details are all on the dashboard.`);
+      say(ar
+        ? `${blocked.length - 3} ${blocked.length - 3 === 1 ? "مهمة متعثرة أخرى مفصلة" : "مهام متعثرة أخرى مفصلة"} في لوحة المتابعة.`
+        : `${blocked.length - 3} more blocked ${blocked.length - 3 === 1 ? "task is" : "tasks are"} detailed on the dashboard.`);
     }
   }
 
-  /* Slipped deadlines — owned, with a corrective action */
+  /* Slipped deadlines */
   const delayed = tasks.filter((x) => effStatus(x) === "delayed");
   if (delayed.length) {
     const first = delayed[0];
     const owner = getUser(first.ownerId)!;
     const d = daysPastDue(first.due);
-    lines.push(ar
-      ? `وبخصوص المواعيد: «${first.title.ar}» عند ${owner.name.ar} متأخرة ${d} ${d === 1 ? "يومًا" : "أيام"}${delayed.length > 1 ? `، ومعها ${delayed.length - 1} ${delayed.length - 1 === 1 ? "مهمة أخرى" : "مهام أخرى"}` : ""}. سأحصل منه اليوم على موعد جديد واقعي وأبقيك على اطلاع.`
-      : `On deadlines: "${first.title.en}" with ${owner.name.en} is running ${d} ${d === 1 ? "day" : "days"} late${delayed.length > 1 ? `, along with ${delayed.length - 1} other ${delayed.length - 1 === 1 ? "item" : "items"}` : ""}. I'm getting a realistic new date out of him today and I'll keep you posted.`);
+    say(ar
+      ? `المتأخرات: «${first.title.ar}» (${owner.name.ar}) متأخرة ${d} ${d === 1 ? "يومًا" : "أيام"}${delayed.length > 1 ? `، إضافة إلى ${delayed.length - 1} ${delayed.length - 1 === 1 ? "مهمة أخرى" : "مهام أخرى"}` : ""}. يجري الاتفاق على مواعيد جديدة اليوم.`
+      : `Past due: "${first.title.en}" (${owner.name.en}), ${d} ${d === 1 ? "day" : "days"} late${delayed.length > 1 ? `, plus ${delayed.length - 1} ${delayed.length - 1 === 1 ? "other" : "others"}` : ""}. Revised dates are being agreed today.`);
   }
 
-  /* Roundup across the units — for the senior manager's org-wide view */
+  /* Unit roundup for the org-wide view */
   if (includeTeamRoundup) {
     const byHealth: Record<string, string[]> = { great: [], ok: [], risk: [] };
     for (const team of listTeams()) {
@@ -130,31 +128,29 @@ export function buildPodcastScript(user: User, lang: Lang, tasks: Task[], includ
     }
     const parts: string[] = [];
     if (byHealth.great.length) parts.push(ar
-      ? `${prose(byHealth.great, lang)} في وضع جيد ولا تحتاج شيئًا منا`
-      : `${prose(byHealth.great, lang)} ${byHealth.great.length === 1 ? "is" : "are"} in good shape and ${byHealth.great.length === 1 ? "doesn't" : "don't"} need anything from us`);
+      ? `${prose(byHealth.great, lang)} بوضع جيد`
+      : `${prose(byHealth.great, lang)} healthy`);
     if (byHealth.ok.length) parts.push(ar
-      ? `${prose(byHealth.ok, lang)} أتابعها عن قرب هذا الأسبوع`
-      : `I'm keeping a closer eye on ${prose(byHealth.ok, lang)} this week`);
+      ? `${prose(byHealth.ok, lang)} تحت متابعة دقيقة`
+      : `${prose(byHealth.ok, lang)} under close watch`);
     if (byHealth.risk.length) parts.push(ar
-      ? `${prose(byHealth.risk, lang)} في دائرة الخطر، وأنصح بزيارتها اليوم`
-      : `${prose(byHealth.risk, lang)} ${byHealth.risk.length === 1 ? "is" : "are"} at risk. I'd suggest checking in with them today`);
+      ? `${prose(byHealth.risk, lang)} في دائرة الخطر`
+      : `${prose(byHealth.risk, lang)} at risk`);
     if (parts.length) {
-      lines.push(ar
-        ? `أما على مستوى الوحدات: ${parts.join("؛ ")}.`
-        : `Across the units: ${parts.join("; ")}.`);
+      say(ar ? `حالة الوحدات: ${parts.join("؛ ")}.` : `Unit status: ${parts.join("; ")}.`);
     }
   }
 
-  /* Closing — one ask, then hand back */
+  /* Closing: the single priority, stated plainly */
   if (blocked.length) {
     const owner = getUser(blocked[0].ownerId)!;
-    lines.push(ar
-      ? `هذا كل ما عندي. لو أخذت من هذا الملخص شيئًا واحدًا: كلمة سريعة مع ${owner.name.ar} ستفك أكبر عائق لدينا. وسأوافيك بأي جديد.`
-      : `That's everything from me. If you take one thing from this update: a quick word with ${owner.name.en} would clear our biggest blocker. I'll flag anything that changes.`);
+    say(ar
+      ? `أولوية اليوم: فك تعثر «${blocked[0].title.ar}» مع ${owner.name.ar}. انتهى الملخص.`
+      : `Priority for today: unblocking "${blocked[0].title.en}" with ${owner.name.en}. End of briefing.`);
   } else {
-    lines.push(ar
-      ? "هذا كل ما عندي. يوم مستقر ولا شيء يستدعي تدخلك حاليًا. سأوافيك فورًا بأي مستجد."
-      : "That's everything from me. A steady day, and nothing needs your intervention right now. I'll flag it the moment anything changes.");
+    say(ar
+      ? "لا حاجة لأي تدخل اليوم. انتهى الملخص."
+      : "No intervention is needed today. End of briefing.");
   }
   return lines;
 }
