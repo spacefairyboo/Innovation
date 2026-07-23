@@ -3,4 +3,5 @@ export { StatusChip } from "./StatusChip";
 export { Avatar } from "./Avatar";
 export { Modal } from "./Modal";
 export { DataTable, type DataColumn } from "./DataTable";
+export { HealthChip } from "./HealthChip";
 export { relTime, dueInfo } from "./dateTime";

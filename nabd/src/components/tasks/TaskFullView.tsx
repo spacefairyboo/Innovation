@@ -142,20 +142,26 @@ export function TaskFullView({ vm, canEdit, assignees, colleagues, backHref }: {
 
           <div>
             <span className="block text-xs font-semibold text-ink-2 mb-1.5">{t("quick_status")}</span>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              {(["ontrack", "pending", "blocked", "done"] as const).map((s) => {
-                const lockedOut = delayLocked && s !== "done" && s !== task.status;
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+              {(["ontrack", "pending", "delayed", "blocked", "done"] as const).map((s) => {
+                // Delayed is automatic: it lights up when the task is past
+                // its due date and cannot be chosen by hand.
+                const isAuto = s === "delayed";
+                const pressed = isAuto ? delayLocked : status === s && !delayLocked;
+                const lockedOut = isAuto || (delayLocked && s !== "done" && s !== task.status);
                 return (
                   <button
                     key={s}
                     type="button"
                     disabled={!canEdit || lockedOut}
-                    aria-pressed={status === s}
+                    aria-pressed={pressed}
+                    title={isAuto ? t(delayLocked ? "delayed_locked_hint" : "delayed_auto") : undefined}
                     className={`flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-semibold cursor-pointer transition disabled:cursor-default
-                      ${lockedOut ? "border-line bg-surface-2 text-ink-3 opacity-50"
-                        : status === s ? "border-transparent" : "border-line bg-surface-2 text-ink-2 hover:border-accent"}`}
-                    style={status === s ? { background: `var(--st-${s}-bg)`, color: `var(--st-${s})`, boxShadow: `inset 0 0 0 1.5px var(--st-${s})` } : undefined}
-                    onClick={() => { setStatus(s); if (s === "done") setProgress(100); }}
+                      ${pressed ? "border-transparent"
+                        : lockedOut ? "border-line bg-surface-2 text-ink-3 opacity-50"
+                        : "border-line bg-surface-2 text-ink-2 hover:border-accent"}`}
+                    style={pressed ? { background: `var(--st-${s}-bg)`, color: `var(--st-${s})`, boxShadow: `inset 0 0 0 1.5px var(--st-${s})` } : undefined}
+                    onClick={() => { if (isAuto) return; setStatus(s); if (s === "done") setProgress(100); }}
                   >
                     <Icon name={STATUS_META[s].icon} size={14} /> {t(STATUS_META[s].labelKey)}
                   </button>

@@ -4,7 +4,7 @@
    existing databases upgrade in place with no external tooling. */
 
 import type { DatabaseSync } from "node:sqlite";
-import { deriveEmail, ensureDemoPasswords, ensurePhoneExts, seedMeetings } from "./seed";
+import { deriveEmail, ensureDemoPasswords, ensureExpandedOrg, ensurePhoneExts, seedMeetings } from "./seed";
 
 export function migrate(d: DatabaseSync) {
   d.exec(`
@@ -225,6 +225,10 @@ export function migrate(d: DatabaseSync) {
   ensurePhoneExts(d);
   // Every account can sign in: users without credentials get the demo password.
   ensureDemoPasswords(d);
+  // The 2026 org expansion lands on databases seeded before it. Fresh,
+  // still-empty databases skip it here; seed() adds it with everything else.
+  const anyUsers = (d.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c > 0;
+  if (anyUsers) ensureExpandedOrg(d);
   // Backfill: tasks created before multi-assignee support get their owner as assignee.
   d.exec(`
     INSERT OR IGNORE INTO task_assignees (task_id, user_id)

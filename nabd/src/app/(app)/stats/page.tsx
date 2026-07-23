@@ -9,12 +9,12 @@ import {
   type ProgressRow, type TeamBarRow,
 } from "@/components/charts";
 import { ExportCsvButton } from "@/components/dashboard";
-import { Icon } from "@/components/ui";
+import { HealthChip, Icon } from "@/components/ui";
 import { Avatar } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
 import { getUser, listTeams, scopeTasks, teamMembers, teamTasks, userTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
-import { DAY_MS, HEALTH_META, countStatuses, teamHealth, type Task, type User } from "@/lib/types";
+import { DAY_MS, countStatuses, teamHealth, type Task, type User } from "@/lib/types";
 import { completionTrend, csvRows } from "@/server/vm";
 
 const avgProgress = (tasks: Task[]): number =>
@@ -50,7 +50,7 @@ export default async function StatsPage() {
   const tasks = scopeTasks(user);
   const stats = countStatuses(tasks);
   const trend = completionTrend(tasks, lang, 14);
-  const health = HEALTH_META[teamHealth(stats)];
+  const health = teamHealth(stats);
   const contributors = topContributors(tasks, 5);
 
   // Senior: group by unit across the org. Section head: by unit in their
@@ -98,12 +98,7 @@ export default async function StatsPage() {
           <p className="m-0 mt-0.5 text-sm text-ink-2">{t("stats_sub")}</p>
         </div>
         <div className="flex-1" />
-        <span
-          className="inline-flex items-center gap-1.5 text-sm font-bold px-3.5 py-2 rounded-xl border border-line bg-surface"
-          style={{ color: health.color }}
-        >
-          <Icon name={health.icon} size={16} /> {t("health_overall")}: {t(health.labelKey)}
-        </span>
+        <HealthChip health={health} pill prefix={`${t("health_overall")}: `} />
         <ExportCsvButton rows={csvRows(tasks, lang)} filename={`nabd-stats-${new Date().toISOString().slice(0, 10)}.csv`} />
       </div>
 
