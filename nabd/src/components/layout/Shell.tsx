@@ -68,39 +68,36 @@ export function Shell({
 
   // The sidebar bundles similar destinations, separated by dividers:
   // daily work, then analysis and planning, then the personal corner.
+  // The sidebar bundles similar destinations, separated by dividers:
+  // daily work, then analysis and planning, then the personal corner.
   type NavItem = { href: string; ico: string; label: string; badge?: number };
+
   const navGroups: NavItem[][] = [
     [
       { href: '/', ico: 'layout-dashboard', label: t('nav_dashboard') },
+      ...(user.role !== 'employee'
+        ? [{ href: '/stats', ico: 'trending-up', label: t('nav_stats') }]
+        : []),
+
+      ...(user.role !== 'employee'
+        ? [{ href: '/teams', ico: 'users', label: t('nav_teams') }]
+        : []),
+    ],
+    [
+      { href: '/advisor', ico: 'lightbulb', label: t('nav_advisor') },
+
       {
         href: '/tasks',
         ico: 'clipboard-list',
         label: t(user.role === 'senior' ? 'all_tasks_title' : 'nav_mytasks'),
       },
-      // { href: '/calendar', ico: 'calendar', label: t('nav_calendar') },
+      { href: '/calendar', ico: 'calendar', label: t('nav_calendar') },
     ],
     [
-      // { href: '/advisor', ico: 'lightbulb', label: t('nav_advisor') },
-      // ...(user.role !== 'employee'
-      //   ? [{ href: '/stats', ico: 'trending-up', label: t('nav_stats') }]
-      //   : []),
-      ...(user.role !== 'employee'
-        ? [{ href: '/teams', ico: 'users', label: t('nav_teams') }]
-        : []),
       ...(user.role !== 'employee'
         ? [{ href: '/podcast', ico: 'headphones', label: t('nav_podcast') }]
         : []),
-      { href: '/directory', ico: 'phone', label: t('nav_directory') },
       { href: '/tools', ico: 'wrench', label: t('nav_tools') },
-    ],
-    [
-      // {
-      //   href: '/notifications',
-      //   ico: 'bell',
-      //   label: t('nav_notifications'),
-      //   badge: unreadCount,
-      // },
-      // { href: '/profile', ico: 'user', label: t('nav_profile') },
     ],
   ];
 
@@ -121,7 +118,9 @@ export function Shell({
           border: '1px solid rgb(223 245 241 / 0.08)',
         }}
       >
-        <div className={`flex items-center gap-3 pb-4 pt-1 ${collapsed ? 'flex-col px-0' : 'px-2'}`}>
+        <div
+          className={`flex items-center gap-3 pb-4 pt-1 ${collapsed ? 'flex-col px-0' : 'px-2'}`}
+        >
           <span
             className='w-9 h-9 rounded-2xl grid place-items-center text-white font-bold text-base shadow-md shrink-0'
             style={{ background: 'linear-gradient(135deg, #2a9686, #46c7b4)' }}
@@ -151,7 +150,11 @@ export function Shell({
             aria-expanded={!collapsed}
           >
             <Icon
-              name={(collapsed ? lang !== 'ar' : lang === 'ar') ? 'chevron-right' : 'chevron-left'}
+              name={
+                (collapsed ? lang !== 'ar' : lang === 'ar')
+                  ? 'chevron-right'
+                  : 'chevron-left'
+              }
               size={15}
             />
           </button>
@@ -160,7 +163,10 @@ export function Shell({
         {navGroups
           .filter((g) => g.length)
           .map((group, gi) => (
-            <div key={gi} className={`flex flex-col gap-1.5 ${collapsed ? 'items-center' : ''}`}>
+            <div
+              key={gi}
+              className={`flex flex-col gap-1.5 ${collapsed ? 'items-center' : ''}`}
+            >
               {gi > 0 && (
                 <hr
                   className={`border-0 my-2 h-px ${collapsed ? 'w-8' : 'mx-3 self-stretch'}`}
@@ -175,9 +181,11 @@ export function Shell({
                     href={item.href}
                     title={item.label}
                     className={`flex items-center transition ${active ? 'shadow-lg' : 'hover:bg-white/10'}
-                      ${collapsed
-                        ? 'w-11 h-11 rounded-full justify-center relative'
-                        : 'gap-3 rounded-full px-4 py-2.5 text-sm font-medium self-stretch'}`}
+                      ${
+                        collapsed
+                          ? 'w-11 h-11 rounded-full justify-center relative'
+                          : 'gap-3 rounded-full px-4 py-2.5 text-sm font-medium self-stretch'
+                      }`}
                     style={
                       active
                         ? {
@@ -209,7 +217,9 @@ export function Shell({
           style={{ borderTop: '1px solid var(--side-line)' }}
         >
           {/* The picture and name open the profile; switching users has its own control. */}
-          <div className={`flex items-center ${collapsed ? 'flex-col gap-1' : 'gap-1 self-stretch'}`}>
+          <div
+            className={`flex items-center ${collapsed ? 'flex-col gap-1' : 'gap-1 self-stretch'}`}
+          >
             <Link
               href='/profile'
               className={`flex items-center gap-3 rounded-full cursor-pointer transition hover:bg-white/10 text-start no-underline min-w-0
@@ -253,7 +263,9 @@ export function Shell({
             title={t('logout')}
             aria-label={t('logout')}
           >
-            <span className={`grid place-items-center shrink-0 ${collapsed ? '' : 'w-7 h-7'}`}>
+            <span
+              className={`grid place-items-center shrink-0 ${collapsed ? '' : 'w-7 h-7'}`}
+            >
               <Icon name='log-out' size={15} />
             </span>
             {!collapsed && t('logout')}
