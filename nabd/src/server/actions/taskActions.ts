@@ -93,9 +93,12 @@ export async function saveTask(input: {
     refresh();
     return { delayedLocked: locked };
   } else {
+    // Section heads have no unit of their own, so creating without picking
+    // an assignee is not possible for them; everyone else defaults to self.
+    const fallback = user.teamId ? [user.id] : [];
     const assigneeIds = user.role === "employee"
       ? [user.id]
-      : vetAssignees(user, input.assigneeIds?.length ? input.assigneeIds : [user.id]);
+      : vetAssignees(user, input.assigneeIds?.length ? input.assigneeIds : fallback);
     const task = createTask({
       title, assigneeIds, due, priority, createdBy: user.id,
       tags, projectId: projectId ?? null,

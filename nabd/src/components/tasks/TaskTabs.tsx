@@ -9,13 +9,17 @@ import { Icon } from "@/components/ui";
 import { TaskListSection } from "./TaskList";
 import type { AssigneeOption, ProjectOption, TaskVM } from "./types";
 
-type TabId = "mine" | "email" | "delegated";
+type TabId = "mine" | "email" | "suggested" | "delegated";
 
-/** My Tasks with separate tabs for delegated and email-created tasks. */
-export function TaskTabs({ myVms, delegatedVms, emailVms = [], ...listProps }: {
+/** My Tasks with separate tabs for delegated tasks, email-created tasks,
+    and the mail scanner's pending suggestions. */
+export function TaskTabs({ myVms, delegatedVms, emailVms = [], suggestions, suggestionsCount = 0, ...listProps }: {
   myVms: TaskVM[];
   delegatedVms: TaskVM[];
   emailVms?: TaskVM[];
+  /** The rendered suggestions panel; shown in its own tab when present. */
+  suggestions?: React.ReactNode;
+  suggestionsCount?: number;
   mine?: boolean;
   canNudge?: boolean;
   withFilters?: boolean;
@@ -29,11 +33,15 @@ export function TaskTabs({ myVms, delegatedVms, emailVms = [], ...listProps }: {
 }) {
   const { t } = useI18n();
   const [tab, setTab] = useState<TabId>("mine");
-  if (!delegatedVms.length && !emailVms.length) return <TaskListSection vms={myVms} {...listProps} />;
+  const hasSuggestions = !!suggestions && suggestionsCount > 0;
+  if (!delegatedVms.length && !emailVms.length && !hasSuggestions) {
+    return <TaskListSection vms={myVms} {...listProps} />;
+  }
 
   const tabs: { id: TabId; label: string; count: number; icon: string }[] = [
     { id: "mine", label: t("tab_my_tasks"), count: myVms.length, icon: "clipboard-list" },
     ...(emailVms.length ? [{ id: "email" as const, label: t("tab_email"), count: emailVms.length, icon: "inbox" }] : []),
+    ...(hasSuggestions ? [{ id: "suggested" as const, label: t("tab_suggested"), count: suggestionsCount, icon: "sparkles" }] : []),
     ...(delegatedVms.length ? [{ id: "delegated" as const, label: t("tab_delegated"), count: delegatedVms.length, icon: "user-check" }] : []),
   ];
   const active = tab === "email" ? emailVms : tab === "delegated" ? delegatedVms : myVms;
@@ -56,7 +64,7 @@ export function TaskTabs({ myVms, delegatedVms, emailVms = [], ...listProps }: {
           </button>
         ))}
       </div>
-      <TaskListSection key={tab} vms={active} {...listProps} />
+      {tab === "suggested" ? suggestions : <TaskListSection key={tab} vms={active} {...listProps} />}
     </>
   );
 }

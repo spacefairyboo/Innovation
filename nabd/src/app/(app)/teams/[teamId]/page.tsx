@@ -9,7 +9,7 @@ import { TaskListSection, type AssigneeOption } from "@/components/tasks";
 import { TeamGlyph } from "@/components/teams";
 import { Avatar } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
-import { getTeam, getUnit, overseesTeam, teamMembers, teamTasks, userTasks } from "@/server/repositories";
+import { bySeniority, getTeam, getUnit, overseesTeam, teamMembers, teamTasks, userTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { HEALTH_META, countStatuses, teamHealth } from "@/lib/types";
 import { csvRows, toVM } from "@/server/vm";
@@ -37,7 +37,7 @@ export default async function TeamPage({ params, searchParams }: {
   const h = HEALTH_META[teamHealth(stats)];
 
   const assignees: AssigneeOption[] | undefined = canManage
-    ? members.map((m) => ({ id: m.id, name: m.name, teamName: team.name }))
+    ? [...members].sort(bySeniority).map((m) => ({ id: m.id, name: m.name, teamName: team.name }))
     : undefined;
 
   return (

@@ -52,6 +52,12 @@ export const teamMembers = (teamId: string): User[] =>
 export const sectionTeams = (sectionId: string): Team[] =>
   listTeams().filter((x) => x.unitId === sectionId);
 
+const ROLE_RANK: Record<User["role"], number> = { senior: 0, section: 1, manager: 2, employee: 3 };
+
+/** Sorts people most-senior first (unit heads before members), then by name. */
+export const bySeniority = (a: User, b: User): number =>
+  ROLE_RANK[a.role] - ROLE_RANK[b.role] || a.name.en.localeCompare(b.name.en);
+
 export function bumpStreak(userId: string): void {
   getDB().prepare("UPDATE users SET streak = streak + 1 WHERE id = ?").run(userId);
 }

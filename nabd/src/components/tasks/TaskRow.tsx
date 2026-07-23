@@ -3,6 +3,7 @@
 /* One task in a list: status, badges, meta line, progress, quick actions. */
 
 import { useTransition } from "react";
+import Link from "next/link";
 import { quickDone } from "@/app/actions";
 import { useI18n, useToast } from "@/components/providers";
 import { dueInfo, Icon, relTime, StatusChip } from "@/components/ui";
@@ -48,7 +49,14 @@ export function TaskRow({ vm, mine, canEdit, canNudge, showTeam, onOpen }: {
 
       <div className="flex-1 min-w-0">
         <div className="font-semibold text-sm flex items-center gap-2 flex-wrap">
-          <span className={task.status === "done" ? "text-ink-3 line-through decoration-1" : ""}>{task.title[lang]}</span>
+          {/* The title always opens the task page: leads see the full
+              details read-only even where they cannot edit. */}
+          <Link
+            href={`/task/${task.id}`}
+            className={`no-underline hover:underline ${task.status === "done" ? "text-ink-3 line-through decoration-1" : "text-ink"}`}
+          >
+            {task.title[lang]}
+          </Link>
           <StatusChip status={eff} />
           <ValueChip value={vm.value} />
           <span className={`inline-flex items-center gap-1 text-xs font-semibold ${prio.cls}`}>
@@ -112,6 +120,16 @@ export function TaskRow({ vm, mine, canEdit, canNudge, showTeam, onOpen }: {
           >
             <Icon name="check" size={16} />
           </button>
+        )}
+        {!editable && (
+          <Link
+            href={`/task/${task.id}`}
+            className="icon-btn !w-9 !h-9"
+            title={t("view_task")}
+            aria-label={t("view_task")}
+          >
+            <Icon name="eye" size={15} />
+          </Link>
         )}
         {canNudge && !editable && (stale || eff === "blocked") && (
           <button className="btn-ghost btn-sm" onClick={() => toast(t("nudged", { who: vm.ownerName[lang] }))}>

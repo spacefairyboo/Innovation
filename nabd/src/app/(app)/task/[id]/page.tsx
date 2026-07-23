@@ -5,7 +5,7 @@
 import { notFound } from "next/navigation";
 import { TaskFullView } from "@/components/tasks";
 import type { AssigneeOption } from "@/components/tasks";
-import { canUpdateTask, getTask, getTeam, listUsers, overseesTeam, teamMembers } from "@/server/repositories";
+import { bySeniority, canUpdateTask, getTask, getTeam, listUsers, overseesTeam, teamMembers } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { toVM } from "@/server/vm";
 
@@ -24,7 +24,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const team = getTeam(task.teamId)!;
   const assignees: AssigneeOption[] | undefined =
     user.role !== "employee"
-      ? teamMembers(task.teamId).map((m) => ({ id: m.id, name: m.name, teamName: team.name }))
+      ? [...teamMembers(task.teamId)].sort(bySeniority).map((m) => ({ id: m.id, name: m.name, teamName: team.name }))
       : undefined;
 
   const backHref = user.role === "employee" ? "/tasks" : `/teams/${task.teamId}`;

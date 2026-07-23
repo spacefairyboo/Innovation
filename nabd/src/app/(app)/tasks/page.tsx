@@ -11,7 +11,7 @@ import { NewTaskButton, TaskTabs, type AssigneeOption } from "@/components/tasks
 import { taskIdsDelegatedTo } from "@/server/repositories/delegationRepository";
 import { makeT } from "@/lib/i18n";
 import { pendingSuggestions } from "@/server/repositories/inboxRepository";
-import { getTeam, listProjects, listTeams, scopeTasks, teamMembers, userTasks } from "@/server/repositories";
+import { bySeniority, getTeam, listProjects, listTeams, scopeTasks, sectionTeams, teamMembers, userTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { countStatuses } from "@/lib/types";
 import { doneThisWeekCount, toVM } from "@/server/vm";
@@ -29,15 +29,22 @@ export default async function MyTasksPage({ searchParams }: {
   const delegatedIn = taskIdsDelegatedTo(user.id);
   const projects = listProjects().map((p) => ({ id: p.id, name: p.name }));
 
-  const assignees: AssigneeOption[] | undefined = senior
-    ? listTeams().flatMap((team) =>
-        teamMembers(team.id).map((m) => ({ id: m.id, name: m.name, teamName: team.name })))
-    : user.role === "manager" && user.teamId
-      ? teamMembers(user.teamId).map((m) => {
-          const team = getTeam(m.teamId!)!;
-          return { id: m.id, name: m.name, teamName: team.name };
-        })
-      : undefined;
+  // Who this role may assign to, most senior first: the department head
+  // across every unit, a section head across their section's units, a unit
+  // head within their own unit.
+  const assignable = senior
+    ? listTeams().flatMap((team) => teamMembers(team.id))
+    : user.role === "section" && user.sectionId
+      ? sectionTeams(user.sectionId).flatMap((tm) => teamMembers(tm.id))
+      : user.role === "manager" && user.teamId
+        ? teamMembers(user.teamId)
+        : null;
+  const assignees: AssigneeOption[] | undefined = assignable
+    ? [...assignable].sort(bySeniority).map((m) => {
+        const team = getTeam(m.teamId!)!;
+        return { id: m.id, name: m.name, teamName: team.name };
+      })
+    : undefined;
 
   return (
     <>
@@ -60,9 +67,9 @@ export default async function MyTasksPage({ searchParams }: {
 
       <StatTiles stats={stats} />
 
-      <EmailSuggestions suggestions={pendingSuggestions(user.id)} />
-
       <TaskTabs
+        suggestions={<EmailSuggestions suggestions={pendingSuggestions(user.id)} />}
+        suggestionsCount={pendingSuggestions(user.id).length}
         myVms={tasks.filter((x) => !delegatedIn.has(x.id) && x.source !== "email").map((x) => toVM(x, user))}
         emailVms={tasks.filter((x) => !delegatedIn.has(x.id) && x.source === "email").map((x) => toVM(x, user))}
         delegatedVms={tasks.filter((x) => delegatedIn.has(x.id)).map((x) => toVM(x, user))}
