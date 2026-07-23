@@ -355,6 +355,12 @@ export const I18N: Record<Lang, Record<string, string>> = {
     by_member: 'Tasks by member',
     open_tasks: 'Open tasks',
     health_overall: 'Health',
+    stats_scope_all: 'Whole department',
+    tile_due_week: 'Due this week',
+    tile_done_week: 'Completed this week',
+    brk_title: 'Detailed breakdown',
+    brk_sub: 'Search, sort, and export the numbers behind the charts',
+    brk_done7: 'Completed, 7 days',
     // assignees
     assignees: 'Assignees',
     assignees_sub:
@@ -806,6 +812,12 @@ export const I18N: Record<Lang, Record<string, string>> = {
     by_member: 'المهام حسب العضو',
     open_tasks: 'مهام مفتوحة',
     health_overall: 'الصحة',
+    stats_scope_all: 'الإدارة كاملة',
+    tile_due_week: 'تستحق هذا الأسبوع',
+    tile_done_week: 'أُكملت هذا الأسبوع',
+    brk_title: 'التفصيل الكامل',
+    brk_sub: 'ابحث ورتّب وصدّر الأرقام التي خلف الرسوم',
+    brk_done7: 'مكتملة خلال ٧ أيام',
     // assignees
     assignees: 'المكلّفون',
     assignees_sub: 'اختر شخصًا أو أكثر. أول المختارين يصبح المكلّف الرئيسي.',

@@ -53,7 +53,24 @@ export interface DocReview {
 
 /* ---------------- text utilities ---------------- */
 
-const clean = (s: string) => s.replace(/\s+/g, " ").trim();
+/* Formatting never counts as a change: list markers are stripped, and words
+   are compared with punctuation, quote style, dashes, and case ignored. Only
+   the wording itself can raise a finding. */
+const clean = (s: string) =>
+  s
+    .replace(/^\s*(?:[•▪◦‣*–—-]|\(?\d{1,3}[.)]|\(?[a-z][.)])\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/** A word reduced to its comparable core: quotes/dashes unified, surrounding
+    punctuation dropped, case ignored. "" means the token is pure formatting. */
+const normToken = (w: string) =>
+  w
+    .replace(/[“”„«»]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[–—]/g, "-")
+    .replace(/^[^\p{L}\p{N}%]+|[^\p{L}\p{N}%]+$/gu, "")
+    .toLowerCase();
 
 /** Meaningful paragraphs of a document (headings and one-liners included). */
 export function splitParagraphs(text: string): string[] {
@@ -84,14 +101,17 @@ const shorten = (s: string, n = 160) => (s.length > n ? `${s.slice(0, n).trimEnd
 /** Word-level diff (LCS) between a template paragraph and its counterpart:
     which words the document added and which it dropped. */
 function wordDiff(a: string, b: string): { removed: string[]; added: string[] } {
-  const wa = a.split(/\s+/);
-  const wb = b.split(/\s+/);
+  // Pure-formatting tokens (bullets, stray punctuation) never enter the diff.
+  const toks = (s: string) => s.split(/\s+/).filter((w) => normToken(w) !== "");
+  const wa = toks(a);
+  const wb = toks(b);
+  const same = (x: string, y: string) => normToken(x) === normToken(y);
   const n = wa.length;
   const m = wb.length;
   const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
-      dp[i][j] = wa[i].toLowerCase() === wb[j].toLowerCase()
+      dp[i][j] = same(wa[i], wb[j])
         ? dp[i + 1][j + 1] + 1
         : Math.max(dp[i + 1][j], dp[i][j + 1]);
     }
@@ -101,7 +121,7 @@ function wordDiff(a: string, b: string): { removed: string[]; added: string[] } 
   let i = 0;
   let j = 0;
   while (i < n && j < m) {
-    if (wa[i].toLowerCase() === wb[j].toLowerCase()) { i++; j++; }
+    if (same(wa[i], wb[j])) { i++; j++; }
     else if (dp[i + 1][j] >= dp[i][j + 1]) removed.push(wa[i++]);
     else added.push(wb[j++]);
   }
@@ -153,8 +173,10 @@ function templateDiff(tplParas: string[], docParas: string[], lang: Lang): Findi
       }
     } else if (best >= 0 && bestSim >= 0.22) {
       usedDoc.add(best);
-      // Name the exact changes, not just "this differs".
+      // Name the exact changes, not just "this differs". A paragraph whose
+      // differences are formatting alone raises nothing.
       const d = wordDiff(tpl, docParas[best]);
+      if (!d.added.length && !d.removed.length) continue;
       const detailEn = [
         d.added.length ? `Added: "${phrase(d.added)}".` : "",
         d.removed.length ? `Removed from the template text: "${phrase(d.removed)}".` : "",
