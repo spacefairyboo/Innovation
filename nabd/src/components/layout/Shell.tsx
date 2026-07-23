@@ -68,8 +68,6 @@ export function Shell({
 
   // The sidebar bundles similar destinations, separated by dividers:
   // daily work, then analysis and planning, then the personal corner.
-  // The sidebar bundles similar destinations, separated by dividers:
-  // daily work, then analysis and planning, then the personal corner.
   type NavItem = { href: string; ico: string; label: string; badge?: number };
 
   const navGroups: NavItem[][] = [
@@ -97,6 +95,7 @@ export function Shell({
       ...(user.role !== 'employee'
         ? [{ href: '/podcast', ico: 'headphones', label: t('nav_podcast') }]
         : []),
+      { href: '/directory', ico: 'phone', label: t('nav_directory') },
       { href: '/tools', ico: 'wrench', label: t('nav_tools') },
     ],
   ];
