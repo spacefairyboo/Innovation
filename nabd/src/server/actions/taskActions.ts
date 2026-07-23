@@ -8,7 +8,7 @@ import { bumpStreak, listUsers, sectionTeams, teamMembers } from "../repositorie
 import { createProject, getProject } from "../repositories/projectRepository";
 import { createTask, deleteTask, getChecklist, saveChecklist, updateTask } from "../repositories/taskRepository";
 import { boundedText, clampProgress, validDate, validPriority, validStatus } from "../validation";
-import { assertCanEdit, refresh, sanitizeChecklist, vetAssignees } from "./guards";
+import { assertCanEdit, delayLocked, refresh, sanitizeChecklist, vetAssignees } from "./guards";
 import type { ChecklistItem, Localized, Priority, TaskStatus, User } from "@/lib/types";
 
 /** People the caller may assign work to, per the responsibility hierarchy. */
@@ -78,16 +78,20 @@ export async function saveTask(input: {
   const projectId = resolveProject(user, input.projectId, input.newProjectName);
 
   if (input.id) {
-    const { user: editor } = await assertCanEdit(input.id);
+    const { user: editor, task } = await assertCanEdit(input.id);
     const assigneeIds = input.assigneeIds?.length ? vetAssignees(editor, input.assigneeIds) : undefined;
     const note = boundedText(input.note, 2000);
+    // Overdue tasks stay Delayed until the due date moves or they complete.
+    const locked = delayLocked(task, status, due);
     updateTask(
       input.id,
-      { title, due, priority, status, progress, assigneeIds, tags, projectId },
+      { title, due, priority, status: locked ? undefined : status, progress, assigneeIds, tags, projectId },
       note ? { en: note, ar: note } : null,
       editor.id,
     );
     if (input.checklist) saveChecklist(input.id, sanitizeChecklist(input.checklist));
+    refresh();
+    return { delayedLocked: locked };
   } else {
     const assigneeIds = user.role === "employee"
       ? [user.id]
@@ -99,6 +103,7 @@ export async function saveTask(input: {
     if (input.checklist?.length) saveChecklist(task.id, sanitizeChecklist(input.checklist));
   }
   refresh();
+  return { delayedLocked: false };
 }
 
 export async function saveTaskChecklist(taskId: string, items: ChecklistItem[]) {
@@ -121,17 +126,21 @@ export async function quickDone(taskId: string) {
 
 /** Applies a parsed chat/voice update to a task the caller may edit:
     their own, or any task their role oversees. */
-export async function applyCheckin(taskId: string, patch: { status?: TaskStatus; progress?: number }, note: string) {
-  const { user } = await assertCanEdit(taskId);
+export async function applyCheckin(taskId: string, patch: { status?: TaskStatus; progress?: number }, note: string): Promise<{ delayedLocked: boolean }> {
+  const { user, task } = await assertCanEdit(taskId);
   const text = boundedText(note, 2000);
+  const status = validStatus(patch.status);
+  // Overdue tasks stay Delayed until the due date moves or they complete.
+  const locked = delayLocked(task, status, undefined);
   updateTask(
     taskId,
-    { status: validStatus(patch.status), progress: patch.progress !== undefined ? clampProgress(patch.progress) : undefined },
+    { status: locked ? undefined : status, progress: patch.progress !== undefined ? clampProgress(patch.progress) : undefined },
     text ? { en: text, ar: text } : null,
     user.id,
   );
   bumpStreak(user.id);
   refresh();
+  return { delayedLocked: locked };
 }
 
 /** Chat-created task: resolves the assignee name against the caller's authority. */
@@ -167,8 +176,8 @@ export async function applyTaskEdit(taskId: string, edit: {
   checklistAdd?: string;
   checklistDone?: string;
   note?: string;
-}): Promise<{ assignee: Localized | null; assigneeFailed: string | null; checklistMatched: string | null }> {
-  const { user } = await assertCanEdit(taskId);
+}): Promise<{ assignee: Localized | null; assigneeFailed: string | null; checklistMatched: string | null; delayedLocked: boolean }> {
+  const { user, task } = await assertCanEdit(taskId);
 
   // Resolve the assignee by name within the caller's authority, then vet
   // the result exactly like the form path.
@@ -186,11 +195,15 @@ export async function applyTaskEdit(taskId: string, edit: {
     }
   }
 
+  const due = edit.due !== undefined ? (edit.due === null ? null : validDate(edit.due)) : undefined;
+  const status = validStatus(edit.status);
+  // Overdue tasks stay Delayed unless this same edit moves the due date.
+  const delayedLocked = delayLocked(task, status, due);
   const patch = {
     title: edit.title !== undefined ? boundedText(edit.title, 200) : undefined,
-    due: edit.due !== undefined ? (edit.due === null ? null : validDate(edit.due)) : undefined,
+    due,
     progress: edit.progress !== undefined ? clampProgress(edit.progress) : undefined,
-    status: validStatus(edit.status),
+    status: delayedLocked ? undefined : status,
     priority: edit.priority !== undefined ? validPriority(edit.priority) : undefined,
     assigneeIds,
   };
@@ -227,5 +240,5 @@ export async function applyTaskEdit(taskId: string, edit: {
 
   bumpStreak(user.id);
   refresh();
-  return { assignee, assigneeFailed, checklistMatched };
+  return { assignee, assigneeFailed, checklistMatched, delayedLocked };
 }

@@ -33,7 +33,9 @@ export function TaskRow({ vm, mine, canEdit, canNudge, showTeam, onOpen }: {
   const due = dueInfo(task.due, t, lang);
   const prio = PRIO_META[task.priority];
   const checkDone = vm.checklist.filter((c) => c.done).length;
-  const editable = mine || canEdit;
+  // Row-level rights win when present: only assignees, delegates, and the
+  // line manager may update; everyone else gets the reminder bell.
+  const editable = vm.editable !== undefined ? vm.editable : (mine || canEdit);
 
   return (
     <div className="flex items-center gap-4 py-3.5 border-b border-grid last:border-b-0 group">

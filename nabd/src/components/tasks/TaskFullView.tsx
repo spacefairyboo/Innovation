@@ -14,7 +14,7 @@ import { AssigneePicker } from "./AssigneePicker";
 import { ChecklistEditor } from "./ChecklistEditor";
 import { DelegationChip, ValueChip } from "./TaskChips";
 import { TaskDelegationCard } from "./TaskDelegationCard";
-import { STATUS_META, effStatus, type ChecklistItem, type Priority, type TaskStatus } from "@/lib/types";
+import { STATUS_META, effStatus, todayISO, type ChecklistItem, type Priority, type TaskStatus } from "@/lib/types";
 import type { AssigneeOption, TaskVM } from "./types";
 
 /** One labeled fact in the header strip. */
@@ -59,6 +59,11 @@ export function TaskFullView({ vm, canEdit, assignees, colleagues, backHref }: {
   const [checklist, setChecklist] = useState<ChecklistItem[]>(vm.checklist);
   const eff = effStatus(task);
   const dueView = dueInfo(task.due, t, lang);
+  // An overdue task is Delayed and stays Delayed: only completing it or
+  // moving the due date (the form's due field counts) unlocks the status.
+  const delayLocked = task.status !== "done"
+    && !!task.due && task.due < todayISO()
+    && (!due || due < todayISO());
   // Deterministic date format — locale formatting can differ between the
   // server's ICU and the browser's, breaking hydration.
   const cd = new Date(task.createdAt);
@@ -138,21 +143,30 @@ export function TaskFullView({ vm, canEdit, assignees, colleagues, backHref }: {
           <div>
             <span className="block text-xs font-semibold text-ink-2 mb-1.5">{t("quick_status")}</span>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              {(["ontrack", "pending", "blocked", "done"] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  disabled={!canEdit}
-                  aria-pressed={status === s}
-                  className={`flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-semibold cursor-pointer transition disabled:cursor-default
-                    ${status === s ? "border-transparent" : "border-line bg-surface-2 text-ink-2 hover:border-accent"}`}
-                  style={status === s ? { background: `var(--st-${s}-bg)`, color: `var(--st-${s})`, boxShadow: `inset 0 0 0 1.5px var(--st-${s})` } : undefined}
-                  onClick={() => { setStatus(s); if (s === "done") setProgress(100); }}
-                >
-                  <Icon name={STATUS_META[s].icon} size={14} /> {t(STATUS_META[s].labelKey)}
-                </button>
-              ))}
+              {(["ontrack", "pending", "blocked", "done"] as const).map((s) => {
+                const lockedOut = delayLocked && s !== "done" && s !== task.status;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={!canEdit || lockedOut}
+                    aria-pressed={status === s}
+                    className={`flex items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-semibold cursor-pointer transition disabled:cursor-default
+                      ${lockedOut ? "border-line bg-surface-2 text-ink-3 opacity-50"
+                        : status === s ? "border-transparent" : "border-line bg-surface-2 text-ink-2 hover:border-accent"}`}
+                    style={status === s ? { background: `var(--st-${s}-bg)`, color: `var(--st-${s})`, boxShadow: `inset 0 0 0 1.5px var(--st-${s})` } : undefined}
+                    onClick={() => { setStatus(s); if (s === "done") setProgress(100); }}
+                  >
+                    <Icon name={STATUS_META[s].icon} size={14} /> {t(STATUS_META[s].labelKey)}
+                  </button>
+                );
+              })}
             </div>
+            {canEdit && delayLocked && (
+              <p className="m-0 mt-1.5 text-xs font-medium flex items-start gap-1.5" style={{ color: "var(--st-delayed)" }}>
+                <Icon name="alert-triangle" size={13} className="mt-0.5 shrink-0" /> {t("delayed_locked_hint")}
+              </p>
+            )}
           </div>
 
           <label className="block">

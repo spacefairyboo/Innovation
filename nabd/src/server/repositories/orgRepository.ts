@@ -15,6 +15,7 @@ export const mapUser = (r: any): User => ({
   sectionId: r.section_id ?? null,
   name: { en: r.name_en, ar: r.name_ar }, streak: Number(r.streak),
   email: r.email ?? null,
+  phoneExt: r.phone_ext ?? null,
   prefLang: r.pref_lang === "ar" || r.pref_lang === "en" ? r.pref_lang : null,
   prefTheme: r.pref_theme === "dark" || r.pref_theme === "light" ? r.pref_theme : null,
 });

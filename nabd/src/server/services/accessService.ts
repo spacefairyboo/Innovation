@@ -31,6 +31,14 @@ export function overseesTeam(user: User, teamId: string): boolean {
   return false;
 }
 
+/** May this user change the task? Only its assignees (a delegate becomes an
+    assignee while a delegation is active) and its line manager, the head of
+    the task's own unit. Seniors and section heads see and nudge, not edit. */
+export function canUpdateTask(user: User, task: Pick<Task, "assigneeIds" | "teamId">): boolean {
+  if (task.assigneeIds.includes(user.id)) return true;
+  return getTeam(task.teamId)?.managerId === user.id;
+}
+
 /* ---------- notifications (derived from live data; read-state persisted) ---------- */
 export function buildNotifications(user: User): Notification[] {
   const db = getDB();

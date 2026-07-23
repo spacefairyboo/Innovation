@@ -11,6 +11,16 @@ import { hashPassword } from "../auth/passwords";
 export const DEMO_PASSWORD = "nabd2026";
 
 /** Gives any user without credentials the demo password. */
+/** Every user gets a stable phone extension (1101, 1102, … in id order). */
+export function ensurePhoneExts(d: DatabaseSync): void {
+  const noExt = d.prepare("SELECT id FROM users WHERE phone_ext IS NULL OR phone_ext = '' ORDER BY id").all() as { id: string }[];
+  if (!noExt.length) return;
+  const maxExt = d.prepare("SELECT MAX(CAST(phone_ext AS INTEGER)) AS m FROM users WHERE phone_ext IS NOT NULL").get() as { m: number | null };
+  let next = Math.max(1100, maxExt.m ?? 1100);
+  const upd = d.prepare("UPDATE users SET phone_ext = ? WHERE id = ?");
+  for (const u of noExt) upd.run(String(++next), u.id);
+}
+
 export function ensureDemoPasswords(d: DatabaseSync): void {
   const missing = d.prepare("SELECT id FROM users WHERE password_hash IS NULL OR password_hash = ''").all() as { id: string }[];
   if (!missing.length) return;
@@ -155,6 +165,7 @@ export function seed(d: DatabaseSync) {
 
   seedMeetings(d);
   ensureDemoPasswords(d);
+  ensurePhoneExts(d);
 }
 
 /* Demo Outlook calendar — meetings the Graph sync would pull from each

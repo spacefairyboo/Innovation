@@ -73,7 +73,8 @@ export async function askAssistant(message: string, ctx?: AskContext): Promise<s
         }
         if (proposal.priority) lines.push(t("chat_edit_priority", { task: title, prio: t(`prio_${proposal.priority}`) }));
         if (proposal.progress !== undefined) lines.push(t("chat_progress_set", { task: title, pct: proposal.progress }));
-        if (proposal.status) lines.push(t("chat_updated", { task: title, status: t(STATUS_META[proposal.status].labelKey) }));
+        if (proposal.status && !res.delayedLocked) lines.push(t("chat_updated", { task: title, status: t(STATUS_META[proposal.status].labelKey) }));
+        if (res.delayedLocked) lines.push(t("chat_delayed_locked", { task: title }));
         if (lines.length) return lines.join("\n");
       } catch {
         // Validation or authority said no — fall through to a spoken answer.

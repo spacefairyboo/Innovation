@@ -76,7 +76,7 @@ export default async function TeamsPage({ searchParams }: {
             <p className="m-0 text-xs text-ink-3">{t("section_tasks_sub")}</p>
           </div>
           <TaskListSection
-            vms={sectionTasks(focusSection.id).map(toVM)}
+            vms={sectionTasks(focusSection.id).map((x) => toVM(x, user))}
             canEdit
             canNudge
             showTeam
@@ -128,7 +128,7 @@ export default async function TeamsPage({ searchParams }: {
             <p className="m-0 text-xs text-ink-3">{t("dept_tasks_sub")}</p>
           </div>
           <TaskListSection
-            vms={allTasks().map(toVM)}
+            vms={allTasks().map((x) => toVM(x, user))}
             canEdit
             canNudge
             showTeam
@@ -157,7 +157,7 @@ export default async function TeamsPage({ searchParams }: {
             <p className="m-0 text-xs text-ink-3">{t("section_tasks_sub")}</p>
           </div>
           <TaskListSection
-            vms={sectionTasks(user.sectionId).map(toVM)}
+            vms={sectionTasks(user.sectionId).map((x) => toVM(x, user))}
             canEdit
             canNudge
             showTeam

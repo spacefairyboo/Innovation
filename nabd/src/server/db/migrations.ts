@@ -4,7 +4,7 @@
    existing databases upgrade in place with no external tooling. */
 
 import type { DatabaseSync } from "node:sqlite";
-import { deriveEmail, ensureDemoPasswords, seedMeetings } from "./seed";
+import { deriveEmail, ensureDemoPasswords, ensurePhoneExts, seedMeetings } from "./seed";
 
 export function migrate(d: DatabaseSync) {
   d.exec(`
@@ -218,6 +218,11 @@ export function migrate(d: DatabaseSync) {
     const upd = d.prepare("UPDATE users SET email = ? WHERE id = ?");
     for (const u of noEmail) upd.run(deriveEmail(u.name_en), u.id);
   }
+  // Databases created before the employee directory lack users.phone_ext;
+  // backfill a stable extension per user (1101, 1102, … in id order).
+  const extCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];
+  if (!extCols.some((c) => c.name === "phone_ext")) d.exec("ALTER TABLE users ADD COLUMN phone_ext TEXT");
+  ensurePhoneExts(d);
   // Every account can sign in: users without credentials get the demo password.
   ensureDemoPasswords(d);
   // Backfill: tasks created before multi-assignee support get their owner as assignee.

@@ -141,30 +141,36 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
     if (parsed.intent) patch.status = parsed.intent;
     if (parsed.pct !== null) patch.progress = parsed.pct;
     if (parsed.intent === "done") patch.progress = 100;
-    startTransition(async () => { await applyCheckin(task.id, patch, raw); });
-
-    const title = task.title[lang];
-    if (parsed.intent === "done" || parsed.pct === 100) {
-      completions.current += 1;
-      push({
-        who: "bot",
-        text: `${t("chat_updated", { task: title, status: t("st_done") })}\n${t("chat_kudos", { n: completions.current })}`,
-      });
-    } else if (parsed.intent === "blocked") {
-      push({
-        who: "bot",
-        text: `${t("chat_updated", { task: title, status: t("st_blocked") })}\n${t("chat_blocked_note")}`,
-      });
-    } else if (parsed.pct !== null) {
-      push({ who: "bot", text: t("chat_progress_set", { task: title, pct: parsed.pct }) });
-    } else if (parsed.intent) {
-      push({ who: "bot", text: t("chat_updated", { task: title, status: t(STATUS_META[parsed.intent].labelKey) }) });
-    } else {
-      // No status or percent in the message: it was saved as the task's
-      // progress update note.
-      push({ who: "bot", text: t("chat_noted", { task: title }) });
-    }
-    push({ who: "bot", text: t("chat_summary_q") });
+    // The confirmation waits for the server: an overdue task refuses status
+    // changes (it stays Delayed until the due date moves or it completes).
+    startTransition(async () => {
+      const res = await applyCheckin(task.id, patch, raw);
+      const title = task.title[lang];
+      if (res.delayedLocked) {
+        if (parsed.pct !== null) push({ who: "bot", text: t("chat_progress_set", { task: title, pct: parsed.pct }) });
+        push({ who: "bot", text: t("chat_delayed_locked", { task: title }) });
+      } else if (parsed.intent === "done" || parsed.pct === 100) {
+        completions.current += 1;
+        push({
+          who: "bot",
+          text: `${t("chat_updated", { task: title, status: t("st_done") })}\n${t("chat_kudos", { n: completions.current })}`,
+        });
+      } else if (parsed.intent === "blocked") {
+        push({
+          who: "bot",
+          text: `${t("chat_updated", { task: title, status: t("st_blocked") })}\n${t("chat_blocked_note")}`,
+        });
+      } else if (parsed.pct !== null) {
+        push({ who: "bot", text: t("chat_progress_set", { task: title, pct: parsed.pct }) });
+      } else if (parsed.intent) {
+        push({ who: "bot", text: t("chat_updated", { task: title, status: t(STATUS_META[parsed.intent].labelKey) }) });
+      } else {
+        // No status or percent in the message: it was saved as the task's
+        // progress update note.
+        push({ who: "bot", text: t("chat_noted", { task: title }) });
+      }
+      push({ who: "bot", text: t("chat_summary_q") });
+    });
   };
 
   /** Applies a parsed field edit (due/title/assignee/checklist/progress/priority)
@@ -203,7 +209,8 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
         if (edit.priority) lines.push(t("chat_edit_priority", { task: title, prio: t(`prio_${edit.priority}`) }));
         const pct = edit.progress ?? parsed.pct;
         if (pct !== null && pct !== undefined) lines.push(t("chat_progress_set", { task: title, pct }));
-        if (status) lines.push(t("chat_updated", { task: title, status: t(STATUS_META[status].labelKey) }));
+        if (status && !res.delayedLocked) lines.push(t("chat_updated", { task: title, status: t(STATUS_META[status].labelKey) }));
+        if (res.delayedLocked) lines.push(t("chat_delayed_locked", { task: title }));
         push({ who: "bot", text: lines.join("\n") || t("chat_noted", { task: title }) });
         push({ who: "bot", text: t("chat_summary_q") });
       } catch {

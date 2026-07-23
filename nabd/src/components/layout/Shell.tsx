@@ -37,8 +37,22 @@ export function Shell({
   const pathname = usePathname();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // Minimized sidebar (icons only). The choice persists: expanded stays
+  // locked expanded, minimized stays minimized, across visits.
+  const [collapsed, setCollapsed] = useState(false);
   const [, startTransition] = useTransition();
   const toast = useToast();
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the saved sidebar state on mount
+    setCollapsed(localStorage.getItem('nabd-side-collapsed') === '1');
+  }, []);
+  const toggleSidebar = () => {
+    setCollapsed((c) => {
+      localStorage.setItem('nabd-side-collapsed', c ? '0' : '1');
+      return !c;
+    });
+  };
 
   // Global Ctrl/Cmd+K opens the command palette.
   useEffect(() => {
@@ -73,9 +87,10 @@ export function Shell({
       ...(user.role !== 'employee'
         ? [{ href: '/teams', ico: 'users', label: t('nav_teams') }]
         : []),
-      ...(user.role === 'senior'
+      ...(user.role !== 'employee'
         ? [{ href: '/podcast', ico: 'headphones', label: t('nav_podcast') }]
         : []),
+      { href: '/directory', ico: 'phone', label: t('nav_directory') },
       { href: '/tools', ico: 'wrench', label: t('nav_tools') },
     ],
     [
@@ -96,42 +111,59 @@ export function Shell({
 
   return (
     <div className='flex min-h-screen'>
-      {/* Sidebar — floating glass panel on the deep-green gradient */}
+      {/* Sidebar — floating glass panel on the deep-green gradient.
+          Minimizes to an icon rail; the expanded state stays locked open. */}
       <aside
-        className='hidden md:flex w-60 shrink-0 flex-col gap-1.5 p-4 sticky top-3 ms-3 my-3 rounded-3xl h-[calc(100vh-1.5rem)] shadow-2xl backdrop-blur-xl'
+        className={`hidden md:flex shrink-0 flex-col gap-1.5 sticky top-3 ms-3 my-3 rounded-3xl h-[calc(100vh-1.5rem)] shadow-2xl backdrop-blur-xl transition-[width] duration-200
+          ${collapsed ? 'w-[4.6rem] p-2.5' : 'w-60 p-4'}`}
         style={{
           background: 'var(--side-bg)',
           border: '1px solid rgb(223 245 241 / 0.08)',
         }}
       >
-        <div className='flex items-center gap-3 px-2 pb-5 pt-1'>
+        <div className={`flex items-center gap-3 pb-4 pt-1 ${collapsed ? 'flex-col px-0' : 'px-2'}`}>
           <span
-            className='w-9 h-9 rounded-2xl grid place-items-center text-white font-bold text-base shadow-md'
+            className='w-9 h-9 rounded-2xl grid place-items-center text-white font-bold text-base shadow-md shrink-0'
             style={{ background: 'linear-gradient(135deg, #2a9686, #46c7b4)' }}
           >
             N
           </span>
-          <span
-            className='font-bold text-lg leading-tight'
-            style={{ color: '#eefaf7' }}
-          >
-            {t('appName')}
-            <small
-              className='block text-[0.66rem] font-medium tracking-wider uppercase'
-              style={{ color: 'var(--side-ink-dim)' }}
+          {!collapsed && (
+            <span
+              className='font-bold text-lg leading-tight flex-1 min-w-0'
+              style={{ color: '#eefaf7' }}
             >
-              {t('appTag')}
-            </small>
-          </span>
+              {t('appName')}
+              <small
+                className='block text-[0.66rem] font-medium tracking-wider uppercase'
+                style={{ color: 'var(--side-ink-dim)' }}
+              >
+                {t('appTag')}
+              </small>
+            </span>
+          )}
+          <button
+            className='w-7 h-7 rounded-full grid place-items-center cursor-pointer transition hover:bg-white/10 shrink-0'
+            style={{ color: 'var(--side-ink-dim)' }}
+            onClick={toggleSidebar}
+            title={t(collapsed ? 'sidebar_expand' : 'sidebar_collapse')}
+            aria-label={t(collapsed ? 'sidebar_expand' : 'sidebar_collapse')}
+            aria-expanded={!collapsed}
+          >
+            <Icon
+              name={(collapsed ? lang !== 'ar' : lang === 'ar') ? 'chevron-right' : 'chevron-left'}
+              size={15}
+            />
+          </button>
         </div>
 
         {navGroups
           .filter((g) => g.length)
           .map((group, gi) => (
-            <div key={gi} className='flex flex-col gap-1.5'>
+            <div key={gi} className={`flex flex-col gap-1.5 ${collapsed ? 'items-center' : ''}`}>
               {gi > 0 && (
                 <hr
-                  className='border-0 my-2 mx-3 h-px'
+                  className={`border-0 my-2 h-px ${collapsed ? 'w-8' : 'mx-3 self-stretch'}`}
                   style={{ background: 'var(--side-line)' }}
                 />
               )}
@@ -141,7 +173,11 @@ export function Shell({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition ${active ? 'shadow-lg' : 'hover:bg-white/10'}`}
+                    title={item.label}
+                    className={`flex items-center transition ${active ? 'shadow-lg' : 'hover:bg-white/10'}
+                      ${collapsed
+                        ? 'w-11 h-11 rounded-full justify-center relative'
+                        : 'gap-3 rounded-full px-4 py-2.5 text-sm font-medium self-stretch'}`}
                     style={
                       active
                         ? {
@@ -151,11 +187,12 @@ export function Shell({
                         : { color: 'var(--side-ink)' }
                     }
                   >
-                    <Icon name={item.ico} size={17} />
-                    {item.label}
+                    <Icon name={item.ico} size={collapsed ? 19 : 17} />
+                    {!collapsed && item.label}
                     {!!item.badge && (
                       <span
-                        className='ms-auto min-w-5 h-5 rounded-full grid place-items-center px-1.5 text-[0.68rem] font-bold text-white'
+                        className={`min-w-5 h-5 rounded-full grid place-items-center px-1.5 text-[0.68rem] font-bold text-white
+                          ${collapsed ? 'absolute -top-0.5 -end-0.5 min-w-4 h-4 text-[0.58rem]' : 'ms-auto'}`}
                         style={{ background: '#d24a4a' }}
                       >
                         {item.badge}
@@ -168,41 +205,58 @@ export function Shell({
           ))}
 
         <div
-          className='mt-auto pt-3'
+          className={`mt-auto pt-3 flex flex-col gap-1 ${collapsed ? 'items-center' : ''}`}
           style={{ borderTop: '1px solid var(--side-line)' }}
         >
+          {/* The picture and name open the profile; switching users has its own control. */}
+          <div className={`flex items-center ${collapsed ? 'flex-col gap-1' : 'gap-1 self-stretch'}`}>
+            <Link
+              href='/profile'
+              className={`flex items-center gap-3 rounded-full cursor-pointer transition hover:bg-white/10 text-start no-underline min-w-0
+                ${collapsed ? 'p-1.5' : 'flex-1 px-2.5 py-2'}`}
+              style={{ color: 'var(--side-ink)' }}
+              title={t('nav_profile')}
+            >
+              <Avatar name={user.name} size='sm' />
+              {!collapsed && (
+                <span className='flex-1 min-w-0 leading-tight'>
+                  <b
+                    className='block text-[0.82rem] truncate'
+                    style={{ color: '#eefaf7' }}
+                  >
+                    {user.name[lang]}
+                  </b>
+                  <span
+                    className='block text-[0.7rem] truncate'
+                    style={{ color: 'var(--side-ink-dim)' }}
+                  >
+                    {roleLabel}
+                  </span>
+                </span>
+              )}
+            </Link>
+            <button
+              className='w-9 h-9 rounded-full grid place-items-center shrink-0 cursor-pointer transition hover:bg-white/10'
+              style={{ color: 'var(--side-ink)' }}
+              onClick={() => setSwitcherOpen(true)}
+              title={t('switch_user')}
+              aria-label={t('switch_user')}
+            >
+              <Icon name='switch-users' size={15} />
+            </button>
+          </div>
           <button
-            className='w-full flex items-center gap-3 rounded-full px-2.5 py-2 cursor-pointer transition hover:bg-white/10 text-start'
-            style={{ color: 'var(--side-ink)' }}
-            onClick={() => setSwitcherOpen(true)}
-            title={t('switch_user')}
-          >
-            <Avatar name={user.name} size='sm' />
-            <span className='flex-1 min-w-0 leading-tight'>
-              <b
-                className='block text-[0.82rem] truncate'
-                style={{ color: '#eefaf7' }}
-              >
-                {user.name[lang]}
-              </b>
-              <span
-                className='block text-[0.7rem] truncate'
-                style={{ color: 'var(--side-ink-dim)' }}
-              >
-                {roleLabel}
-              </span>
-            </span>
-            <Icon name='switch-users' size={15} />
-          </button>
-          <button
-            className='w-full flex items-center gap-3 rounded-full px-2.5 py-2 mt-1 cursor-pointer transition hover:bg-white/10 text-start text-[0.8rem] font-medium'
+            className={`flex items-center gap-3 rounded-full cursor-pointer transition hover:bg-white/10 text-start text-[0.8rem] font-medium
+              ${collapsed ? 'w-9 h-9 justify-center' : 'self-stretch px-2.5 py-2'}`}
             style={{ color: 'var(--side-ink)' }}
             onClick={() => startTransition(() => logoutAction())}
+            title={t('logout')}
+            aria-label={t('logout')}
           >
-            <span className='w-7 h-7 grid place-items-center shrink-0'>
+            <span className={`grid place-items-center shrink-0 ${collapsed ? '' : 'w-7 h-7'}`}>
               <Icon name='log-out' size={15} />
             </span>
-            {t('logout')}
+            {!collapsed && t('logout')}
           </button>
         </div>
       </aside>

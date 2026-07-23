@@ -7,6 +7,6 @@ export * from "./orgRepository";
 export * from "./projectRepository";
 export * from "./taskRepository";
 export {
-  scopeTasks, sectionTasks, overseesTeam,
+  scopeTasks, sectionTasks, overseesTeam, canUpdateTask,
   buildNotifications, unreadCount, markAllRead,
 } from "../services/accessService";

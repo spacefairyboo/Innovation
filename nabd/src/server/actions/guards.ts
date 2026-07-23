@@ -5,21 +5,21 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "../auth/session";
 import { getTask } from "../repositories/taskRepository";
 import { getTeam, getUser } from "../repositories/orgRepository";
-import { overseesTeam } from "../services/accessService";
-import type { ChecklistItem, User } from "@/lib/types";
+import { canUpdateTask } from "../services/accessService";
+import { todayISO, type ChecklistItem, type Task, type TaskStatus, type User } from "@/lib/types";
 
 /** Revalidates every route after a mutation. */
 export function refresh(): void {
   revalidatePath("/", "layout");
 }
 
-/** May the current user modify this task? An assignee, or anyone whose role oversees its unit. */
+/** May the current user modify this task? Only an assignee (delegates are
+    assignees while a delegation is active) or the task's line manager. */
 export async function assertCanEdit(taskId: string) {
   const { user } = await getSession();
   const task = getTask(taskId);
   if (!task) throw new Error("Task not found");
-  const allowed = task.assigneeIds.includes(user.id) || overseesTeam(user, task.teamId);
-  if (!allowed) throw new Error("Not allowed");
+  if (!canUpdateTask(user, task)) throw new Error("Not allowed");
   return { user, task };
 }
 
@@ -37,6 +37,23 @@ export function vetAssignees(editor: User, ids: string[]): string[] {
     }
   }
   return clean;
+}
+
+/** A task past its due date is Delayed, and that status is locked: it can
+    only leave Delayed by moving the due date to today or later, or by being
+    completed. True = the requested status change must be dropped. */
+export function delayLocked(
+  task: Pick<Task, "status" | "due">,
+  nextStatus: TaskStatus | undefined,
+  nextDue: string | null | undefined,
+): boolean {
+  // Re-stating the stored status also counts: the visible status is Delayed,
+  // and saying "on track" would clear nothing but claim otherwise.
+  if (!nextStatus || nextStatus === "done") return false;
+  const overdue = task.status !== "done" && !!task.due && task.due < todayISO();
+  if (!overdue) return false;
+  const due = nextDue !== undefined ? nextDue : task.due;
+  return !due || due < todayISO();
 }
 
 export function sanitizeChecklist(items: ChecklistItem[]): ChecklistItem[] {

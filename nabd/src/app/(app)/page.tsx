@@ -21,6 +21,7 @@ import {
   getTeam,
   getUnit,
   getUser,
+  canUpdateTask,
   listTeams,
   listUnits,
   listUsers,
@@ -497,6 +498,37 @@ export default async function Dashboard({
   /* ---------- Default home: simple, voice-first ---------- */
   const attention = mattersMost(tasks, lang, 5);
 
+  // The briefing scopes each lead may listen to: the senior manager gets the
+  // whole department plus every section and unit; a section head their
+  // section and its units; a unit head their unit. Both narration languages
+  // are generated so the player can switch without a round trip.
+  const mkScope = (id: string, label: string, ts: Task[], roundup: boolean) => ({
+    id,
+    label,
+    en: buildPodcastScript(user, 'en', ts, roundup),
+    ar: buildPodcastScript(user, 'ar', ts, roundup),
+  });
+  const briefScopes =
+    user.role === 'senior'
+      ? [
+          mkScope('all', t('org_pulse'), tasks, true),
+          ...listUnits().map((sec) =>
+            mkScope(sec.id, `${t('unit')}: ${sec.name[lang]}`, sectionTasks(sec.id), false)),
+          ...listTeams().map((tm) =>
+            mkScope(tm.id, `${t('team')}: ${tm.name[lang]}`, teamTasks(tm.id), false)),
+        ]
+      : user.role === 'section' && user.sectionId
+        ? [
+            mkScope(user.sectionId, `${t('unit')}: ${getUnit(user.sectionId)!.name[lang]}`, sectionTasks(user.sectionId), false),
+            ...listTeams()
+              .filter((x) => x.unitId === user.sectionId)
+              .map((tm) =>
+                mkScope(tm.id, `${t('team')}: ${tm.name[lang]}`, teamTasks(tm.id), false)),
+          ]
+        : user.role === 'manager' && user.teamId
+          ? [mkScope(user.teamId, getTeam(user.teamId)!.name[lang], teamTasks(user.teamId), false)]
+          : [];
+
   const kpis = [
     {
       label: t('tasks_total'),
@@ -643,12 +675,12 @@ export default async function Dashboard({
         </div>
       </div>
 
-      {/* ---- Centerpiece: seniors hear the briefing; everyone else
-             updates their tasks by voice or text ---- */}
-      <div className='mb-20'>
-        {user.role === 'senior' ? (
-          <HomeBriefing lines={buildPodcastScript(user, lang, tasks, true)} />
-        ) : (
+      {/* ---- Centerpiece: every lead hears the briefing (scoped to what
+             they oversee); everyone below senior also updates tasks by
+             voice or text ---- */}
+      <div className='mb-20 flex flex-col gap-5'>
+        {briefScopes.length > 0 && <HomeBriefing scopes={briefScopes} />}
+        {user.role !== 'senior' && (
           <div className='card'>
             <div className='flex items-center gap-3 mb-4'>
               <span className='w-10 h-10 rounded-xl grid place-items-center bg-accent-soft text-primary shrink-0'>
@@ -664,7 +696,7 @@ export default async function Dashboard({
               </div>
             </div>
             <CheckinPanel
-              tasks={tasks}
+              tasks={tasks.filter((x) => canUpdateTask(user, x))}
               userFirstName={firstName}
               doneThisWeek={doneThisWeekCount(tasks)}
               startVoice={false}
