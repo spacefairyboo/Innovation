@@ -17,7 +17,7 @@ export function TeamBars({ rows }: { rows: TeamBarRow[] }) {
       {rows.map((r) => (
         <div key={r.id} className="flex items-center gap-3 mb-3">
           <div className="w-32 shrink-0 text-[0.82rem] font-semibold text-ink-2 truncate">{r.label}</div>
-          <div className="flex-1 flex gap-0.5 h-5.5 rounded overflow-hidden bg-surface-2">
+          <div className="flex-1 flex gap-0.5 h-5.5 rounded overflow-hidden bg-surface-2 bar-grow">
             {STATUS_ORDER.filter((s) => r.stats[s] > 0).map((s) => {
               const pct = (r.stats[s] / max) * 100;
               return (

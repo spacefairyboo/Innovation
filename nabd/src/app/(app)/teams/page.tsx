@@ -27,7 +27,7 @@ export default async function TeamsPage({ searchParams }: {
   if (user.role === "employee") notFound();
 
   const unitGrid = (teams: Team[]) => (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-4 md:grid-cols-2 rise-stagger">
       {teams.map((team) => {
         const stats = countStatuses(teamTasks(team.id));
         return (
@@ -94,7 +94,7 @@ export default async function TeamsPage({ searchParams }: {
           <h2 className="m-0 text-xl font-bold">{t("nav_teams")}</h2>
           <p className="m-0 mt-0.5 text-sm text-ink-2">{t("sections_glance_sub")}</p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 rise-stagger">
           {listUnits().map((section) => {
             const teams = listTeams().filter((x) => x.unitId === section.id);
             const stats = countStatuses(sectionTasks(section.id));
