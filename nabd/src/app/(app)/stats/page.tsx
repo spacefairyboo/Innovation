@@ -5,9 +5,10 @@
 
 import { redirect } from "next/navigation";
 import {
-  BreakdownTable, ChartCard, Donut, LineChart, ProgressBars, ProgressTable,
-  StatTiles, StatusTable, TeamBars, TeamBarsTable, TrendTable,
-  type BreakdownRow, type StatTileExtra,
+  BreakdownTable, BucketBars, BucketTable, ChartCard, Donut, LineChart,
+  ProgressBars, ProgressTable, StatTiles, StatusTable, TeamBars,
+  TeamBarsTable, TrendTable,
+  type BreakdownRow, type BucketRow, type StatTileExtra,
 } from "@/components/charts";
 import { ExportCsvButton, ScopeSelect } from "@/components/dashboard";
 import { HealthChip, Icon } from "@/components/ui";
@@ -123,6 +124,27 @@ export default async function StatsPage({ searchParams }: {
         })),
       };
 
+  // Three bucket views over the open work: when it is due, its priority,
+  // and how far along it is.
+  const open = tasks.filter((x) => x.status !== "done");
+  const inWeek = (from: string, to: string) => open.filter((x) => x.due && x.due >= from && x.due <= to).length;
+  const dueBuckets: BucketRow[] = [
+    { id: "overdue", label: t("overdue"), count: open.filter((x) => x.due && x.due < today).length },
+    { id: "today", label: t("b_today"), count: inWeek(today, today) },
+    { id: "week", label: t("tile_due_week"), count: inWeek(isoInDays(1), weekEnd) },
+    { id: "next", label: t("b_next_week"), count: inWeek(isoInDays(8), isoInDays(14)) },
+    { id: "later", label: t("b_later"), count: open.filter((x) => x.due && x.due > isoInDays(14)).length },
+    { id: "none", label: t("b_no_due"), count: open.filter((x) => !x.due).length },
+  ];
+  const prioBuckets: BucketRow[] = (["high", "med", "low"] as const).map((p) => ({
+    id: p, label: t(`prio_${p}`), count: open.filter((x) => x.priority === p).length,
+  }));
+  const progBuckets: BucketRow[] = [0, 20, 40, 60, 80].map((lo) => ({
+    id: String(lo),
+    label: `${lo}-${lo + 19}%`,
+    count: open.filter((x) => x.progress >= lo && x.progress < lo + 20).length,
+  }));
+
   const rows = groups.buckets.map((b) => ({
     id: b.id, label: b.label,
     pct: avgProgress(b.tasks), open: b.tasks.filter((x) => x.status !== "done").length,
@@ -198,6 +220,27 @@ export default async function StatsPage({ searchParams }: {
           sub={t("avg_progress_sub")}
           chart={<ProgressBars rows={rows} />}
           table={<ProgressTable rows={rows} groupLabel={groups.groupLabel} />}
+        />
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-3 items-start mb-5">
+        <ChartCard
+          title={t("due_outlook")}
+          sub={t("due_outlook_sub")}
+          chart={<BucketBars rows={dueBuckets} countLabel={t("open_tasks")} />}
+          table={<BucketTable rows={dueBuckets} groupLabel={t("bucket")} countLabel={t("open_tasks")} />}
+        />
+        <ChartCard
+          title={t("prio_mix")}
+          sub={t("prio_mix_sub")}
+          chart={<BucketBars rows={prioBuckets} countLabel={t("open_tasks")} />}
+          table={<BucketTable rows={prioBuckets} groupLabel={t("bucket")} countLabel={t("open_tasks")} />}
+        />
+        <ChartCard
+          title={t("prog_dist")}
+          sub={t("prog_dist_sub")}
+          chart={<BucketBars rows={progBuckets} countLabel={t("open_tasks")} />}
+          table={<BucketTable rows={progBuckets} groupLabel={t("progress")} countLabel={t("open_tasks")} />}
         />
       </div>
 
