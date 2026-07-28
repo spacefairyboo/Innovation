@@ -1,4 +1,4 @@
-/* The Nabd loading mark: a circular soundwave. Flowing rings of fine wavy
+/* The Echo loading mark: a circular soundwave. Flowing rings of fine wavy
    lines drift around a quiet center, two layers turning in opposite
    directions, with a slow breathing pulse. Pure SVG and CSS, so it renders
    instantly in loading states. */

@@ -175,7 +175,7 @@ export async function chatgptRespond(
   const meetings = meetingLines(user, lang, tz);
   const delegations = delegationNote(user, lang);
   const instructions = [
-    `You are the assistant inside Nabd, a bilingual task-management app. You help ${user.name[lang]} understand and manage their work.`,
+    `You are the assistant inside Echo, a bilingual task-management app. You help ${user.name[lang]} understand and manage their work.`,
     `Right now it is ${fmtDate(now, "en", tz)}, ${fmtTime(now, "en", tz)} (the user's local time). Today's date in ISO form is ${localToday(tz)}.`,
     `The tasks the user can see, from live data:`,
     tasks.length ? tasks.map((t) => taskLine(t, lang)).join("\n") : "(none)",

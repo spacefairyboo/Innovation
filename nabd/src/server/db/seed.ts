@@ -8,7 +8,7 @@ import { getDB } from "./connection";
 import { hashPassword } from "../auth/passwords";
 
 /** Every demo account signs in with this password (shown on the login page). */
-export const DEMO_PASSWORD = "nabd2026";
+export const DEMO_PASSWORD = "echo2026";
 
 /** Gives any user without credentials the demo password. */
 /** Every user gets a stable phone extension (1101, 1102, … in id order). */
@@ -82,7 +82,7 @@ export function ensureExpandedOrg(d: DatabaseSync): void {
 
 const ago = (days: number, hours = 0) => Date.now() - days * DAY_MS - hours * 3_600_000;
 const inDays = (n: number) => new Date(Date.now() + n * DAY_MS).toISOString().slice(0, 10);
-export const deriveEmail = (en: string) => `${en.toLowerCase().replace(/[^a-z ]/g, "").trim().replace(/ +/g, ".")}@nabd.example`;
+export const deriveEmail = (en: string) => `${en.toLowerCase().replace(/[^a-z ]/g, "").trim().replace(/ +/g, ".")}@echo.example`;
 
 export function seed(d: DatabaseSync) {
   // Org hierarchy: sections (units table) contain units (teams table).
@@ -189,7 +189,7 @@ export function seed(d: DatabaseSync) {
     "Urgent: payment gateway certificate expires Friday",
     "Hi Yousef, the TLS certificate on the payment gateway expires this week. Please renew it by Friday; this is urgent for the launch.",
     ago(0, 2));
-  insSugg.run("e1", "Sara Nasser", "sara.nasser@nabd.example",
+  insSugg.run("e1", "Sara Nasser", "sara.nasser@echo.example",
     "Checkout assets ready for review",
     "The new checkout illustrations are ready. Could you review them by Tuesday and confirm they fit the payment page?",
     ago(0, 6));
@@ -197,7 +197,7 @@ export function seed(d: DatabaseSync) {
     "Action required: push notification copy approval",
     "Your push notification templates need copy approval before release. Please submit the final wording by Thursday.",
     ago(1));
-  insSugg.run("m1", "Layla Al-Harbi", "layla.alharbi@nabd.example",
+  insSugg.run("m1", "Layla Al-Harbi", "layla.alharbi@echo.example",
     "Board asks for a hiring update by July 15",
     "The board would like a one-page summary of the backend hiring pipeline by July 15. No need for slides.",
     ago(0, 4));
@@ -234,27 +234,27 @@ export function seedMeetings(d: DatabaseSync) {
     orgName: string, orgEmail: string, start: number, end: number, body: string];
   const rows: M[] = [
     ["e1", "Sprint planning: Development", "Room 2A, Tech floor", null,
-      "Omar Hassan", "omar.hassan@nabd.example", ...at(0, 10), "Planning for the next sprint. Bring your estimates for the payment page work."],
+      "Omar Hassan", "omar.hassan@echo.example", ...at(0, 10), "Planning for the next sprint. Bring your estimates for the payment page work."],
     ["e1", "Payment gateway vendor call", "Microsoft Teams", teams,
       "Salem Al-Qahtani", "salem@acmecorp.example", ...at(1, 14), "Walkthrough of the certificate renewal process with the vendor's security team."],
     ["e1", "1:1 with Omar", "Omar's office", null,
-      "Omar Hassan", "omar.hassan@nabd.example", ...at(3, 9, 30), "Monthly one-to-one. Agenda: growth plan, API security review status."],
+      "Omar Hassan", "omar.hassan@echo.example", ...at(3, 9, 30), "Monthly one-to-one. Agenda: growth plan, API security review status."],
     ["e1", "Tech all-hands", "Auditorium", null,
-      "Layla Al-Harbi", "layla.alharbi@nabd.example", ...at(8, 11, 90), "Quarterly all-hands for the Technology unit."],
+      "Layla Al-Harbi", "layla.alharbi@echo.example", ...at(8, 11, 90), "Quarterly all-hands for the Technology unit."],
     ["m1", "Sprint planning: Development", "Room 2A, Tech floor", null,
-      "Omar Hassan", "omar.hassan@nabd.example", ...at(0, 10), "Planning for the next sprint."],
+      "Omar Hassan", "omar.hassan@echo.example", ...at(0, 10), "Planning for the next sprint."],
     ["m1", "Hiring panel: senior backend engineer", "Microsoft Teams", teams,
-      "HR Team", "hr@nabd.example", ...at(2, 13, 90), "Final-round interviews. Review the four candidate scorecards beforehand."],
+      "HR Team", "hr@echo.example", ...at(2, 13, 90), "Final-round interviews. Review the four candidate scorecards beforehand."],
     ["m1", "Leadership sync", "Boardroom", null,
-      "Layla Al-Harbi", "layla.alharbi@nabd.example", ...at(4, 15), "Weekly managers' sync with the senior leadership."],
+      "Layla Al-Harbi", "layla.alharbi@echo.example", ...at(4, 15), "Weekly managers' sync with the senior leadership."],
     ["s1", "Leadership sync", "Boardroom", null,
-      "Layla Al-Harbi", "layla.alharbi@nabd.example", ...at(4, 15), "Weekly managers' sync. Review team health across all units."],
+      "Layla Al-Harbi", "layla.alharbi@echo.example", ...at(4, 15), "Weekly managers' sync. Review team health across all units."],
     ["s1", "Board review: Q3 outlook", "Executive briefing room", null,
-      "Board Office", "board@nabd.example", ...at(6, 9, 120), "Quarterly review with the board. Hiring update and Q3 campaign figures on the agenda."],
+      "Board Office", "board@echo.example", ...at(6, 9, 120), "Quarterly review with the board. Hiring update and Q3 campaign figures on the agenda."],
     ["s1", "Enterprise client visit: Gulf Retail Co.", "Client HQ, King Fahd Rd", null,
       "Gulf Retail Co.", "success@gulfretail.example", ...at(9, 12, 120), "On-site visit to review the onboarding rollout."],
     ["e6", "Q3 campaign kickoff", "Marketing studio", null,
-      "Khalid Amin", "khalid.amin@nabd.example", ...at(1, 11), "Kickoff for the Q3 campaign launch. Creatives and budget split review."],
+      "Khalid Amin", "khalid.amin@echo.example", ...at(1, 11), "Kickoff for the Q3 campaign launch. Creatives and budget split review."],
     ["e8", "Onboarding feedback call: Gulf Retail", "Microsoft Teams", teams,
       "Gulf Retail Co.", "success@gulfretail.example", ...at(5, 13), "Feedback call on the enterprise onboarding kit."],
   ];

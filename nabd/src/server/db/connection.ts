@@ -13,13 +13,25 @@ import { isEmpty, seed } from "./seed";
 
 const log = logger("db");
 const DATA_DIR = path.isAbsolute(config.dataDir) ? config.dataDir : path.join(process.cwd(), config.dataDir);
-const DB_PATH = path.join(DATA_DIR, "nabd.db");
+const DB_PATH = path.join(DATA_DIR, "echo.db");
+
+/** The database predates the Echo rebrand: carry its data over once. */
+function adoptLegacyDb(): void {
+  const legacy = path.join(DATA_DIR, "nabd.db");
+  if (!fs.existsSync(legacy) || fs.existsSync(DB_PATH)) return;
+  for (const ext of ["", "-wal", "-shm"]) {
+    const from = `${legacy}${ext}`;
+    if (fs.existsSync(from)) fs.renameSync(from, `${DB_PATH}${ext}`);
+  }
+  log.info("renamed legacy database to echo.db");
+}
 
 let db: DatabaseSync | null = null;
 
 export function getDB(): DatabaseSync {
   if (db) return db;
   fs.mkdirSync(DATA_DIR, { recursive: true });
+  adoptLegacyDb();
   db = new DatabaseSync(DB_PATH);
   // Connection standards: WAL for concurrent readers, enforced foreign keys,
   // and a busy timeout so parallel server-action writes queue instead of failing.

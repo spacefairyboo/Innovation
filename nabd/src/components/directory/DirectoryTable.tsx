@@ -130,7 +130,7 @@ export function DirectoryTable({ rows, sections }: {
         columns={columns}
         rowKey={(r) => r.id}
         searchPlaceholder={t("dir_search")}
-        exportName="nabd-directory"
+        exportName="echo-directory"
       />
     </div>
   );

@@ -55,7 +55,7 @@ export default async function TeamPage({ params, searchParams }: {
         </div>
         <div className="flex-1" />
         {canManage && (
-          <ExportCsvButton rows={csvRows(tasks, lang)} filename={`nabd-${team.id}-${new Date().toISOString().slice(0, 10)}.csv`} />
+          <ExportCsvButton rows={csvRows(tasks, lang)} filename={`echo-${team.id}-${new Date().toISOString().slice(0, 10)}.csv`} />
         )}
       </div>
 

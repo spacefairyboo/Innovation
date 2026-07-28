@@ -33,7 +33,7 @@ export async function startDelegationAction(delegateId: string, endDate: string 
         ? `On ${until} the tasks will be assigned back to ${user.name.en.split(" ")[0]} automatically.`
         : `The tasks will be assigned back when ${user.name.en.split(" ")[0]} ends the delegation.`,
       ``,
-      `Nabd, your team pulse`,
+      `Echo, from your team`,
     ].join("\n"),
   });
   refresh();
@@ -52,7 +52,7 @@ export async function endDelegationAction() {
       toUser: delegate,
       kind: "delegation_ended",
       subject: `Delegation from ${user.name.en} has ended`,
-      body: `Hello ${delegate.name.en.split(" ")[0]},\n\n${user.name.en} has ended the delegation. Their tasks have been handed back. Thank you for covering.\n\nNabd, your team pulse`,
+      body: `Hello ${delegate.name.en.split(" ")[0]},\n\n${user.name.en} has ended the delegation. Their tasks have been handed back. Thank you for covering.\n\nEcho, from your team`,
     });
   }
   refresh();
@@ -75,7 +75,7 @@ export async function delegateTaskAction(taskId: string, delegateId: string, end
     kind: "delegation",
     taskId,
     subject: `"${task.title.en}" has been delegated to you`,
-    body: `Hello ${delegate.name.en.split(" ")[0]},\n\n${user.name.en} has delegated the task "${task.title.en}" to you${until ? ` until ${until}` : ""}. You'll find it under My Tasks.\n\n${until ? `On ${until} it will be assigned back to ${owner.name.en.split(" ")[0]} automatically.` : `It will be assigned back when the delegation is ended.`}\n\nNabd, your team pulse`,
+    body: `Hello ${delegate.name.en.split(" ")[0]},\n\n${user.name.en} has delegated the task "${task.title.en}" to you${until ? ` until ${until}` : ""}. You'll find it under My Tasks.\n\n${until ? `On ${until} it will be assigned back to ${owner.name.en.split(" ")[0]} automatically.` : `It will be assigned back when the delegation is ended.`}\n\nEcho, from your team`,
   });
   refresh();
 }

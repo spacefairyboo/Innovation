@@ -46,7 +46,7 @@ export function HomeBriefing({ scopes }: { scopes: BriefScope[] }) {
         .filter((v) => matchesLang(v, spoken))
         .sort((a, b) => naturalScore(a) - naturalScore(b) || a.name.localeCompare(b.name));
       setVoices(forLang);
-      const saved = localStorage.getItem(`nabd-voice-${spoken}`);
+      const saved = localStorage.getItem(`echo-voice-${spoken}`);
       setVoiceURI(saved && forLang.some((v) => v.voiceURI === saved) ? saved : (forLang[0]?.voiceURI ?? ""));
     };
     load();
@@ -96,7 +96,7 @@ export function HomeBriefing({ scopes }: { scopes: BriefScope[] }) {
 
   const pickVoice = (uri: string) => {
     setVoiceURI(uri);
-    localStorage.setItem(`nabd-voice-${spoken}`, uri);
+    localStorage.setItem(`echo-voice-${spoken}`, uri);
     if (playing && !paused) playLine(idxRef.current, rate, uri);
   };
 

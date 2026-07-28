@@ -3,8 +3,8 @@ import type { Lang } from './types';
 
 export const I18N: Record<Lang, Record<string, string>> = {
   en: {
-    appName: 'Nabd',
-    appTag: 'Team Pulse',
+    appName: 'Echo',
+    appTag: 'Team Echo',
     // nav
     nav_dashboard: 'Dashboard',
     nav_mytasks: 'My Tasks',
@@ -77,8 +77,8 @@ export const I18N: Record<Lang, Record<string, string>> = {
     login_btn: 'Sign in',
     login_error: 'Wrong email or password. Please try again.',
     login_demo_hint:
-      'Demo: sign in as any teammate, like omar.hassan@nabd.example, with the password',
-    login_hero: "Your team's pulse, the moment you sign in.",
+      'Demo: sign in as any teammate, like omar.hassan@echo.example, with the password',
+    login_hero: "Your team's voice, clear from the moment you sign in.",
     login_hero_sub:
       'Tasks, delegation, briefings, and insight. Bilingual, spoken, and always up to date.',
     login_footer:
@@ -493,8 +493,8 @@ export const I18N: Record<Lang, Record<string, string>> = {
   },
 
   ar: {
-    appName: 'نبض',
-    appTag: 'نبض الفريق',
+    appName: 'صدى',
+    appTag: 'صدى الفريق',
     nav_dashboard: 'لوحة المتابعة',
     nav_mytasks: 'مهامي',
     nav_advisor: 'المستشار',
@@ -566,8 +566,8 @@ export const I18N: Record<Lang, Record<string, string>> = {
     login_btn: 'تسجيل الدخول',
     login_error: 'البريد أو كلمة المرور غير صحيحة. حاول مرة أخرى.',
     login_demo_hint:
-      'تجريبي: سجّل الدخول بأي حساب (مثل omar.hassan@nabd.example) وكلمة المرور',
-    login_hero: 'نبض فريقك، لحظة تسجيل دخولك.',
+      'تجريبي: سجّل الدخول بأي حساب (مثل omar.hassan@echo.example) وكلمة المرور',
+    login_hero: 'صوت فريقك واضح من لحظة تسجيل دخولك.',
     login_hero_sub:
       'المهام والتفويض والملخصات والرؤى، بلغتين، منطوقة، ومحدثة دائمًا.',
     login_footer:

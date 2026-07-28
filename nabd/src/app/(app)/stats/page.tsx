@@ -172,7 +172,7 @@ export default async function StatsPage({ searchParams }: {
           />
         )}
         <HealthChip health={health} pill prefix={`${t("health_overall")}: `} />
-        <ExportCsvButton rows={csvRows(tasks, lang)} filename={`nabd-stats-${new Date().toISOString().slice(0, 10)}.csv`} />
+        <ExportCsvButton rows={csvRows(tasks, lang)} filename={`echo-stats-${new Date().toISOString().slice(0, 10)}.csv`} />
       </div>
 
       <StatTiles stats={stats} extras={extras} />

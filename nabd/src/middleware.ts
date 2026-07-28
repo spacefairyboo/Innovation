@@ -3,7 +3,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 
-const SESSION_COOKIE = "nabd_uid";
+const SESSION_COOKIE = "echo_uid";
 
 export function middleware(request: NextRequest) {
   const hasSession = request.cookies.has(SESSION_COOKIE);

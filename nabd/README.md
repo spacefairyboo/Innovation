@@ -1,6 +1,6 @@
-# 💠 Nabd (نبض) — Team Pulse · Web App
+# 💠 Echo (صدى) · Team Web App
 
-Full-stack rewrite of the Nabd prototype: **Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SQLite** (`node:sqlite`, zero native deps).
+Full-stack rewrite of the Echo prototype: **Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · SQLite** (`node:sqlite`, zero native deps).
 
 ```bash
 npm install
@@ -9,7 +9,7 @@ npm run build && npm start   # production
 npm run lint
 ```
 
-The SQLite database is created and seeded on first request at `data/nabd.db` (gitignored). "Reset demo data" in the user switcher reseeds it.
+The SQLite database is created and seeded on first request at `data/echo.db` (gitignored). "Reset demo data" in the user switcher reseeds it.
 
 ## Architecture
 
