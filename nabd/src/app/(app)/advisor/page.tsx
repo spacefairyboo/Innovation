@@ -1,44 +1,37 @@
-/* The Advisor — "what should I do next?" answered from live task data,
-   with step-by-step guidance and prepared emails, per persona. */
+/* The Advisor — pick a task and the AI writes the step-by-step plan to
+   complete it, technical detail included. Fully AI: no canned plans. */
 
-import { AdvisorActionCard } from "@/components/advisor";
-import { Icon } from "@/components/ui";
-import { buildAdvisorPlan } from "@/server/services/advisorService";
+import { AdvisorPanel, type AdvisorTaskOption } from "@/components/advisor";
 import { makeT } from "@/lib/i18n";
+import { effStatus } from "@/lib/types";
+import { scopeTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 
 export default async function AdvisorPage() {
   const { user, lang } = await getSession();
   const t = makeT(lang);
-  const plan = buildAdvisorPlan(user, lang);
+
+  // Open work only, the urgent first: blocked, overdue, then by due date.
+  const rank = { blocked: 0, delayed: 1, pending: 2, ontrack: 3, done: 9 } as const;
+  const tasks: AdvisorTaskOption[] = scopeTasks(user)
+    .filter((x) => x.status !== "done")
+    .sort((a, b) => rank[effStatus(a)] - rank[effStatus(b)] || (a.due ?? "9999").localeCompare(b.due ?? "9999"))
+    .slice(0, 60)
+    .map((x) => ({
+      id: x.id,
+      title: x.title[lang],
+      eff: effStatus(x),
+      progress: x.progress,
+      due: x.due,
+    }));
 
   return (
     <>
       <div className="mb-5">
         <h2 className="m-0 text-xl font-bold">{t("nav_advisor")}</h2>
-        <p className="m-0 mt-0.5 text-sm text-ink-2">{t("advisor_sub")}</p>
+        <p className="m-0 mt-0.5 text-sm text-ink-2 max-w-prose">{t("advisor_sub")}</p>
       </div>
-
-      <div
-        className="rounded-2xl p-5 mb-5 flex gap-4 items-start text-sm"
-        style={{ background: "linear-gradient(120deg, var(--accent-soft), transparent 70%)", border: "1px solid var(--line)" }}
-      >
-        <span className="w-10 h-10 rounded-xl grid place-items-center bg-surface text-primary shrink-0 border border-line">
-          <Icon name="lightbulb" size={19} />
-        </span>
-        <p className="m-0 text-ink-2 leading-6">{plan.intro}</p>
-      </div>
-
-      <div className="flex flex-col gap-4">
-        {plan.actions.map((a, i) => <AdvisorActionCard key={a.id} action={a} index={i} />)}
-      </div>
-
-      {plan.actions.length === 0 && (
-        <div className="card text-center text-ink-3 py-12 text-sm">
-          <Icon name="shield-check" size={32} className="mx-auto mb-2 opacity-60" />
-          {t("advisor_empty")}
-        </div>
-      )}
+      <AdvisorPanel tasks={tasks} />
     </>
   );
 }

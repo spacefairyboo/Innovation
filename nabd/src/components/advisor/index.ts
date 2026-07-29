@@ -1,1 +1,1 @@
-export * from "./AdvisorActionCard";
+export { AdvisorPanel, type AdvisorTaskOption } from "./AdvisorPanel";

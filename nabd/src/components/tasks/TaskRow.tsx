@@ -39,7 +39,7 @@ export function TaskRow({ vm, mine, canEdit, canNudge, showTeam, onOpen }: {
   const editable = vm.editable !== undefined ? vm.editable : (mine || canEdit);
 
   return (
-    <div className="flex items-center gap-4 py-3.5 border-b border-grid last:border-b-0 group">
+    <div className="flex items-center gap-4 py-3.5 border-b border-grid last:border-b-0 group row-hover px-2 -mx-2">
       <span
         className="w-9 h-9 rounded-xl grid place-items-center shrink-0"
         style={{ background: `var(--st-${eff}-bg)`, color: `var(--st-${eff})` }}
