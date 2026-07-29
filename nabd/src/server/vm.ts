@@ -32,7 +32,7 @@ export function toVM(task: Task, viewer?: User): TaskVM {
     teamName: team.name,
     assignees,
     activity: taskActivity(task.id),
-    checklist: getChecklist(task.id),
+    checklist: viewer ? getChecklist(task.id, viewer.id) : [],
     value: taskValue(task),
     projectName: task.projectId ? (getProject(task.projectId)?.name ?? null) : null,
     editable: viewer ? canUpdateTask(viewer, task) : undefined,

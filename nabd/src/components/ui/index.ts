@@ -6,4 +6,5 @@ export { DataTable, type DataColumn } from "./DataTable";
 export { HealthChip } from "./HealthChip";
 export { PulseLoader, EchoMark } from "./PulseLoader";
 export { GlassIcon } from "./GlassIcon";
+export { Select, type SelectOption } from "./Select";
 export { relTime, dueInfo } from "./dateTime";

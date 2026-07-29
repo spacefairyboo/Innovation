@@ -4,6 +4,7 @@
    scope their data to one section (or anything else) without client state. */
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { Select } from "@/components/ui";
 
 export function ScopeSelect({ param, value, allLabel, options, label }: {
   param: string;
@@ -23,14 +24,11 @@ export function ScopeSelect({ param, value, allLabel, options, label }: {
   };
 
   return (
-    <select
-      className="field-input !w-auto !py-2 text-sm"
+    <Select
+      ariaLabel={label}
       value={value}
-      onChange={(e) => apply(e.target.value)}
-      aria-label={label}
-    >
-      <option value="">{allLabel}</option>
-      {options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-    </select>
+      onChange={apply}
+      options={[{ value: "", label: allLabel }, ...options.map((o) => ({ value: o.id, label: o.label }))]}
+    />
   );
 }

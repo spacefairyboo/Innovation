@@ -10,7 +10,7 @@ export function ChartCard({ title, sub, chart, table }: {
   const { t } = useI18n();
   const [mode, setMode] = useState<"chart" | "table">("chart");
   return (
-    <div className="card h-full flex flex-col">
+    <div className="card chart-glass h-full flex flex-col">
       <div className="flex items-start gap-2.5 mb-3">
         <div>
           <h3 className="m-0 text-base font-bold">{title}</h3>

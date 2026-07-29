@@ -288,7 +288,7 @@ export default async function StatsPage({ searchParams }: {
                 table={<TeamBarsTable rows={projBarRows} />}
               />
             </div>
-            <div className="card">
+            <div className="card chart-glass">
               <div className="mb-3">
                 <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
                   <Icon name="folder" size={16} className="text-ink-3" /> {t("brk_title")}
@@ -309,7 +309,7 @@ export default async function StatsPage({ searchParams }: {
               chart={<LineChart points={trend} seriesLabel={t("st_done")} />}
               table={<TrendTable points={trend} seriesLabel={t("st_done")} />}
             />
-            <div className="card h-full flex flex-col">
+            <div className="card chart-glass h-full flex flex-col">
               <div className="mb-3">
                 <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
                   <Icon name="award" size={16} className="text-ink-3" /> {t("leaderboard")}
@@ -393,7 +393,7 @@ export default async function StatsPage({ searchParams }: {
             />
           </div>
 
-          <div className="card">
+          <div className="card chart-glass">
             <div className="mb-3">
               <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
                 <Icon name="list-checks" size={16} className="text-ink-3" /> {t("brk_title")}

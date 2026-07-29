@@ -8,3 +8,4 @@ export { NewTaskButton } from "./NewTaskButton";
 export { ActivityLog } from "./ActivityLog";
 export { ChecklistEditor } from "./ChecklistEditor";
 export { TaskFullView } from "./TaskFullView";
+export { TaskReaderView } from "./TaskReaderView";

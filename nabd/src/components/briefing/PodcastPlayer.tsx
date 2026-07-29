@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/components/providers';
-import { Icon } from '@/components/ui';
+import { Icon, Select } from '@/components/ui';
 import { naturalScore, voiceGender } from './voiceUtils';
 
 const BARS = 64;
@@ -350,69 +350,54 @@ export function PodcastPlayer({
             ))}
           </div>
           {scopeOptions && (
-            <select
-              className='rounded-xl px-2.5 py-2 text-sm border border-white/20 bg-white/10 text-white [&>option]:text-ink [&>option]:bg-surface'
+            <Select
+              variant='glass'
+              ariaLabel={t('podcast_scope')}
               value={scope}
-              onChange={(e) => {
+              onChange={(v) => {
                 stop();
-                router.push(`/podcast?scope=${e.target.value}`);
+                router.push(`/podcast?scope=${v}`);
               }}
-            >
-              {scopeOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+              options={scopeOptions.map((o) => ({ value: o.value, label: o.label }))}
+            />
           )}
           {voices.length > 0 && (
-            <select
-              className='rounded-xl px-2.5 py-2 text-sm border border-white/20 bg-white/10 text-white max-w-56 [&>option]:text-ink [&>option]:bg-surface [&>optgroup]:text-ink [&>optgroup]:bg-surface'
-              value={voiceURI}
-              onChange={(e) => {
-                pickVoice(e.target.value);
-                if (playing && !paused)
-                  playLine(idxRef.current, rate, e.target.value);
-              }}
+            <Select
+              variant='glass'
+              className='max-w-56'
               title={t('voice')}
-            >
-              {(['female', 'male', 'other'] as const).map((g) => {
-                const group = voices.filter((v) => voiceGender(v) === g);
-                if (!group.length) return null;
-                return (
-                  <optgroup
-                    key={g}
-                    label={t(
+              ariaLabel={t('voice')}
+              value={voiceURI}
+              onChange={(v) => {
+                pickVoice(v);
+                if (playing && !paused) playLine(idxRef.current, rate, v);
+              }}
+              options={(['female', 'male', 'other'] as const).flatMap((g) =>
+                voices
+                  .filter((v) => voiceGender(v) === g)
+                  .map((v) => ({
+                    value: v.voiceURI,
+                    label: v.name.replace(/^Microsoft |^Google |\(.*\)$/g, '').trim(),
+                    group: t(
                       g === 'female'
                         ? 'voice_female'
                         : g === 'male'
                           ? 'voice_male'
                           : 'voice_other',
-                    )}
-                  >
-                    {group.map((v) => (
-                      <option key={v.voiceURI} value={v.voiceURI}>
-                        {v.name
-                          .replace(/^Microsoft |^Google |\(.*\)$/g, '')
-                          .trim()}
-                      </option>
-                    ))}
-                  </optgroup>
-                );
-              })}
-            </select>
+                    ),
+                  })))}
+            />
           )}
-          <select
-            className='rounded-xl px-2.5 py-2 text-sm border border-white/20 bg-white/10 text-white [&>option]:text-ink [&>option]:bg-surface'
+          <Select
+            variant='glass'
+            ariaLabel={t('podcast_speed')}
             value={String(rate)}
-            onChange={(e) => changeRate(Number(e.target.value))}
-          >
-            {[0.8, 1, 1.25, 1.5].map((r) => (
-              <option key={r} value={r}>
-                {t('podcast_speed')} {r}×
-              </option>
-            ))}
-          </select>
+            onChange={(v) => changeRate(Number(v))}
+            options={[0.8, 1, 1.25, 1.5].map((r) => ({
+              value: String(r),
+              label: `${t('podcast_speed')} ${r}×`,
+            }))}
+          />
           {/* <p className="m-0 text-xs inline-flex items-center gap-1.5 basis-full" style={{ color: "#7fa89e" }}>
             <Icon name="lock" size={12} /> {t("podcast_voice_note")}
           </p> */}

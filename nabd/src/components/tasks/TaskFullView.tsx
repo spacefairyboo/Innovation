@@ -8,7 +8,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { removeTask, saveTask } from "@/app/actions";
 import { useI18n, useToast } from "@/components/providers";
-import { dueInfo, Icon, relTime, StatusChip } from "@/components/ui";
+import { dueInfo, Icon, relTime, Select, StatusChip } from "@/components/ui";
 import { ActivityLog } from "./ActivityLog";
 import { AssigneePicker } from "./AssigneePicker";
 import { ChecklistEditor } from "./ChecklistEditor";
@@ -203,11 +203,19 @@ export function TaskFullView({ vm, canEdit, assignees, colleagues, backHref }: {
             </label>
             <label className="block">
               <span className="block text-xs font-semibold text-ink-2 mb-1.5">{t("priority")}</span>
-              <select className="field-input" value={priority} disabled={!canEdit} onChange={(e) => setPriority(e.target.value as Priority)}>
-                <option value="high">{t("prio_high")}</option>
-                <option value="med">{t("prio_med")}</option>
-                <option value="low">{t("prio_low")}</option>
-              </select>
+              <Select
+                className="w-full"
+                size="md"
+                ariaLabel={t("priority")}
+                value={priority}
+                disabled={!canEdit}
+                onChange={(v) => setPriority(v as Priority)}
+                options={[
+                  { value: "high", label: t("prio_high") },
+                  { value: "med", label: t("prio_med") },
+                  { value: "low", label: t("prio_low") },
+                ]}
+              />
             </label>
           </div>
 

@@ -144,8 +144,8 @@ export function taskActivity(taskId: string): ActivityEvent[] {
 }
 
 /* ---------- task notes ("note to self" checklist) ---------- */
-export function getChecklist(taskId: string): ChecklistItem[] {
-  const row = getDB().prepare("SELECT checklist_items FROM task_notes WHERE task_id = ?").get(taskId) as { checklist_items: string } | undefined;
+export function getChecklist(taskId: string, userId: string): ChecklistItem[] {
+  const row = getDB().prepare("SELECT checklist_items FROM task_notes WHERE task_id = ? AND user_id = ?").get(taskId, userId) as { checklist_items: string } | undefined;
   if (!row) return [];
   try {
     const parsed = JSON.parse(row.checklist_items);
@@ -157,11 +157,11 @@ export function getChecklist(taskId: string): ChecklistItem[] {
   }
 }
 
-export function saveChecklist(taskId: string, items: ChecklistItem[]): void {
+export function saveChecklist(taskId: string, userId: string, items: ChecklistItem[]): void {
   getDB().prepare(`
-    INSERT INTO task_notes (task_id, checklist_items) VALUES (?, ?)
-    ON CONFLICT(task_id) DO UPDATE SET checklist_items = excluded.checklist_items
-  `).run(taskId, JSON.stringify(items));
+    INSERT INTO task_notes (task_id, user_id, checklist_items) VALUES (?, ?, ?)
+    ON CONFLICT(task_id, user_id) DO UPDATE SET checklist_items = excluded.checklist_items
+  `).run(taskId, userId, JSON.stringify(items));
 }
 
 /* ---------- saved AI advice (latest plan per task) ---------- */

@@ -5,7 +5,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { delegateTaskAction, endTaskDelegationAction } from "@/app/actions";
 import { useI18n, useToast } from "@/components/providers";
-import { Icon } from "@/components/ui";
+import { Icon, Select } from "@/components/ui";
 import type { AssigneeOption, TaskVM } from "./types";
 
 export
@@ -57,12 +57,17 @@ function TaskDelegationCard({ vm, colleagues }: { vm: TaskVM; colleagues: Assign
         <>
           <p className="m-0 mb-2.5 text-xs text-ink-3 leading-5">{t("task_delegation_sub")}</p>
           <div className="flex flex-col gap-2">
-            <select className="field-input" value={delegateId} onChange={(e) => setDelegateId(e.target.value)}>
-              <option value="">{t("delegation_pick")}</option>
-              {options.map((c) => (
-                <option key={c.id} value={c.id}>{c.name[lang]} — {c.teamName[lang]}</option>
-              ))}
-            </select>
+            <Select
+              className="w-full"
+              size="md"
+              ariaLabel={t("delegation_pick")}
+              value={delegateId}
+              onChange={setDelegateId}
+              options={[
+                { value: "", label: t("delegation_pick") },
+                ...options.map((c) => ({ value: c.id, label: `${c.name[lang]} — ${c.teamName[lang]}` })),
+              ]}
+            />
             <input
               type="date" className="field-input" min={today || undefined} value={endDate}
               aria-label={t("delegation_end_date")}

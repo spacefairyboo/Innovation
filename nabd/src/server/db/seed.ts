@@ -123,7 +123,7 @@ export function seed(d: DatabaseSync) {
   );
   const insUpd = d.prepare("INSERT INTO task_updates (task_id, ts, by_id, text_en, text_ar, status, progress) VALUES (?,?,?,?,?,?,?)");
   const insAudit = d.prepare("INSERT INTO audit_logs (task_id, changed_by, ts, field, old_value, new_value) VALUES (?,?,?,?,?,?)");
-  const insNote = d.prepare("INSERT INTO task_notes (task_id, checklist_items) VALUES (?,?)");
+  const insNote = d.prepare("INSERT INTO task_notes (task_id, user_id, checklist_items) VALUES (?,?,?)");
   type SeedTask = [id: string, owner: string, team: string, status: string, progress: number, prio: string,
     en: string, arTitle: string, due: string, updatedAt: number, noteEn: string, noteAr: string];
   const rows: SeedTask[] = [
@@ -171,12 +171,12 @@ export function seed(d: DatabaseSync) {
   insAudit.run("k9", "m2", ago(4), "assignee", "e4", "e5");
 
   // Seed a couple of personal checklists ("note to self").
-  insNote.run("k1", JSON.stringify([
+  insNote.run("k1", "e1", JSON.stringify([
     { text: "Test with saved cards", done: true },
     { text: "Verify RTL layout of the form", done: false },
     { text: "Ask QA for a regression pass", done: false },
   ]));
-  insNote.run("k16", JSON.stringify([
+  insNote.run("k16", "e8", JSON.stringify([
     { text: "Confirm churn KPI formula", done: true },
     { text: "Draft dashboard wireframe", done: false },
   ]));

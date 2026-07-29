@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { removeTask, saveTask } from "@/app/actions";
 import { useI18n, useToast } from "@/components/providers";
-import { Icon, Modal } from "@/components/ui";
+import { Icon, Modal, Select } from "@/components/ui";
 import { ActivityLog } from "./ActivityLog";
 import { AssigneePicker } from "./AssigneePicker";
 import { ChecklistEditor } from "./ChecklistEditor";
@@ -180,21 +180,35 @@ export function TaskModal({ vm, assignees, projects, onClose }: {
             <input type="date" className="field-input" value={due} onChange={(e) => setDue(e.target.value)} />
           </Field>
           <Field label={t("priority")}>
-            <select className="field-input" value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-              <option value="high">{t("prio_high")}</option>
-              <option value="med">{t("prio_med")}</option>
-              <option value="low">{t("prio_low")}</option>
-            </select>
+            <Select
+              className="w-full"
+              size="md"
+              ariaLabel={t("priority")}
+              value={priority}
+              onChange={(v) => setPriority(v as Priority)}
+              options={[
+                { value: "high", label: t("prio_high") },
+                { value: "med", label: t("prio_med") },
+                { value: "low", label: t("prio_low") },
+              ]}
+            />
           </Field>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t("project")}>
-            <select className="field-input" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-              <option value="">{t("project_none")}</option>
-              {(projects ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              <option value={NEW_PROJECT}>{t("project_new")}</option>
-            </select>
+            <Select
+              className="w-full"
+              size="md"
+              ariaLabel={t("project")}
+              value={projectId}
+              onChange={setProjectId}
+              options={[
+                { value: "", label: t("project_none") },
+                ...(projects ?? []).map((p) => ({ value: p.id, label: p.name })),
+                { value: NEW_PROJECT, label: t("project_new") },
+              ]}
+            />
           </Field>
           <Field label={t("tags")}>
             <input

@@ -65,7 +65,7 @@ function taskContext(task: Task, user: User, lang: Lang): string {
     .filter((h) => h.text[lang] || h.text.en)
     .slice(0, 5)
     .map((h) => `- ${new Date(h.ts).toISOString().slice(0, 10)}: ${h.text[lang] || h.text.en}`);
-  const checklist = getChecklist(task.id).map((c) => `- [${c.done ? "x" : " "}] ${c.text}`);
+  const checklist = getChecklist(task.id, user.id).map((c) => `- [${c.done ? "x" : " "}] ${c.text}`);
   return [
     `Today: ${todayISO()}`,
     `Task: ${task.title[lang] || task.title.en}`,

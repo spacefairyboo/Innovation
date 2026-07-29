@@ -59,9 +59,10 @@ export function migrate(d: DatabaseSync) {
     );
     CREATE INDEX IF NOT EXISTS idx_audit_task ON audit_logs(task_id, ts DESC);
     CREATE TABLE IF NOT EXISTS task_notes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      task_id TEXT NOT NULL UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
-      checklist_items TEXT NOT NULL DEFAULT '[]'
+      task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      checklist_items TEXT NOT NULL DEFAULT '[]',
+      PRIMARY KEY (task_id, user_id)
     );
     CREATE TABLE IF NOT EXISTS notif_reads (
       user_id TEXT NOT NULL, notif_id TEXT NOT NULL,
@@ -151,6 +152,24 @@ export function migrate(d: DatabaseSync) {
   // Databases created before the creation-date release: backfill from the first update.
   const taskCols = d.prepare("SELECT name FROM pragma_table_info('tasks')").all() as { name: string }[];
   if (!taskCols.some((c) => c.name === "created_at")) d.exec("ALTER TABLE tasks ADD COLUMN created_at INTEGER");
+  // Notes to self used to be shared per task; they are private per person
+  // now. Legacy rows move to the task's owner, their most likely author.
+  const noteCols = d.prepare("SELECT name FROM pragma_table_info('task_notes')").all() as { name: string }[];
+  if (!noteCols.some((c) => c.name === "user_id")) {
+    d.exec(`
+      CREATE TABLE task_notes_v2 (
+        task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id),
+        checklist_items TEXT NOT NULL DEFAULT '[]',
+        PRIMARY KEY (task_id, user_id)
+      );
+      INSERT OR IGNORE INTO task_notes_v2 (task_id, user_id, checklist_items)
+        SELECT n.task_id, t.owner_id, n.checklist_items
+        FROM task_notes n JOIN tasks t ON t.id = n.task_id;
+      DROP TABLE task_notes;
+      ALTER TABLE task_notes_v2 RENAME TO task_notes;
+    `);
+  }
   // Databases created before task descriptions lack tasks.description.
   if (!taskCols.some((c) => c.name === "description")) d.exec("ALTER TABLE tasks ADD COLUMN description TEXT");
   // Databases created before task origins were tracked lack tasks.source.
