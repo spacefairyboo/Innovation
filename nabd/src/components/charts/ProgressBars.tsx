@@ -9,14 +9,14 @@ export function ProgressBars({ rows }: { rows: ProgressRow[] }) {
   const { t } = useI18n();
   return (
     <div>
-      {rows.map((r) => (
+      {rows.map((r, i) => (
         <div key={r.id} className="flex items-center gap-3 mb-3">
           <div className="w-36 shrink-0 text-[0.82rem] font-semibold text-ink-2 truncate">{r.label}</div>
           <div
             className="flex-1 h-4 rounded overflow-hidden bg-surface-2 cursor-pointer"
             data-tt={`${r.label}|${t("progress")}: ${r.pct}%`}
           >
-            <div className="h-full rounded-e bar-grow" style={{ width: `${r.pct}%`, background: "var(--primary)" }} />
+            <div className="h-full rounded-e bar-grow" style={{ width: `${r.pct}%`, background: "var(--primary)", animationDelay: `${0.1 + i * 0.05}s` }} />
           </div>
           <div className="w-10 text-xs font-semibold text-ink-2 tabular-nums text-end">{r.pct}%</div>
         </div>

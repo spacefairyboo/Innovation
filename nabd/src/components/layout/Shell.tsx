@@ -126,7 +126,7 @@ export function Shell({
             className='w-9 h-9 rounded-2xl grid place-items-center text-white font-bold text-base shadow-md shrink-0'
             style={{ background: 'linear-gradient(135deg, #2a9686, #46c7b4)' }}
           >
-            N
+            E
           </span>
           {!collapsed && (
             <span
