@@ -5,9 +5,9 @@
 
 import { redirect } from "next/navigation";
 import {
-  BreakdownTable, BucketBars, BucketTable, ChartCard, Donut, LineChart,
-  ProgressBars, ProgressTable, StatTiles, StatusTable, TeamBars,
-  TeamBarsTable, TrendTable,
+  ArcChart, BreakdownTable, BucketBars, BucketTable, ChartCard, ColumnChart,
+  Donut, LineChart, ProgressBars, ProgressTable, RadialBars, StatTiles,
+  StatusTable, TeamBars, TeamBarsTable, TrendTable,
   type BreakdownRow, type BucketRow, type StatTileExtra,
 } from "@/components/charts";
 import { ExportCsvButton, ScopeSelect } from "@/components/dashboard";
@@ -130,28 +130,35 @@ export default async function StatsPage({ searchParams }: {
   // and how far along it is.
   const open = tasks.filter((x) => x.status !== "done");
   const inWeek = (from: string, to: string) => open.filter((x) => x.due && x.due >= from && x.due <= to).length;
+  // Urgency wears the status scale: hot near the deadline, calm past it.
   const dueBuckets: BucketRow[] = [
-    { id: "overdue", label: t("overdue"), count: open.filter((x) => x.due && x.due < today).length },
-    { id: "today", label: t("b_today"), count: inWeek(today, today) },
-    { id: "week", label: t("tile_due_week"), count: inWeek(isoInDays(1), weekEnd) },
-    { id: "next", label: t("b_next_week"), count: inWeek(isoInDays(8), isoInDays(14)) },
-    { id: "later", label: t("b_later"), count: open.filter((x) => x.due && x.due > isoInDays(14)).length },
-    { id: "none", label: t("b_no_due"), count: open.filter((x) => !x.due).length },
+    { id: "overdue", label: t("overdue"), color: "var(--ch-delayed)", count: open.filter((x) => x.due && x.due < today).length },
+    { id: "today", label: t("b_today"), color: "var(--ch-pending)", count: inWeek(today, today) },
+    { id: "week", label: t("tile_due_week"), color: "var(--ch-ontrack)", count: inWeek(isoInDays(1), weekEnd) },
+    { id: "next", label: t("b_next_week"), color: "var(--ch-done)", count: inWeek(isoInDays(8), isoInDays(14)) },
+    { id: "later", label: t("b_later"), color: "color-mix(in srgb, var(--ch-done) 55%, var(--surface-2))", count: open.filter((x) => x.due && x.due > isoInDays(14)).length },
+    { id: "none", label: t("b_no_due"), color: "color-mix(in srgb, var(--ink-3) 55%, var(--surface-2))", count: open.filter((x) => !x.due).length },
   ];
+  const PRIO_COLORS = { high: "var(--ch-blocked)", med: "var(--ch-pending)", low: "var(--ch-done)" } as const;
   const prioBuckets: BucketRow[] = (["high", "med", "low"] as const).map((p) => ({
-    id: p, label: t(`prio_${p}`), count: open.filter((x) => x.priority === p).length,
+    id: p, label: t(`prio_${p}`), color: PRIO_COLORS[p],
+    count: open.filter((x) => x.priority === p).length,
   }));
-  const progBuckets: BucketRow[] = [0, 20, 40, 60, 80].map((lo) => ({
+  // A sequential single-hue ramp: darker means further along.
+  const progBuckets: BucketRow[] = [0, 20, 40, 60, 80].map((lo, i) => ({
     id: String(lo),
     label: `${lo}-${lo + 19}%`,
+    color: `color-mix(in srgb, var(--accent) ${35 + i * 16}%, var(--surface-2))`,
     count: open.filter((x) => x.progress >= lo && x.progress < lo + 20).length,
   }));
+  // Staleness runs green to red.
+  const AGE_COLORS = ["var(--ch-done)", "var(--ch-pending)", "var(--ch-delayed)", "var(--ch-blocked)"];
   const ageBuckets: BucketRow[] = [
     { id: "fresh", label: t("age_fresh"), count: open.filter((x) => daysSince(x.updatedAt) < 3).length },
     { id: "week", label: t("age_week"), count: open.filter((x) => daysSince(x.updatedAt) >= 3 && daysSince(x.updatedAt) <= 7).length },
     { id: "two", label: t("age_two_weeks"), count: open.filter((x) => daysSince(x.updatedAt) > 7 && daysSince(x.updatedAt) <= 14).length },
     { id: "stale", label: t("age_stale"), count: open.filter((x) => daysSince(x.updatedAt) > 14).length },
-  ];
+  ].map((b, i) => ({ ...b, color: AGE_COLORS[i] }));
   // Completions per weekday, from every completion in the history.
   const dayName = new Intl.DateTimeFormat(lang === "ar" ? "ar" : "en", { weekday: "short" });
   const weekdayCounts = new Array(7).fill(0);
@@ -244,13 +251,13 @@ export default async function StatsPage({ searchParams }: {
         <ChartCard
           title={t("due_outlook")}
           sub={t("due_outlook_sub")}
-          chart={<BucketBars rows={dueBuckets} countLabel={t("open_tasks")} />}
+          chart={<ColumnChart rows={dueBuckets} countLabel={t("open_tasks")} />}
           table={<BucketTable rows={dueBuckets} groupLabel={t("bucket")} countLabel={t("open_tasks")} />}
         />
         <ChartCard
           title={t("prio_mix")}
           sub={t("prio_mix_sub")}
-          chart={<BucketBars rows={prioBuckets} countLabel={t("open_tasks")} />}
+          chart={<ArcChart slices={prioBuckets.map((b) => ({ id: b.id, label: b.label, value: b.count, color: b.color! }))} centerLabel={t("open_tasks")} />}
           table={<BucketTable rows={prioBuckets} groupLabel={t("bucket")} countLabel={t("open_tasks")} />}
         />
       </div>
@@ -260,7 +267,7 @@ export default async function StatsPage({ searchParams }: {
         <ChartCard
           title={t("prog_dist")}
           sub={t("prog_dist_sub")}
-          chart={<BucketBars rows={progBuckets} countLabel={t("open_tasks")} />}
+          chart={<ColumnChart rows={progBuckets} countLabel={t("open_tasks")} />}
           table={<BucketTable rows={progBuckets} groupLabel={t("progress")} countLabel={t("open_tasks")} />}
         />
         <ChartCard
@@ -272,7 +279,7 @@ export default async function StatsPage({ searchParams }: {
         <ChartCard
           title={t("weekday_title")}
           sub={t("weekday_sub")}
-          chart={<BucketBars rows={weekdayBuckets} countLabel={t("st_done")} />}
+          chart={<RadialBars rows={weekdayBuckets} countLabel={t("st_done")} />}
           table={<BucketTable rows={weekdayBuckets} groupLabel={t("bucket")} countLabel={t("st_done")} />}
         />
       </div>

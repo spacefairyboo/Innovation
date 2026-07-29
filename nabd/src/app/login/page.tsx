@@ -40,7 +40,7 @@ export default async function LoginPage() {
             </span>
           </div>
           <div className="max-w-md">
-            <h1 className="m-0 text-4xl font-bold text-white leading-snug [text-shadow:0_2px_18px_rgb(6_40_30/0.4)]">
+            <h1 className="m-0 text-4xl font-bold text-white leading-snug [text-shadow:0_1px_3px_rgb(6_40_30/0.35),0_2px_22px_rgb(6_40_30/0.55)]">
               {t("login_hero")}
             </h1>
             <p className="mt-4 text-[0.95rem] leading-7" style={{ color: "rgb(238 250 243 / 0.85)" }}>
