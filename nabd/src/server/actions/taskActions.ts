@@ -54,6 +54,8 @@ function resolveAssignee(user: User, name: string): User | null {
 export async function saveTask(input: {
   id?: string;
   title: string;
+  /** Free-form context; empty string clears it. */
+  description?: string;
   due: string | null;
   priority: Priority;
   status?: TaskStatus;
@@ -70,6 +72,9 @@ export async function saveTask(input: {
   const { user } = await getSession();
   const title = boundedText(input.title, 200);
   if (!title) throw new Error("Title required");
+  const description = input.description === undefined
+    ? undefined
+    : (boundedText(input.description, 4000) ?? null);
   const due = validDate(input.due);
   const priority = validPriority(input.priority);
   const status = validStatus(input.status);
@@ -85,7 +90,7 @@ export async function saveTask(input: {
     const locked = delayLocked(task, status, due);
     updateTask(
       input.id,
-      { title, due, priority, status: locked ? undefined : status, progress, assigneeIds, tags, projectId },
+      { title, description, due, priority, status: locked ? undefined : status, progress, assigneeIds, tags, projectId },
       note ? { en: note, ar: note } : null,
       editor.id,
     );
@@ -100,7 +105,7 @@ export async function saveTask(input: {
       ? [user.id]
       : vetAssignees(user, input.assigneeIds?.length ? input.assigneeIds : fallback);
     const task = createTask({
-      title, assigneeIds, due, priority, createdBy: user.id,
+      title, description: description ?? null, assigneeIds, due, priority, createdBy: user.id,
       tags, projectId: projectId ?? null,
     });
     if (input.checklist?.length) saveChecklist(task.id, sanitizeChecklist(input.checklist));

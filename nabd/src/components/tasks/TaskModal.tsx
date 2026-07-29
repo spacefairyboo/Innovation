@@ -35,6 +35,7 @@ export function TaskModal({ vm, assignees, projects, onClose }: {
   const [pending, startTransition] = useTransition();
   const task = vm?.task ?? null;
   const [title, setTitle] = useState(task ? task.title[lang] : "");
+  const [description, setDescription] = useState(task?.description ?? "");
   const [due, setDue] = useState(task?.due ?? "");
   const [priority, setPriority] = useState<Priority>(task?.priority ?? "med");
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? "pending");
@@ -63,7 +64,7 @@ export function TaskModal({ vm, assignees, projects, onClose }: {
     if (!title.trim()) return;
     startTransition(async () => {
       await saveTask({
-        id: task?.id, title, due: due || null, priority,
+        id: task?.id, title, description, due: due || null, priority,
         status: task ? status : undefined,
         progress: task ? progress : undefined,
         assigneeIds: assigneeIds.length ? assigneeIds : undefined,
@@ -117,6 +118,15 @@ export function TaskModal({ vm, assignees, projects, onClose }: {
       <div className="flex flex-col gap-4">
         <Field label={t("task_title")}>
           <input className="field-input" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus={!task} />
+        </Field>
+
+        <Field label={t("task_desc")}>
+          <textarea
+            className="field-input min-h-20 resize-y"
+            placeholder={t("task_desc_ph")}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
         </Field>
 
         {task && (

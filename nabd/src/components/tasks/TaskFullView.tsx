@@ -50,6 +50,7 @@ export function TaskFullView({ vm, canEdit, assignees, colleagues, backHref }: {
   const [pending, startTransition] = useTransition();
   const { task } = vm;
   const [title, setTitle] = useState(task.title[lang]);
+  const [description, setDescription] = useState(task.description ?? "");
   const [due, setDue] = useState(task.due ?? "");
   const [priority, setPriority] = useState<Priority>(task.priority);
   const [status, setStatus] = useState<TaskStatus>(task.status);
@@ -78,7 +79,7 @@ export function TaskFullView({ vm, canEdit, assignees, colleagues, backHref }: {
     if (!title.trim()) return;
     startTransition(async () => {
       await saveTask({
-        id: task.id, title, due: due || null, priority, status, progress,
+        id: task.id, title, description, due: due || null, priority, status, progress,
         assigneeIds, note: note || undefined, checklist,
       });
       setNote("");
@@ -138,6 +139,17 @@ export function TaskFullView({ vm, canEdit, assignees, colleagues, backHref }: {
           <label className="block">
             <span className="block text-xs font-semibold text-ink-2 mb-1.5">{t("task_title")}</span>
             <input className="field-input" value={title} disabled={!canEdit} onChange={(e) => setTitle(e.target.value)} />
+          </label>
+
+          <label className="block">
+            <span className="block text-xs font-semibold text-ink-2 mb-1.5">{t("task_desc")}</span>
+            <textarea
+              className="field-input min-h-24 resize-y"
+              placeholder={canEdit ? t("task_desc_ph") : undefined}
+              value={description}
+              disabled={!canEdit}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </label>
 
           <div>

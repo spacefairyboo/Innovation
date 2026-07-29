@@ -17,9 +17,11 @@ import { countStatuses } from "@/lib/types";
 import { doneThisWeekCount, toVM } from "@/server/vm";
 
 export default async function MyTasksPage({ searchParams }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; status?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, status } = await searchParams;
+  const EFF = ["done", "ontrack", "pending", "delayed", "blocked"] as const;
+  const statusF = EFF.find((s) => s === status);
   const { user, lang } = await getSession();
   const t = makeT(lang);
   const senior = user.role === "senior";
@@ -65,7 +67,7 @@ export default async function MyTasksPage({ searchParams }: {
         <NewTaskButton assignees={assignees} projects={projects} />
       </div>
 
-      <StatTiles stats={stats} />
+      <StatTiles stats={stats} filterable />
 
       <TaskTabs
         suggestions={<EmailSuggestions suggestions={pendingSuggestions(user.id)} />}
@@ -83,7 +85,8 @@ export default async function MyTasksPage({ searchParams }: {
         assignees={assignees}
         projects={projects}
         initialQuery={q}
-        key={q ?? ""}
+        initialStatus={statusF}
+        key={`${q ?? ""}|${statusF ?? ""}`}
       />
     </>
   );
