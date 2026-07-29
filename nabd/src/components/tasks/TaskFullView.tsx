@@ -66,8 +66,8 @@ export function TaskFullView({ vm, canEdit, assignees, colleagues, backHref }: {
     && (!due || due < todayISO());
   // Deterministic date format — locale formatting can differ between the
   // server's ICU and the browser's, breaking hydration.
-  const cd = new Date(task.createdAt);
-  const createdStr = `${cd.getDate()}/${cd.getMonth() + 1}/${cd.getFullYear()}`;
+  // Same YYYY-MM-DD style the due date uses, so the chips read as a pair.
+  const createdStr = new Date(task.createdAt).toISOString().slice(0, 10);
 
   const toggleAssignee = (id: string) =>
     setAssigneeIds((ids) => ids.includes(id)

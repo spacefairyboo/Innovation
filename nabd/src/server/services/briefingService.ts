@@ -1,6 +1,6 @@
 /* Server-side builders for the smart-insight line and the podcast narrative. */
 
-import { buildNotifications, getTeam, getUser, listTeams, scopeTasks, teamTasks } from "../repositories";
+import { buildNotifications, getTeam, getUnit, getUser, listTeams, scopeTasks, teamTasks } from "../repositories";
 import { makeT } from "@/lib/i18n";
 import {
   DAY_MS, type Lang, type Task, type User,
@@ -122,12 +122,29 @@ export function buildPodcastScript(user: User, lang: Lang, tasks: Task[], includ
 
   /* Unit roundup for the org-wide view */
   if (includeTeamRoundup) {
+    // Generic unit names repeat across sections ("Unit 1" exists in four of
+    // them), so each name is qualified with its section when ambiguous.
+    const teams = listTeams();
+    const nameCounts = new Map<string, number>();
+    for (const team of teams) {
+      nameCounts.set(team.name[lang], (nameCounts.get(team.name[lang]) ?? 0) + 1);
+    }
+    const label = (team: (typeof teams)[number]) => {
+      const bare = team.name[lang];
+      if ((nameCounts.get(bare) ?? 0) < 2) return bare;
+      const section = getUnit(team.unitId);
+      return section ? `${bare} (${section.name[lang]})` : bare;
+    };
     const byHealth: Record<string, string[]> = { great: [], ok: [], risk: [] };
-    for (const team of listTeams()) {
-      byHealth[teamHealth(countStatuses(teamTasks(team.id)))].push(team.name[lang]);
+    for (const team of teams) {
+      byHealth[teamHealth(countStatuses(teamTasks(team.id)))].push(label(team));
     }
     const parts: string[] = [];
-    if (byHealth.great.length) parts.push(ar
+    // A long healthy list is noise when spoken: state the count instead.
+    if (byHealth.great.length > 3) parts.push(ar
+      ? `${byHealth.great.length} وحدات بوضع جيد`
+      : `${byHealth.great.length} units healthy`);
+    else if (byHealth.great.length) parts.push(ar
       ? `${prose(byHealth.great, lang)} بوضع جيد`
       : `${prose(byHealth.great, lang)} healthy`);
     if (byHealth.ok.length) parts.push(ar

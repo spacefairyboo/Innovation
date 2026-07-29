@@ -603,25 +603,24 @@ export default async function Dashboard({
         )}
       </div>
 
-      <div className='mb-2'>
-        <h3 className='m-0 text-base font-bold'>{t('matters_title')}</h3>
-        <p className='m-0 text-xs text-ink-3'>{t('matters_sub')}</p>
-      </div>
       {/* ---- The short list that matters ---- */}
-      <div className='card mb-8'>
-        <div className='flex items-start gap-2'>
-          <div className='flex-1' />
-          <Link
-            href='/tasks'
-            className='text-xs font-semibold text-primary no-underline inline-flex items-center gap-0.5 shrink-0'
-          >
-            {t('view_all')}{' '}
-            <Icon
-              name={lang === 'ar' ? 'chevron-left' : 'chevron-right'}
-              size={13}
-            />
-          </Link>
+      <div className='mb-2 flex items-end gap-3'>
+        <div className='flex-1 min-w-0'>
+          <h3 className='m-0 text-base font-bold'>{t('matters_title')}</h3>
+          <p className='m-0 text-xs text-ink-3'>{t('matters_sub')}</p>
         </div>
+        <Link
+          href='/tasks'
+          className='text-xs font-semibold text-primary no-underline inline-flex items-center gap-0.5 shrink-0 mb-0.5'
+        >
+          {t('view_all')}{' '}
+          <Icon
+            name={lang === 'ar' ? 'chevron-left' : 'chevron-right'}
+            size={13}
+          />
+        </Link>
+      </div>
+      <div className='card mb-8'>
         <AttentionList items={attention} canNudge={user.role !== 'employee'} />
       </div>
 

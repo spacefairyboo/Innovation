@@ -118,7 +118,7 @@ export const I18N: Record<Lang, Record<string, string>> = {
     needs_attention_sub: 'Blocked or delayed tasks in your scope',
     matters_title: 'What matters today',
     matters_sub:
-      'Only the items that needs your attention. The full picture is in Statistics.',
+      'Only the items that need your attention. The full picture is in Statistics.',
     view_all: 'View all',
     home_briefing_title: 'Your daily briefing',
     home_briefing_sub:
@@ -139,6 +139,7 @@ export const I18N: Record<Lang, Record<string, string>> = {
     view_table: 'Table',
     view_chart: 'Chart',
     members: 'Members',
+    member_one: 'Member',
     active_tasks: 'active tasks',
     // my tasks
     my_tasks_sub: 'Update manually, in chat, or by voice',
@@ -658,6 +659,7 @@ export const I18N: Record<Lang, Record<string, string>> = {
     view_table: 'جدول',
     view_chart: 'رسم',
     members: 'الأعضاء',
+    member_one: 'عضو واحد',
     active_tasks: 'مهام نشطة',
     my_tasks_sub: 'حدّث يدويًا أو عبر المحادثة أو بصوتك',
     all_tasks_title: 'كل المهام',
