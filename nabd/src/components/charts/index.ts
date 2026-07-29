@@ -1,6 +1,9 @@
 export { StatTiles, type StatTileExtra } from "./StatTiles";
 export { BreakdownTable, type BreakdownRow } from "./BreakdownTable";
 export { BucketBars, BucketTable, type BucketRow } from "./BucketBars";
+export { ColumnChart, type ColumnRow } from "./ColumnChart";
+export { ArcChart, type ArcSlice } from "./ArcChart";
+export { RadialBars, type RadialRow } from "./RadialBars";
 export { StatusTable } from "./StatusTable";
 export { ChartCard } from "./ChartCard";
 export { Donut } from "./Donut";

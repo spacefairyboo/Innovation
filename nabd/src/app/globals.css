@@ -363,6 +363,13 @@ body::after {
 @keyframes bar-grow {
   from { transform: scaleX(0); }
 }
+@keyframes col-grow {
+  from { transform: scaleY(0); }
+}
+.col-grow {
+  transform-origin: bottom;
+  animation: col-grow 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
 .bar-grow { animation: bar-grow 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both; }
 [dir="ltr"] .bar-grow { transform-origin: 0% 50%; }
 [dir="rtl"] .bar-grow { transform-origin: 100% 50%; }
@@ -377,17 +384,22 @@ body::after {
   .chart-draw,
   .chart-fill-fade,
   .donut-sweep,
-  .bar-grow { animation: none !important; }
+  .bar-grow,
+  .col-grow { animation: none !important; }
   .chart-draw { stroke-dasharray: none; stroke-dashoffset: 0; }
 }
 
-/* ---------- Login: animated aurora gradient ---------- */
+/* ---------- Login: animated fluid gradient ----------
+   Modeled on the reference clip: full-bleed fields of vivid color sweep
+   across the viewport while the whole scene slowly cycles hue, so the
+   page drifts through blue, mint, and sunlit green phases. */
 
 .aurora {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background: linear-gradient(155deg, #8fb04a 0%, #4e8f62 38%, #1c4f41 100%);
+  background: linear-gradient(140deg, #1f8fd0 0%, #17a586 52%, #9ecb45 115%);
+  animation: au-hue 21s ease-in-out infinite;
 }
 .aurora > span {
   position: absolute;
@@ -396,37 +408,38 @@ body::after {
   will-change: transform;
 }
 .aurora .au-lime {
-  width: 55vw; height: 55vw; top: -18%; inset-inline-start: 12%;
-  background: radial-gradient(circle, rgb(214 232 120 / 0.9), transparent 65%);
+  width: 75vw; height: 75vw; top: -30%; inset-inline-start: -10%;
+  background: radial-gradient(circle, rgb(226 238 110 / 0.95), transparent 62%);
   filter: blur(70px);
-  animation: au-drift-1 24s ease-in-out infinite alternate;
+  animation: au-sweep-1 13s ease-in-out infinite alternate;
 }
 .aurora .au-blue {
-  width: 48vw; height: 48vw; top: 24%; inset-inline-end: -12%;
-  background: radial-gradient(circle, rgb(174 205 232 / 0.85), transparent 65%);
+  width: 80vw; height: 80vw; top: 5%; inset-inline-end: -25%;
+  background: radial-gradient(circle, rgb(41 128 220 / 0.9), transparent 64%);
   filter: blur(80px);
-  animation: au-drift-2 30s ease-in-out infinite alternate;
+  animation: au-sweep-2 16s ease-in-out infinite alternate;
 }
 .aurora .au-teal {
-  width: 52vw; height: 52vw; bottom: -22%; inset-inline-start: -14%;
-  background: radial-gradient(circle, rgb(70 199 180 / 0.55), transparent 65%);
-  filter: blur(90px);
-  animation: au-drift-3 27s ease-in-out infinite alternate;
+  width: 85vw; height: 85vw; bottom: -35%; inset-inline-start: -20%;
+  background: radial-gradient(circle, rgb(64 214 170 / 0.9), transparent 62%);
+  filter: blur(85px);
+  animation: au-sweep-3 14s ease-in-out infinite alternate;
 }
+/* Soft white bloom, like the highlight that blooms through the clip */
 .aurora .au-deep {
-  width: 45vw; height: 45vw; bottom: -12%; inset-inline-end: 8%;
-  background: radial-gradient(circle, rgb(10 55 38 / 0.75), transparent 70%);
-  filter: blur(70px);
-  animation: au-drift-2 34s ease-in-out infinite alternate-reverse;
+  width: 55vw; height: 55vw; top: 18%; inset-inline-start: 28%;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.8), transparent 60%);
+  filter: blur(90px);
+  animation: au-sweep-2 19s ease-in-out infinite alternate-reverse;
 }
 /* The white light shaft falling across the scene */
 .aurora .au-shaft {
-  width: 24vw; height: 160%; top: -30%; inset-inline-start: 34%;
+  width: 26vw; height: 170%; top: -35%; inset-inline-start: 30%;
   border-radius: 40%;
-  background: linear-gradient(rgb(255 255 255 / 0.85), rgb(255 255 255 / 0) 70%);
+  background: linear-gradient(rgb(255 255 255 / 0.8), rgb(255 255 255 / 0) 70%);
   filter: blur(55px);
   transform: rotate(18deg);
-  animation: au-shaft 26s ease-in-out infinite alternate;
+  animation: au-shaft 15s ease-in-out infinite alternate;
 }
 /* Film grain, like the reference photograph */
 .aurora::after {
@@ -438,23 +451,30 @@ body::after {
   mix-blend-mode: overlay;
 }
 [data-theme="dark"] .aurora {
-  background: linear-gradient(155deg, #45611f 0%, #2b5c3c 38%, #0d2c24 100%);
+  background: linear-gradient(140deg, #14608c 0%, #12735e 52%, #6a8c2c 115%);
 }
-@keyframes au-drift-1 {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to { transform: translate3d(-9%, 12%, 0) scale(1.18); }
+/* The scene's slow color journey: teal, into blue, into sunlit green */
+@keyframes au-hue {
+  0%, 100% { filter: hue-rotate(0deg) saturate(1); }
+  33% { filter: hue-rotate(-38deg) saturate(1.1); }
+  66% { filter: hue-rotate(30deg) saturate(1.05); }
 }
-@keyframes au-drift-2 {
-  from { transform: translate3d(0, 0, 0) scale(1.1); }
-  to { transform: translate3d(8%, -10%, 0) scale(0.94); }
+/* Big fluid sweeps: each field crosses most of the viewport */
+@keyframes au-sweep-1 {
+  from { transform: translate3d(-18%, -12%, 0) scale(0.85); }
+  to { transform: translate3d(55%, 30%, 0) scale(1.35); }
 }
-@keyframes au-drift-3 {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to { transform: translate3d(12%, -7%, 0) scale(1.22); }
+@keyframes au-sweep-2 {
+  from { transform: translate3d(20%, -15%, 0) scale(1.25); }
+  to { transform: translate3d(-45%, 22%, 0) scale(0.9); }
+}
+@keyframes au-sweep-3 {
+  from { transform: translate3d(-12%, 18%, 0) scale(1); }
+  to { transform: translate3d(40%, -28%, 0) scale(1.45); }
 }
 @keyframes au-shaft {
-  from { transform: rotate(14deg) translateX(-4%); opacity: 0.75; }
-  to { transform: rotate(22deg) translateX(6%); opacity: 1; }
+  from { transform: rotate(12deg) translateX(-14%); opacity: 0.6; }
+  to { transform: rotate(24deg) translateX(16%); opacity: 1; }
 }
 /* Frosted glass panel that adapts to the active theme */
 .glass-card {
@@ -467,5 +487,5 @@ body::after {
   border-color: color-mix(in srgb, #ffffff 14%, transparent);
 }
 @media (prefers-reduced-motion: reduce) {
-  .aurora > span { animation: none !important; }
+  .aurora, .aurora > span { animation: none !important; }
 }
