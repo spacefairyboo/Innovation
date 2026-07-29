@@ -1,10 +1,11 @@
 /* The Advisor — pick a task and the AI writes the step-by-step plan to
    complete it, technical detail included. Fully AI: no canned plans. */
 
-import { AdvisorPanel, type AdvisorTaskOption } from "@/components/advisor";
+import { AdvisorPanel, type AdvisorTaskOption, type SavedPlans } from "@/components/advisor";
 import { makeT } from "@/lib/i18n";
 import { effStatus } from "@/lib/types";
 import { scopeTasks } from "@/server/repositories";
+import { savedAdviceFor } from "@/server/services/advisorService";
 import { getSession } from "@/server/auth/session";
 
 export default async function AdvisorPage() {
@@ -25,13 +26,20 @@ export default async function AdvisorPage() {
       due: x.due,
     }));
 
+  // Plans already on record show instantly instead of a blank stage.
+  const saved: SavedPlans = {};
+  for (const x of tasks) {
+    const s = savedAdviceFor(user, x.id);
+    if (s && s.lang === lang) saved[x.id] = { advice: s.advice, createdAt: s.createdAt };
+  }
+
   return (
     <>
       <div className="mb-5">
         <h2 className="m-0 text-xl font-bold">{t("nav_advisor")}</h2>
         <p className="m-0 mt-0.5 text-sm text-ink-2 max-w-prose">{t("advisor_sub")}</p>
       </div>
-      <AdvisorPanel tasks={tasks} />
+      <AdvisorPanel tasks={tasks} saved={saved} />
     </>
   );
 }

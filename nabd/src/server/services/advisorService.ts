@@ -7,7 +7,7 @@
 import OpenAI from "openai";
 import { config } from "../config";
 import { logger } from "../logger";
-import { getChecklist, getTeam, getUnit, getUser, scopeTasks } from "../repositories";
+import { getChecklist, getTaskAdvice, getTeam, getUnit, getUser, saveTaskAdvice, scopeTasks } from "../repositories";
 import { effStatus, todayISO, type Lang, type Task, type User } from "@/lib/types";
 
 const log = logger("advisor");
@@ -19,14 +19,21 @@ const client = config.openai.enabled
 
 export interface AdviceStep {
   title: string;
-  /** One or two sentences: what this step achieves. Always visible. */
+  /** One short sentence: what this step achieves. Always visible. */
   summary: string;
-  /** The full how-to, concrete and practical. Shown on expand. */
-  detail: string;
+  /** The how-to as short bullet points. Shown on expand. */
+  bullets: string[];
   /** Commands, templates, checklists, standards. Rendered monospaced. */
   technical?: string;
   /** Rough effort, e.g. "45 min". */
   effort?: string;
+}
+
+/** A ready-to-send email the plan calls for. */
+export interface AdviceEmail {
+  to: string;
+  subject: string;
+  body: string;
 }
 
 export interface TaskAdvice {
@@ -34,6 +41,14 @@ export interface TaskAdvice {
   steps: AdviceStep[];
   risks: string[];
   doneWhen: string[];
+  emails: AdviceEmail[];
+}
+
+/** A saved plan, as shown on the task page. */
+export interface SavedAdvice {
+  advice: TaskAdvice;
+  lang: Lang;
+  createdAt: number;
 }
 
 export type AdviceResult =
@@ -65,18 +80,25 @@ function taskContext(task: Task, user: User, lang: Lang): string {
 }
 
 const SCHEMA_HINT = `{
-  "overview": "2-3 sentences sizing up the task and the plan",
+  "overview": "at most 2 short sentences sizing up the task and the plan",
   "steps": [
     {
       "title": "short imperative step name",
-      "summary": "1-2 sentences: what this step achieves and why now",
-      "detail": "the full how-to: concrete sub-actions, decisions, who to involve, what to produce",
+      "summary": "one short sentence: what this step achieves",
+      "bullets": ["3-6 crisp how-to bullets, each under 15 words: sub-actions, decisions, who to involve, what to produce"],
       "technical": "optional: exact commands, queries, templates, tool settings, standards or file structures - plain text",
       "effort": "optional rough effort like '30 min' or '2 h'"
     }
   ],
-  "risks": ["what could go wrong and the guard for it"],
-  "doneWhen": ["verifiable acceptance criteria"]
+  "risks": ["short bullet: what could go wrong and the guard for it"],
+  "doneWhen": ["short verifiable acceptance criterion"],
+  "emails": [
+    {
+      "to": "recipient name or role, e.g. 'Omar Hassan (line manager)'",
+      "subject": "ready-to-send subject line",
+      "body": "the complete email body, plain text, signed with the requester's first name"
+    }
+  ]
 }`;
 
 /** Strip a possible markdown fence and parse the model's JSON. */
@@ -89,21 +111,38 @@ function parseAdvice(text: string): TaskAdvice | null {
     const j = JSON.parse(raw.slice(start, end + 1)) as Partial<TaskAdvice>;
     if (!j || typeof j.overview !== "string" || !Array.isArray(j.steps) || j.steps.length === 0) return null;
     const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+    const list = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && !!x.trim()) : []);
     const steps: AdviceStep[] = j.steps
       .map((s) => ({
         title: str((s as AdviceStep).title) ?? "",
         summary: str((s as AdviceStep).summary) ?? "",
-        detail: str((s as AdviceStep).detail) ?? "",
+        bullets: list((s as AdviceStep).bullets),
         technical: str((s as AdviceStep).technical),
         effort: str((s as AdviceStep).effort),
       }))
-      .filter((s) => s.title && (s.summary || s.detail));
+      .filter((s) => s.title && (s.summary || s.bullets.length));
     if (!steps.length) return null;
-    const list = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && !!x.trim()) : []);
-    return { overview: j.overview.trim(), steps, risks: list(j.risks), doneWhen: list(j.doneWhen) };
+    const emails: AdviceEmail[] = (Array.isArray(j.emails) ? j.emails : [])
+      .map((e) => ({
+        to: str((e as AdviceEmail).to) ?? "",
+        subject: str((e as AdviceEmail).subject) ?? "",
+        body: str((e as AdviceEmail).body) ?? "",
+      }))
+      .filter((e) => e.subject && e.body);
+    return { overview: j.overview.trim(), steps, risks: list(j.risks), doneWhen: list(j.doneWhen), emails };
   } catch {
     return null;
   }
+}
+
+/** The saved plan for a task the viewer can see, if one exists. */
+export function savedAdviceFor(user: User, taskId: string): SavedAdvice | null {
+  if (!scopeTasks(user).some((t) => t.id === taskId)) return null;
+  const row = getTaskAdvice(taskId);
+  if (!row) return null;
+  const advice = parseAdvice(row.adviceJson);
+  if (!advice) return null;
+  return { advice, lang: row.lang === "ar" ? "ar" : "en", createdAt: row.createdAt };
 }
 
 /* ---------------- entry point ---------------- */
@@ -116,9 +155,10 @@ export async function adviseOnTask(user: User, taskId: string, lang: Lang): Prom
   const instructions = [
     `You are Echo's task advisor: a senior delivery coach and domain expert embedded in a bilingual task-management platform.`,
     `Write a step-by-step plan that takes this task from its current state to completed.`,
-    `Be concrete and willing to go technical: name the exact artifacts to produce, questions to ask, tools, commands, templates, or standards that apply. Never pad with generic advice.`,
-    `4 to 8 steps, ordered. Each step: a short title, a 1-2 sentence summary, and a detail section with the full how-to. Put commands, queries, templates, or file structures in the "technical" field as plain text.`,
+    `Be concise above all: short sentences, crisp bullets, no filler. Be concrete and willing to go technical: name the exact artifacts, tools, commands, templates, or standards that apply. Never pad with generic advice.`,
+    `4 to 8 steps, ordered. Each step: a short title, a one-sentence summary, and 3-6 how-to bullets. Put commands, queries, templates, or file structures in the "technical" field as plain text.`,
     `Also list the main risks with their guards, and verifiable done-when criteria.`,
+    `When the plan needs someone contacted (a blocker owner, the manager, a stakeholder), write the complete ready-to-send email in "emails": real recipient from the context, subject, and a short professional body signed with the requester's first name. Omit "emails" when none is needed.`,
     lang === "ar"
       ? `Write every value in Modern Standard Arabic (keep technical commands, code, and product names in their original form).`
       : `Write every value in English.`,
@@ -138,6 +178,8 @@ export async function adviseOnTask(user: User, taskId: string, lang: Lang): Prom
       log.warn("advisor: model returned unparseable plan");
       return { ok: false, error: "failed" };
     }
+    // Keep the latest plan on record: the task page shows it from now on.
+    saveTaskAdvice(task.id, lang, JSON.stringify(advice), user.id);
     return { ok: true, advice };
   } catch (err) {
     log.warn(`advisor request failed: ${err instanceof Error ? err.message : err}`);

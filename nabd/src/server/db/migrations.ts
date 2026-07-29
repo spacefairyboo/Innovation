@@ -133,6 +133,13 @@ export function migrate(d: DatabaseSync) {
       created_by TEXT REFERENCES users(id),
       ts INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS task_advice (
+      task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+      lang TEXT NOT NULL,
+      advice TEXT NOT NULL,
+      created_by TEXT REFERENCES users(id),
+      created_at INTEGER NOT NULL
+    );
   `);
   // Databases created before the profile release lack user preference columns.
   const prefCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];

@@ -163,6 +163,33 @@ export function saveChecklist(taskId: string, items: ChecklistItem[]): void {
   `).run(taskId, JSON.stringify(items));
 }
 
+/* ---------- saved AI advice (latest plan per task) ---------- */
+
+export interface SavedAdviceRow {
+  adviceJson: string;
+  lang: string;
+  createdBy: string | null;
+  createdAt: number;
+}
+
+export function saveTaskAdvice(taskId: string, lang: string, adviceJson: string, byId: string): void {
+  getDB().prepare(`
+    INSERT INTO task_advice (task_id, lang, advice, created_by, created_at) VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(task_id) DO UPDATE SET
+      lang = excluded.lang, advice = excluded.advice,
+      created_by = excluded.created_by, created_at = excluded.created_at
+  `).run(taskId, lang, adviceJson, byId, Date.now());
+}
+
+export function getTaskAdvice(taskId: string): SavedAdviceRow | null {
+  const row = getDB().prepare(
+    "SELECT advice, lang, created_by, created_at FROM task_advice WHERE task_id = ?",
+  ).get(taskId) as { advice: string; lang: string; created_by: string | null; created_at: number } | undefined;
+  return row
+    ? { adviceJson: row.advice, lang: row.lang, createdBy: row.created_by, createdAt: row.created_at }
+    : null;
+}
+
 /* ---------- writes ---------- */
 type TaskPatch = Partial<Pick<Task, "status" | "progress" | "priority" | "due" | "tags" | "projectId">>
   & { title?: string; assigneeIds?: string[] };
