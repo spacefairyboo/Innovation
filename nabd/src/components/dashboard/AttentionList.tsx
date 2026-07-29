@@ -32,7 +32,7 @@ export function AttentionList({ items, canNudge = false }: { items: AttentionIte
   return (
     <div>
       {items.map((x) => (
-        <div key={x.id} className="flex items-center gap-3 py-3.5 border-b border-grid last:border-b-0 last:pb-1 first:pt-1">
+        <div key={x.id} className="flex items-center gap-3 py-3.5 border-b border-grid last:border-b-0 last:pb-1 first:pt-1 row-hover px-2 -mx-2">
           <div className="flex-1 min-w-0">
             <div className="text-sm font-bold truncate">{x.title}</div>
             <div className="text-xs text-ink-3 truncate mt-0.5">{x.ownerName} · {x.teamLabel}</div>

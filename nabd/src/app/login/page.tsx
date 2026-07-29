@@ -2,7 +2,7 @@
    viewport is a slow-drifting aurora gradient with a film-grain finish; the
    form floats on frosted glass above it. */
 
-import { LoginForm } from "@/components/auth";
+import { LoginBackdrop, LoginForm } from "@/components/auth";
 import { Icon } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
 import { getSession } from "@/server/auth/session";
@@ -15,11 +15,16 @@ export default async function LoginPage() {
   return (
     <div className="relative min-h-screen">
       <div className="aurora" aria-hidden>
-        <span className="au-lime" />
-        <span className="au-blue" />
-        <span className="au-teal" />
-        <span className="au-deep" />
-        <span className="au-shaft" />
+        <div className="au-css">
+          <span className="au-lime" />
+          <span className="au-blue" />
+          <span className="au-teal" />
+          <span className="au-deep" />
+          <span className="au-shaft" />
+        </div>
+        {/* WebGL mesh gradient on top; the CSS layers behind it are the
+            no-WebGL fallback, and the grain overlay stays above both. */}
+        <LoginBackdrop />
       </div>
 
       <div className="relative min-h-screen grid lg:grid-cols-2 items-center gap-10 px-6 py-10 lg:px-16 max-w-7xl mx-auto">

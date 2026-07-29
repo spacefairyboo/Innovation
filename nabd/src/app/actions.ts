@@ -16,4 +16,5 @@ export { savePreferences, setLang, setTheme, switchUser } from "@/server/actions
 export { emailMyBriefing, markNotificationsRead, resetDemo } from "@/server/actions/systemActions";
 export { loginAction, logoutAction } from "@/server/actions/authActions";
 export { askAssistant } from "@/server/actions/assistantActions";
+export { adviseTaskAction } from "@/server/actions/advisorActions";
 export { reviewDocsAction } from "@/server/actions/toolActions";

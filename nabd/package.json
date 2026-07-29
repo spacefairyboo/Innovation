@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@paper-design/shaders-react": "^0.0.78",
     "@types/three": "^0.185.1",
     "dictionary-en": "^4.0.0",
     "docx": "^9.7.1",
