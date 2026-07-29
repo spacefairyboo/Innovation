@@ -23,7 +23,7 @@ export function StatTiles({ stats, extras = [] }: { stats: StatusCounts; extras?
     ...extras,
   ];
   return (
-    <div className="grid gap-3 mb-5 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
+    <div className="grid gap-3 mb-5 rise-stagger [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
       {tiles.map((x) => (
         <div key={x.label} className="card relative overflow-hidden !p-4 flex flex-col gap-1.5">
           <span className="absolute start-0 top-0 bottom-0 w-1" style={{ background: x.edge }} />

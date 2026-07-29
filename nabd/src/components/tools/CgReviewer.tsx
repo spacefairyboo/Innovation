@@ -7,7 +7,7 @@
 import { useRef, useState, useTransition } from "react";
 import { reviewDocsAction } from "@/app/actions";
 import { useI18n } from "@/components/providers";
-import { Icon } from "@/components/ui";
+import { Icon, PulseLoader } from "@/components/ui";
 import type { ReviewedDoc } from "@/server/actions/toolActions";
 
 const KIND_META: Record<string, { icon: string; color: string; labelKey: string }> = {
@@ -147,7 +147,11 @@ export function CgReviewer() {
           <Icon name={pending ? "history" : "sparkles"} size={16} />
           {pending ? t("cg_running") : t("cg_run")}
         </button>
-        {pending && <span className="text-sm text-ink-2">{t("cg_running_hint")}</span>}
+        {pending && (
+          <span className="inline-flex items-center gap-2.5 text-sm text-ink-2">
+            <PulseLoader size={34} /> {t("cg_running_hint")}
+          </span>
+        )}
         {error && <span className="text-sm font-semibold" style={{ color: "var(--st-blocked)" }}>{error}</span>}
       </div>
 

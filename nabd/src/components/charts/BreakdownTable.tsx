@@ -83,7 +83,7 @@ export function BreakdownTable({ rows, groupLabel }: {
       columns={columns}
       rowKey={(r) => r.id}
       searchPlaceholder={t("dir_search")}
-      exportName="nabd-breakdown"
+      exportName="echo-breakdown"
     />
   );
 }

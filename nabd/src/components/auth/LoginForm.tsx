@@ -34,7 +34,7 @@ export function LoginForm({ labels }: {
           autoFocus
           defaultValue={state.email ?? ""}
           className="field-input"
-          placeholder="omar.hassan@nabd.example"
+          placeholder="omar.hassan@echo.example"
         />
       </label>
       <label className="block">

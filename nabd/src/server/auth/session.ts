@@ -6,9 +6,9 @@ import { cookies } from "next/headers";
 import { getUser } from "../repositories/orgRepository";
 import type { Lang, Theme, User } from "@/lib/types";
 
-const UID_COOKIE = "nabd_uid";
-const LANG_COOKIE = "nabd_lang";
-const THEME_COOKIE = "nabd_theme";
+const UID_COOKIE = "echo_uid";
+const LANG_COOKIE = "echo_lang";
+const THEME_COOKIE = "echo_theme";
 const DEFAULT_UID = "s1";
 
 export interface Session {

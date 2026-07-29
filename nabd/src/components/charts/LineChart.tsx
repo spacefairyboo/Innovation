@@ -21,8 +21,8 @@ export function LineChart({ points, seriesLabel }: { points: TrendPoint[]; serie
           <text x={PX - 6} y={y(v) + 3.5} textAnchor="end" fontSize={10} fill="var(--ink-3)">{v}</text>
         </g>
       ))}
-      <polygon points={area} fill="var(--accent)" opacity={0.1} />
-      <polyline points={line} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" />
+      <polygon points={area} fill="var(--accent)" opacity={0.1} className="chart-fill-fade" />
+      <polyline points={line} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" pathLength={1} className="chart-draw" />
       {pts.map((p, i) => (
         <g key={i}>
           <circle cx={p[0]} cy={p[1]} r={11} fill="transparent" data-tt={`${points[i].label}|${points[i].count} ${seriesLabel}`} className="cursor-pointer" />

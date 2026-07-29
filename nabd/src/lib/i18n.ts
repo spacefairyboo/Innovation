@@ -3,8 +3,8 @@ import type { Lang } from './types';
 
 export const I18N: Record<Lang, Record<string, string>> = {
   en: {
-    appName: 'Nabd',
-    appTag: 'Team Pulse',
+    appName: 'Echo',
+    appTag: 'Team Echo',
     // nav
     nav_dashboard: 'Dashboard',
     nav_mytasks: 'My Tasks',
@@ -77,8 +77,8 @@ export const I18N: Record<Lang, Record<string, string>> = {
     login_btn: 'Sign in',
     login_error: 'Wrong email or password. Please try again.',
     login_demo_hint:
-      'Demo: sign in as any teammate, like omar.hassan@nabd.example, with the password',
-    login_hero: "Your team's pulse, the moment you sign in.",
+      'Demo: sign in as any teammate, like omar.hassan@echo.example, with the password',
+    login_hero: "Your team's voice, clear from the moment you sign in.",
     login_hero_sub:
       'Tasks, delegation, briefings, and insight. Bilingual, spoken, and always up to date.',
     login_footer:
@@ -358,6 +358,17 @@ export const I18N: Record<Lang, Record<string, string>> = {
     stats_scope_all: 'Whole department',
     tile_due_week: 'Due this week',
     tile_done_week: 'Completed this week',
+    due_outlook: 'Due-date outlook',
+    due_outlook_sub: 'Open tasks by when they are due',
+    prio_mix: 'Priority mix',
+    prio_mix_sub: 'Open tasks by priority',
+    prog_dist: 'Progress spread',
+    prog_dist_sub: 'Open tasks by completion progress',
+    b_today: 'Due today',
+    b_next_week: 'Next week',
+    b_later: 'Later',
+    b_no_due: 'No due date',
+    bucket: 'Bucket',
     brk_title: 'Detailed breakdown',
     brk_sub: 'Search, sort, and export the numbers behind the charts',
     brk_done7: 'Completed, 7 days',
@@ -482,8 +493,8 @@ export const I18N: Record<Lang, Record<string, string>> = {
   },
 
   ar: {
-    appName: 'نبض',
-    appTag: 'نبض الفريق',
+    appName: 'صدى',
+    appTag: 'صدى الفريق',
     nav_dashboard: 'لوحة المتابعة',
     nav_mytasks: 'مهامي',
     nav_advisor: 'المستشار',
@@ -555,8 +566,8 @@ export const I18N: Record<Lang, Record<string, string>> = {
     login_btn: 'تسجيل الدخول',
     login_error: 'البريد أو كلمة المرور غير صحيحة. حاول مرة أخرى.',
     login_demo_hint:
-      'تجريبي: سجّل الدخول بأي حساب (مثل omar.hassan@nabd.example) وكلمة المرور',
-    login_hero: 'نبض فريقك، لحظة تسجيل دخولك.',
+      'تجريبي: سجّل الدخول بأي حساب (مثل omar.hassan@echo.example) وكلمة المرور',
+    login_hero: 'صوت فريقك واضح من لحظة تسجيل دخولك.',
     login_hero_sub:
       'المهام والتفويض والملخصات والرؤى، بلغتين، منطوقة، ومحدثة دائمًا.',
     login_footer:
@@ -815,6 +826,17 @@ export const I18N: Record<Lang, Record<string, string>> = {
     stats_scope_all: 'الإدارة كاملة',
     tile_due_week: 'تستحق هذا الأسبوع',
     tile_done_week: 'أُكملت هذا الأسبوع',
+    due_outlook: 'مواعيد الاستحقاق',
+    due_outlook_sub: 'المهام المفتوحة حسب موعد استحقاقها',
+    prio_mix: 'توزيع الأولويات',
+    prio_mix_sub: 'المهام المفتوحة حسب الأولوية',
+    prog_dist: 'توزيع التقدم',
+    prog_dist_sub: 'المهام المفتوحة حسب نسبة الإنجاز',
+    b_today: 'تستحق اليوم',
+    b_next_week: 'الأسبوع القادم',
+    b_later: 'لاحقًا',
+    b_no_due: 'بلا موعد',
+    bucket: 'الفئة',
     brk_title: 'التفصيل الكامل',
     brk_sub: 'ابحث ورتّب وصدّر الأرقام التي خلف الرسوم',
     brk_done7: 'مكتملة خلال ٧ أيام',

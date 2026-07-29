@@ -87,7 +87,7 @@ export function PodcastPlayer({
             naturalScore(a) - naturalScore(b) || a.name.localeCompare(b.name),
         );
       setVoices(forLang);
-      const saved = localStorage.getItem(`nabd-voice-${spoken}`);
+      const saved = localStorage.getItem(`echo-voice-${spoken}`);
       setVoiceURI(
         saved && forLang.some((v) => v.voiceURI === saved)
           ? saved
@@ -101,7 +101,7 @@ export function PodcastPlayer({
 
   const pickVoice = (uri: string) => {
     setVoiceURI(uri);
-    localStorage.setItem(`nabd-voice-${spoken}`, uri);
+    localStorage.setItem(`echo-voice-${spoken}`, uri);
   };
 
   useEffect(() => {
@@ -195,7 +195,7 @@ export function PodcastPlayer({
     a.href = URL.createObjectURL(
       new Blob([lines.join('\n\n')], { type: 'text/plain;charset=utf-8' }),
     );
-    a.download = `nabd-briefing-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = `echo-briefing-${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
     URL.revokeObjectURL(a.href);
   };

@@ -22,13 +22,13 @@ src/server/repositories  ◄──────  src/server/services/*  ← busin
 (SQL, one module per aggregate)    access rules, delegation, mailer,
   │                                briefing, advisor
   ▼
-src/server/db/connection.ts  →  SQLite (node:sqlite), data/nabd.db (WAL)
+src/server/db/connection.ts  →  SQLite (node:sqlite), data/echo.db (WAL)
 ```
 
 ## Folder standards
 
 ```
-nabd/src/
+echo/src/
 ├── middleware.ts              # Route guard — no session cookie ⇒ /login
 ├── app/                       # Routes (framework-defined) — one folder per URL
 │   ├── actions.ts             # ★ Mutation API facade — what clients import

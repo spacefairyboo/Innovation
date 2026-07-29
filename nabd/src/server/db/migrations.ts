@@ -223,6 +223,16 @@ export function migrate(d: DatabaseSync) {
   const extCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];
   if (!extCols.some((c) => c.name === "phone_ext")) d.exec("ALTER TABLE users ADD COLUMN phone_ext TEXT");
   ensurePhoneExts(d);
+  // The Echo rebrand: databases seeded under the old name carry old-domain
+  // emails and the old demo password. Move everyone to @echo.example and
+  // reset credentials to the demo password shown on the login page. Runs
+  // once: afterwards no old-domain email remains to match.
+  const legacyUsers = (d.prepare("SELECT COUNT(*) AS c FROM users WHERE email LIKE '%@nabd.example'").get() as { c: number }).c;
+  if (legacyUsers > 0) {
+    d.exec("UPDATE users SET email = replace(email, '@nabd.example', '@echo.example'), password_hash = ''");
+    d.exec("UPDATE email_suggestions SET from_email = replace(from_email, '@nabd.example', '@echo.example')");
+    d.exec("UPDATE meetings SET organizer_email = replace(organizer_email, '@nabd.example', '@echo.example')");
+  }
   // Every account can sign in: users without credentials get the demo password.
   ensureDemoPasswords(d);
   // The 2026 org expansion lands on databases seeded before it. Fresh,

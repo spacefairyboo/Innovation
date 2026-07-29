@@ -45,11 +45,11 @@ export function Shell({
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the saved sidebar state on mount
-    setCollapsed(localStorage.getItem('nabd-side-collapsed') === '1');
+    setCollapsed(localStorage.getItem('echo-side-collapsed') === '1');
   }, []);
   const toggleSidebar = () => {
     setCollapsed((c) => {
-      localStorage.setItem('nabd-side-collapsed', c ? '0' : '1');
+      localStorage.setItem('echo-side-collapsed', c ? '0' : '1');
       return !c;
     });
   };

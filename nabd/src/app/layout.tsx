@@ -3,8 +3,8 @@ import "./globals.css";
 import { getSession } from "@/server/auth/session";
 
 export const metadata: Metadata = {
-  title: "Nabd — Team Pulse",
-  description: "Bilingual task-pulse platform: track, chat, speak, and listen to your team's progress.",
+  title: "Echo, Team Echo",
+  description: "Bilingual task platform: track, chat, speak, and listen to your team's progress.",
 };
 
 /* Root layout: document shell only. The authenticated experience lives in

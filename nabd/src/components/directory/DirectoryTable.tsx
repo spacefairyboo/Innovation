@@ -112,7 +112,7 @@ export function DirectoryTable({ rows, sections }: {
         </select>
         <div className="flex-1" />
       </div>
-      <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]">
+      <div className="grid gap-3 rise-stagger [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]">
         {tiles.map((x) => (
           <div key={x.label} className="card relative overflow-hidden !p-4 flex flex-col gap-1">
             <span className="absolute start-0 top-0 bottom-0 w-1" style={{ background: x.edge }} />
@@ -130,7 +130,7 @@ export function DirectoryTable({ rows, sections }: {
         columns={columns}
         rowKey={(r) => r.id}
         searchPlaceholder={t("dir_search")}
-        exportName="nabd-directory"
+        exportName="echo-directory"
       />
     </div>
   );
