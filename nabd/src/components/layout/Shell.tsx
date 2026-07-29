@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { logoutAction, setLang, setTheme } from '@/app/actions';
 import { useI18n, useToast } from '@/components/providers';
-import { Avatar, Icon } from '@/components/ui';
+import { Avatar, EchoMark, Icon } from '@/components/ui';
 import { CommandPalette, type PaletteItem } from './CommandPalette';
 import { UserSwitcher } from './UserSwitcher';
 import { resetDemo } from '@/app/actions';
@@ -122,11 +122,8 @@ export function Shell({
         }}
       >
         <div className={`flex items-center gap-3 pb-4 pt-1 ${collapsed ? 'flex-col px-0' : 'px-2'}`}>
-          <span
-            className='w-9 h-9 rounded-2xl grid place-items-center text-white font-bold text-base shadow-md shrink-0'
-            style={{ background: 'linear-gradient(135deg, #2a9686, #46c7b4)' }}
-          >
-            E
+          <span className='shrink-0' style={{ color: '#7fe0cb' }} aria-hidden>
+            <EchoMark size={40} mono />
           </span>
           {!collapsed && (
             <span

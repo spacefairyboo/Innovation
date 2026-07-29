@@ -16,7 +16,7 @@ export function ProgressBars({ rows }: { rows: ProgressRow[] }) {
             className="flex-1 h-4 rounded overflow-hidden bg-surface-2 cursor-pointer"
             data-tt={`${r.label}|${t("progress")}: ${r.pct}%`}
           >
-            <div className="h-full rounded-e bar-grow" style={{ width: `${r.pct}%`, background: "var(--primary)", animationDelay: `${0.1 + i * 0.05}s` }} />
+            <div className="h-full rounded-e bar-grow" style={{ width: `${r.pct}%`, background: "var(--primary)", boxShadow: "0 0 12px color-mix(in srgb, var(--primary) 40%, transparent)", animationDelay: `${0.1 + i * 0.05}s` }} />
           </div>
           <div className="w-10 text-xs font-semibold text-ink-2 tabular-nums text-end">{r.pct}%</div>
         </div>

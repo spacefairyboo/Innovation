@@ -3,7 +3,7 @@
    form floats on frosted glass above it. */
 
 import { LoginBackdrop, LoginForm } from "@/components/auth";
-import { Icon } from "@/components/ui";
+import { EchoMark, Icon } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
 import { getSession } from "@/server/auth/session";
 import { DEMO_PASSWORD } from "@/server/db/seed";
@@ -31,11 +31,8 @@ export default async function LoginPage() {
         {/* Brand side */}
         <div className="hidden lg:flex flex-col gap-10 rise-stagger" style={{ color: "#eefaf3" }}>
           <div className="flex items-center gap-3">
-            <span
-              className="w-12 h-12 rounded-2xl grid place-items-center text-white font-bold text-2xl shadow-lg"
-              style={{ background: "linear-gradient(135deg, rgb(10 45 35 / 0.85), rgb(23 90 75 / 0.85))", backdropFilter: "blur(8px)" }}
-            >
-              E
+            <span className="text-white drop-shadow-md" aria-hidden>
+              <EchoMark size={56} mono />
             </span>
             <span className="font-bold text-2xl text-white [text-shadow:0_1px_10px_rgb(6_40_30/0.35)]">
               {t("appName")}
@@ -61,12 +58,7 @@ export default async function LoginPage() {
         <div className="w-full max-w-md mx-auto lg:me-0">
           <div className="glass-card rounded-3xl p-8 sm:p-10 page-enter">
             <div className="lg:hidden flex items-center gap-3 mb-8">
-              <span
-                className="w-10 h-10 rounded-2xl grid place-items-center text-white font-bold text-lg"
-                style={{ background: "linear-gradient(135deg, #2a9686, #46c7b4)" }}
-              >
-                E
-              </span>
+              <EchoMark size={40} />
               <b className="text-xl">{t("appName")}</b>
             </div>
             <h2 className="m-0 text-2xl font-bold">{t("login_title")}</h2>

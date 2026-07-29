@@ -22,6 +22,7 @@ export function LineChart({ points, seriesLabel }: { points: TrendPoint[]; serie
         </g>
       ))}
       <polygon points={area} fill="var(--accent)" opacity={0.1} className="chart-fill-fade" />
+      <polyline points={line} fill="none" stroke="var(--accent)" strokeWidth={5} strokeLinejoin="round" aria-hidden style={{ filter: "blur(6px)", opacity: 0.45 }} className="chart-fill-fade" />
       <polyline points={line} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" pathLength={1} className="chart-draw" />
       {pts.map((p, i) => (
         <g key={i}>

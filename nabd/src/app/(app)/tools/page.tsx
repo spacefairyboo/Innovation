@@ -1,7 +1,7 @@
 /* Tools — a growing set of utilities. Each card opens one tool. */
 
 import Link from "next/link";
-import { Icon } from "@/components/ui";
+import { GlassIcon, Icon } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
 import { getSession } from "@/server/auth/session";
 
@@ -29,16 +29,16 @@ export default async function ToolsPage() {
           <Link
             key={tool.href}
             href={tool.href}
-            className="card !p-5 no-underline flex items-start gap-3.5 transition hover:border-accent group"
+            className="card !p-6 no-underline flex flex-col gap-4 transition hover:border-accent hover:-translate-y-0.5 group"
           >
-            <span className="w-11 h-11 rounded-xl grid place-items-center bg-accent-soft text-primary shrink-0">
-              <Icon name={tool.icon} size={20} />
+            <span className="flex items-start justify-between">
+              <GlassIcon name={tool.icon} size={72} icon={32} />
+              <Icon name={lang === "ar" ? "chevron-left" : "chevron-right"} size={16} className="text-ink-3 shrink-0 mt-1" />
             </span>
             <span className="min-w-0">
-              <span className="block text-base font-bold text-ink group-hover:text-primary transition">{tool.title}</span>
-              <span className="block mt-1 text-sm text-ink-2">{tool.sub}</span>
+              <span className="block text-lg font-bold text-ink group-hover:text-primary transition">{tool.title}</span>
+              <span className="block mt-1 text-sm text-ink-2 leading-6">{tool.sub}</span>
             </span>
-            <Icon name={lang === "ar" ? "chevron-left" : "chevron-right"} size={16} className="text-ink-3 shrink-0 ms-auto mt-1" />
           </Link>
         ))}
       </div>
