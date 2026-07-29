@@ -2,10 +2,15 @@
    attributed activity log. Reachable from the Update dialog's expand button,
    the calendar, and the command palette. */
 
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdviceView } from "@/components/advisor";
 import { TaskFullView } from "@/components/tasks";
 import type { AssigneeOption } from "@/components/tasks";
+import { Icon } from "@/components/ui";
+import { makeT } from "@/lib/i18n";
 import { bySeniority, canUpdateTask, getTask, getTeam, listUsers, overseesTeam, teamMembers } from "@/server/repositories";
+import { savedAdviceFor } from "@/server/services/advisorService";
 import { getSession } from "@/server/auth/session";
 import { toVM } from "@/server/vm";
 
@@ -34,5 +39,33 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
     .filter((u) => u.teamId)
     .map((u) => ({ id: u.id, name: u.name, teamName: getTeam(u.teamId!)!.name }));
 
-  return <TaskFullView vm={toVM(task, user)} canEdit={canEdit} assignees={assignees} colleagues={colleagues} backHref={backHref} />;
+  const { lang } = await getSession();
+  const t = makeT(lang);
+  const savedPlan = savedAdviceFor(user, task.id);
+
+  return (
+    <>
+      <TaskFullView vm={toVM(task, user)} canEdit={canEdit} assignees={assignees} colleagues={colleagues} backHref={backHref} />
+
+      {/* The latest AI plan written for this task, kept for reference. */}
+      {savedPlan && (
+        <section className="mt-6" aria-label={t("adv_saved_title")}>
+          <div className="mb-3 flex items-end gap-3 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
+                <Icon name="sparkles" size={16} className="text-primary" /> {t("adv_saved_title")}
+              </h3>
+              <p className="m-0 text-xs text-ink-3">
+                {t("adv_saved_on", { date: new Date(savedPlan.createdAt).toLocaleDateString(lang === "ar" ? "ar" : "en-GB") })}
+              </p>
+            </div>
+            <Link href="/advisor" className="text-xs font-semibold text-primary no-underline inline-flex items-center gap-0.5 shrink-0 mb-0.5">
+              {t("adv_open_advisor")} <Icon name={lang === "ar" ? "chevron-left" : "chevron-right"} size={13} />
+            </Link>
+          </div>
+          <AdviceView advice={savedPlan.advice} />
+        </section>
+      )}
+    </>
+  );
 }

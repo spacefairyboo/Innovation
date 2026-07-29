@@ -7,16 +7,17 @@
 export interface RadialRow { id: string; label: string; count: number }
 
 export function RadialBars({ rows, countLabel }: { rows: RadialRow[]; countLabel: string }) {
-  const CX = 100, CY = 96, INNER = 26, SPAN = 58;
+  // Labels need clearance in both languages: Arabic weekday names run long.
+  const CX = 100, CY = 96, INNER = 24, SPAN = 52;
   const max = Math.max(...rows.map((r) => r.count), 1);
   const step = 360 / rows.length;
   return (
-    <svg viewBox="-16 -12 232 216" role="img" aria-label={countLabel} className="block w-full h-auto max-w-[19rem] mx-auto">
+    <svg viewBox="-26 -14 252 220" role="img" aria-label={countLabel} className="block w-full h-auto max-w-[20rem] mx-auto">
       {rows.map((r, i) => {
         const angle = i * step - 90;
         const rad = (angle * Math.PI) / 180;
         const len = INNER + (r.count / max) * SPAN;
-        const tip = INNER + SPAN + 14;
+        const tip = INNER + SPAN + 18;
         return (
           <g key={r.id}>
             {/* Track, then the animated data spoke over it */}

@@ -1,1 +1,2 @@
-export { AdvisorPanel, type AdvisorTaskOption } from "./AdvisorPanel";
+export { AdvisorPanel, type AdvisorTaskOption, type SavedPlans } from "./AdvisorPanel";
+export { AdviceView } from "./AdviceView";
