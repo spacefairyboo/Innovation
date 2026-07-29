@@ -10,7 +10,7 @@ export function BucketBars({ rows, countLabel }: { rows: BucketRow[]; countLabel
   const max = Math.max(...rows.map((r) => r.count), 1);
   return (
     <div>
-      {rows.map((r) => (
+      {rows.map((r, i) => (
         <div key={r.id} className="flex items-center gap-3 mb-3 last:mb-0">
           <div className="w-32 shrink-0 text-[0.82rem] font-semibold text-ink-2 truncate">{r.label}</div>
           <div
@@ -19,7 +19,7 @@ export function BucketBars({ rows, countLabel }: { rows: BucketRow[]; countLabel
           >
             <div
               className="h-full rounded-e bar-grow"
-              style={{ width: `${(r.count / max) * 100}%`, background: "var(--accent)" }}
+              style={{ width: `${(r.count / max) * 100}%`, background: "var(--accent)", animationDelay: `${0.1 + i * 0.07}s` }}
             />
           </div>
           <div className="w-8 text-xs font-semibold text-ink-2 tabular-nums text-end">{r.count}</div>

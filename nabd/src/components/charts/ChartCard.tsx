@@ -10,8 +10,8 @@ export function ChartCard({ title, sub, chart, table }: {
   const { t } = useI18n();
   const [mode, setMode] = useState<"chart" | "table">("chart");
   return (
-    <div className="card">
-      <div className="flex items-center gap-2.5 mb-3">
+    <div className="card h-full flex flex-col">
+      <div className="flex items-start gap-2.5 mb-3">
         <div>
           <h3 className="m-0 text-base font-bold">{title}</h3>
           <p className="m-0 text-xs text-ink-3">{sub}</p>
@@ -31,7 +31,11 @@ export function ChartCard({ title, sub, chart, table }: {
           ))}
         </div>
       </div>
-      {mode === "chart" ? chart : table}
+      {/* Grows to fill the row so every card in a grid row is the same height;
+          long tables scroll inside instead of stretching the row. */}
+      <div className="flex-1 min-h-0 flex flex-col justify-center overflow-y-auto">
+        {mode === "chart" ? chart : table}
+      </div>
     </div>
   );
 }

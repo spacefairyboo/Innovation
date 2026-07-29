@@ -380,3 +380,92 @@ body::after {
   .bar-grow { animation: none !important; }
   .chart-draw { stroke-dasharray: none; stroke-dashoffset: 0; }
 }
+
+/* ---------- Login: animated aurora gradient ---------- */
+
+.aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(155deg, #8fb04a 0%, #4e8f62 38%, #1c4f41 100%);
+}
+.aurora > span {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  will-change: transform;
+}
+.aurora .au-lime {
+  width: 55vw; height: 55vw; top: -18%; inset-inline-start: 12%;
+  background: radial-gradient(circle, rgb(214 232 120 / 0.9), transparent 65%);
+  filter: blur(70px);
+  animation: au-drift-1 24s ease-in-out infinite alternate;
+}
+.aurora .au-blue {
+  width: 48vw; height: 48vw; top: 24%; inset-inline-end: -12%;
+  background: radial-gradient(circle, rgb(174 205 232 / 0.85), transparent 65%);
+  filter: blur(80px);
+  animation: au-drift-2 30s ease-in-out infinite alternate;
+}
+.aurora .au-teal {
+  width: 52vw; height: 52vw; bottom: -22%; inset-inline-start: -14%;
+  background: radial-gradient(circle, rgb(70 199 180 / 0.55), transparent 65%);
+  filter: blur(90px);
+  animation: au-drift-3 27s ease-in-out infinite alternate;
+}
+.aurora .au-deep {
+  width: 45vw; height: 45vw; bottom: -12%; inset-inline-end: 8%;
+  background: radial-gradient(circle, rgb(10 55 38 / 0.75), transparent 70%);
+  filter: blur(70px);
+  animation: au-drift-2 34s ease-in-out infinite alternate-reverse;
+}
+/* The white light shaft falling across the scene */
+.aurora .au-shaft {
+  width: 24vw; height: 160%; top: -30%; inset-inline-start: 34%;
+  border-radius: 40%;
+  background: linear-gradient(rgb(255 255 255 / 0.85), rgb(255 255 255 / 0) 70%);
+  filter: blur(55px);
+  transform: rotate(18deg);
+  animation: au-shaft 26s ease-in-out infinite alternate;
+}
+/* Film grain, like the reference photograph */
+.aurora::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.14;
+  mix-blend-mode: overlay;
+}
+[data-theme="dark"] .aurora {
+  background: linear-gradient(155deg, #45611f 0%, #2b5c3c 38%, #0d2c24 100%);
+}
+@keyframes au-drift-1 {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-9%, 12%, 0) scale(1.18); }
+}
+@keyframes au-drift-2 {
+  from { transform: translate3d(0, 0, 0) scale(1.1); }
+  to { transform: translate3d(8%, -10%, 0) scale(0.94); }
+}
+@keyframes au-drift-3 {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(12%, -7%, 0) scale(1.22); }
+}
+@keyframes au-shaft {
+  from { transform: rotate(14deg) translateX(-4%); opacity: 0.75; }
+  to { transform: rotate(22deg) translateX(6%); opacity: 1; }
+}
+/* Frosted glass panel that adapts to the active theme */
+.glass-card {
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  border: 1px solid color-mix(in srgb, #ffffff 35%, transparent);
+  backdrop-filter: blur(26px);
+  box-shadow: 0 24px 70px rgb(5 35 25 / 0.35);
+}
+[data-theme="dark"] .glass-card {
+  border-color: color-mix(in srgb, #ffffff 14%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .aurora > span { animation: none !important; }
+}

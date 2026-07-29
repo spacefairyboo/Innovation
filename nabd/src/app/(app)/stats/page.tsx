@@ -28,6 +28,8 @@ import { completionTrend, csvRows, doneThisWeekCount } from "@/server/vm";
 const isoInDays = (n: number): string =>
   new Date(Date.now() + n * DAY_MS).toISOString().slice(0, 10);
 
+const daysSince = (ts: number): number => (Date.now() - ts) / DAY_MS;
+
 const avgProgress = (tasks: Task[]): number =>
   tasks.length ? Math.round(tasks.reduce((s, t) => s + t.progress, 0) / tasks.length) : 0;
 
@@ -144,6 +146,28 @@ export default async function StatsPage({ searchParams }: {
     label: `${lo}-${lo + 19}%`,
     count: open.filter((x) => x.progress >= lo && x.progress < lo + 20).length,
   }));
+  const ageBuckets: BucketRow[] = [
+    { id: "fresh", label: t("age_fresh"), count: open.filter((x) => daysSince(x.updatedAt) < 3).length },
+    { id: "week", label: t("age_week"), count: open.filter((x) => daysSince(x.updatedAt) >= 3 && daysSince(x.updatedAt) <= 7).length },
+    { id: "two", label: t("age_two_weeks"), count: open.filter((x) => daysSince(x.updatedAt) > 7 && daysSince(x.updatedAt) <= 14).length },
+    { id: "stale", label: t("age_stale"), count: open.filter((x) => daysSince(x.updatedAt) > 14).length },
+  ];
+  // Completions per weekday, from every completion in the history.
+  const dayName = new Intl.DateTimeFormat(lang === "ar" ? "ar" : "en", { weekday: "short" });
+  const weekdayCounts = new Array(7).fill(0);
+  for (const task of tasks) {
+    const seen = new Set<string>();
+    for (const h of task.history) {
+      if (h.status !== "done" || seen.has(task.id)) continue;
+      seen.add(task.id);
+      weekdayCounts[new Date(h.ts).getDay()]++;
+    }
+  }
+  const weekdayBuckets: BucketRow[] = weekdayCounts.map((count, d) => ({
+    id: String(d),
+    label: dayName.format(new Date(Date.UTC(2026, 1, 1 + d, 12))), // Feb 1 2026 is a Sunday
+    count,
+  }));
 
   const rows = groups.buckets.map((b) => ({
     id: b.id, label: b.label,
@@ -177,14 +201,15 @@ export default async function StatsPage({ searchParams }: {
 
       <StatTiles stats={stats} extras={extras} />
 
-      <div className="grid gap-5 lg:[grid-template-columns:1.7fr_1fr] items-start mb-5">
+      {/* Row 1: the trend beside the leaderboard, equal heights */}
+      <div className="grid gap-5 lg:[grid-template-columns:1.7fr_1fr] mb-5">
         <ChartCard
           title={t("completions_trend")}
           sub={t("completions_trend_sub")}
           chart={<LineChart points={trend} seriesLabel={t("st_done")} />}
           table={<TrendTable points={trend} seriesLabel={t("st_done")} />}
         />
-        <div className="card">
+        <div className="card h-full flex flex-col">
           <div className="mb-3">
             <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
               <Icon name="award" size={16} className="text-ink-3" /> {t("leaderboard")}
@@ -208,22 +233,14 @@ export default async function StatsPage({ searchParams }: {
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2 items-start mb-5">
+      {/* Row 2: today's shape of the work */}
+      <div className="grid gap-5 lg:grid-cols-3 mb-5">
         <ChartCard
           title={t("status_mix")}
           sub={t("status_mix_sub")}
           chart={<Donut stats={stats} centerLabel={t("tasks_total")} />}
           table={<StatusTable stats={stats} />}
         />
-        <ChartCard
-          title={t("avg_progress")}
-          sub={t("avg_progress_sub")}
-          chart={<ProgressBars rows={rows} />}
-          table={<ProgressTable rows={rows} groupLabel={groups.groupLabel} />}
-        />
-      </div>
-
-      <div className="grid gap-5 lg:grid-cols-3 items-start mb-5">
         <ChartCard
           title={t("due_outlook")}
           sub={t("due_outlook_sub")}
@@ -236,15 +253,38 @@ export default async function StatsPage({ searchParams }: {
           chart={<BucketBars rows={prioBuckets} countLabel={t("open_tasks")} />}
           table={<BucketTable rows={prioBuckets} groupLabel={t("bucket")} countLabel={t("open_tasks")} />}
         />
+      </div>
+
+      {/* Row 3: how the open work is moving */}
+      <div className="grid gap-5 lg:grid-cols-3 mb-5">
         <ChartCard
           title={t("prog_dist")}
           sub={t("prog_dist_sub")}
           chart={<BucketBars rows={progBuckets} countLabel={t("open_tasks")} />}
           table={<BucketTable rows={progBuckets} groupLabel={t("progress")} countLabel={t("open_tasks")} />}
         />
+        <ChartCard
+          title={t("aging_title")}
+          sub={t("aging_sub")}
+          chart={<BucketBars rows={ageBuckets} countLabel={t("open_tasks")} />}
+          table={<BucketTable rows={ageBuckets} groupLabel={t("bucket")} countLabel={t("open_tasks")} />}
+        />
+        <ChartCard
+          title={t("weekday_title")}
+          sub={t("weekday_sub")}
+          chart={<BucketBars rows={weekdayBuckets} countLabel={t("st_done")} />}
+          table={<BucketTable rows={weekdayBuckets} groupLabel={t("bucket")} countLabel={t("st_done")} />}
+        />
       </div>
 
-      <div className="mb-5">
+      {/* Row 4: the per-group pair, side by side at one height */}
+      <div className="grid gap-5 lg:grid-cols-2 mb-5">
+        <ChartCard
+          title={t("avg_progress")}
+          sub={t("avg_progress_sub")}
+          chart={<ProgressBars rows={rows} />}
+          table={<ProgressTable rows={rows} groupLabel={groups.groupLabel} />}
+        />
         <ChartCard
           title={user.role === "manager" ? t("by_member") : t("by_team")}
           sub={t("by_team_sub")}
