@@ -4,7 +4,7 @@
    existing databases upgrade in place with no external tooling. */
 
 import type { DatabaseSync } from "node:sqlite";
-import { deriveEmail, ensureDemoPasswords, ensureExpandedOrg, ensurePhoneExts, seedMeetings } from "./seed";
+import { deriveEmail, ensureDemoPasswords, ensureDemoProjects, ensureExpandedOrg, ensurePhoneExts, seedMeetings } from "./seed";
 
 export function migrate(d: DatabaseSync) {
   d.exec(`
@@ -151,6 +151,8 @@ export function migrate(d: DatabaseSync) {
   // Databases created before the creation-date release: backfill from the first update.
   const taskCols = d.prepare("SELECT name FROM pragma_table_info('tasks')").all() as { name: string }[];
   if (!taskCols.some((c) => c.name === "created_at")) d.exec("ALTER TABLE tasks ADD COLUMN created_at INTEGER");
+  // Databases created before task descriptions lack tasks.description.
+  if (!taskCols.some((c) => c.name === "description")) d.exec("ALTER TABLE tasks ADD COLUMN description TEXT");
   // Databases created before task origins were tracked lack tasks.source.
   if (!taskCols.some((c) => c.name === "source")) d.exec("ALTER TABLE tasks ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
   // Databases created before tags and projects lack these columns.
@@ -246,6 +248,7 @@ export function migrate(d: DatabaseSync) {
   // still-empty databases skip it here; seed() adds it with everything else.
   const anyUsers = (d.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c > 0;
   if (anyUsers) ensureExpandedOrg(d);
+  if (anyUsers) ensureDemoProjects(d);
   // Backfill: tasks created before multi-assignee support get their owner as assignee.
   d.exec(`
     INSERT OR IGNORE INTO task_assignees (task_id, user_id)

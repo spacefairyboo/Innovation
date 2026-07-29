@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 
 export function Modal({ title, icon, onClose, children, footer, headerAction }: {
@@ -11,7 +12,11 @@ export function Modal({ title, icon, onClose, children, footer, headerAction }: 
   footer?: ReactNode;
   headerAction?: ReactNode;
 }) {
-  return (
+  // Rendered into <body> via a portal: ancestors with backdrop-filter or a
+  // transform (glass cards, page-enter animations) would otherwise trap the
+  // fixed overlay and misplace or clip the dialog.
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
       className="fixed inset-0 z-90 grid place-items-center p-5 bg-[rgb(7_30_25/0.45)] backdrop-blur-sm"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -29,6 +34,7 @@ export function Modal({ title, icon, onClose, children, footer, headerAction }: 
         <div className="p-5 overflow-y-auto flex-1">{children}</div>
         {footer && <div className="px-5 py-3.5 border-t border-line flex gap-2.5 items-center">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

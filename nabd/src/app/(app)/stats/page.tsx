@@ -1,8 +1,10 @@
-/* Statistics — the manager / senior-manager analytics view: KPI tiles,
-   completion trend (line), status mix (donut), average progress (bars),
-   the per-unit / per-member charts, and a sortable, exportable breakdown
-   table behind it all. The senior can scope everything to one section. */
+/* Statistics — the manager / senior-manager analytics view. Two views:
+   Projects (default) and Tasks, switched by pills. The header also holds
+   the time range (weekly / monthly / quarterly / yearly), the senior's
+   section scope, and the health tag; the KPI tiles are clickable and
+   filter everything below to one status. */
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArcChart, BreakdownTable, BucketBars, BucketTable, ChartCard, ColumnChart,
@@ -15,13 +17,13 @@ import { HealthChip, Icon } from "@/components/ui";
 import { Avatar } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
 import {
-  getUser, listTeams, listUnits, scopeTasks, sectionTasks, teamMembers,
-  teamTasks, userTasks,
+  getUser, listProjects, listTeams, listUnits, scopeTasks, sectionTasks,
+  teamMembers, teamTasks, userTasks,
 } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import {
   DAY_MS, countStatuses, effStatus, teamHealth, todayISO,
-  type Task, type User,
+  type EffStatus, type Task, type User,
 } from "@/lib/types";
 import { completionTrend, csvRows, doneThisWeekCount } from "@/server/vm";
 
@@ -29,6 +31,8 @@ const isoInDays = (n: number): string =>
   new Date(Date.now() + n * DAY_MS).toISOString().slice(0, 10);
 
 const daysSince = (ts: number): number => (Date.now() - ts) / DAY_MS;
+
+const cutoffFor = (days: number): number => Date.now() - days * DAY_MS;
 
 const avgProgress = (tasks: Task[]): number =>
   tasks.length ? Math.round(tasks.reduce((s, t) => s + t.progress, 0) / tasks.length) : 0;
@@ -69,13 +73,21 @@ function breakdownRow(id: string, name: string, tasks: Task[], head?: string | n
   };
 }
 
+const RANGES = { w: 7, m: 30, q: 90, y: 365 } as const;
+type RangeKey = keyof typeof RANGES;
+const EFF: EffStatus[] = ["done", "ontrack", "pending", "delayed", "blocked"];
+
 export default async function StatsPage({ searchParams }: {
-  searchParams: Promise<{ section?: string }>;
+  searchParams: Promise<{ section?: string; view?: string; status?: string; range?: string }>;
 }) {
-  const { section: sectionParam } = await searchParams;
+  const { section: sectionParam, view: viewParam, status: statusParam, range: rangeParam } = await searchParams;
   const { user, lang } = await getSession();
   if (user.role === "employee") redirect("/");
   const t = makeT(lang);
+
+  const view: "projects" | "tasks" = viewParam === "tasks" ? "tasks" : "projects";
+  const range: RangeKey = (["w", "m", "q", "y"] as const).find((r) => r === rangeParam) ?? "m";
+  const statusF = EFF.find((s) => s === statusParam);
 
   // The senior can narrow the whole page to one section.
   const sections = listUnits();
@@ -83,10 +95,18 @@ export default async function StatsPage({ searchParams }: {
     ? sections.find((s) => s.id === sectionParam) ?? null
     : null;
 
-  const tasks = focus ? sectionTasks(focus.id) : scopeTasks(user);
+  // Range keeps all open work current and trims old completions.
+  const cutoff = cutoffFor(RANGES[range]);
+  const inRange = (x: Task) => x.status !== "done" || x.updatedAt >= cutoff;
+  const inView = (x: Task) => inRange(x) && (!statusF || effStatus(x) === statusF);
+
+  const scopeAll = (focus ? sectionTasks(focus.id) : scopeTasks(user)).filter(inRange);
+  // Tiles always show the whole range; clicking one narrows everything else.
+  const tilesStats = countStatuses(scopeAll);
+  const tasks = statusF ? scopeAll.filter((x) => effStatus(x) === statusF) : scopeAll;
   const stats = countStatuses(tasks);
-  const trend = completionTrend(tasks, lang, 14);
-  const health = teamHealth(stats);
+  const trend = completionTrend(tasks, lang, Math.min(RANGES[range], 90));
+  const health = teamHealth(tilesStats);
   const contributors = topContributors(tasks, 5);
 
   const today = todayISO();
@@ -114,7 +134,7 @@ export default async function StatsPage({ searchParams }: {
         return {
           groupLabel: t("team"),
           buckets: teams.map((team) => ({
-            id: team.id, label: team.name[lang], tasks: teamTasks(team.id),
+            id: team.id, label: team.name[lang], tasks: teamTasks(team.id).filter(inView),
             head: getUser(team.managerId)?.name[lang] ?? null,
           })),
         };
@@ -122,7 +142,7 @@ export default async function StatsPage({ searchParams }: {
     : {
         groupLabel: t("members"),
         buckets: teamMembers(user.teamId!).map((m) => ({
-          id: m.id, label: m.name[lang], tasks: userTasks(m.id), head: null,
+          id: m.id, label: m.name[lang], tasks: userTasks(m.id).filter(inView), head: null,
         })),
       };
 
@@ -185,6 +205,32 @@ export default async function StatsPage({ searchParams }: {
   }));
   const breakdown = groups.buckets.map((b) => breakdownRow(b.id, b.label, b.tasks, b.head));
 
+  // Projects view: every project as a bucket, plus unfiled work.
+  const projects = listProjects();
+  const projBuckets = [
+    ...projects.map((p) => ({ id: p.id, label: p.name, tasks: tasks.filter((x) => x.projectId === p.id) })),
+    { id: "none", label: t("proj_no_project"), tasks: tasks.filter((x) => !x.projectId) },
+  ].filter((b) => b.id !== "none" || b.tasks.length > 0);
+  const projRows = projBuckets.map((b) => ({
+    id: b.id, label: b.label,
+    pct: avgProgress(b.tasks), open: b.tasks.filter((x) => x.status !== "done").length,
+  }));
+  const projBarRows = projBuckets.map((b) => ({ id: b.id, label: b.label, stats: countStatuses(b.tasks) }));
+  const projBreakdown = projBuckets.map((b) => breakdownRow(b.id, b.label, b.tasks));
+
+  // Pills keep the other URL choices intact.
+  const href = (patch: Record<string, string | undefined>) => {
+    const q = new URLSearchParams();
+    const merged = { section: focus?.id, view: viewParam, status: statusF, range: rangeParam, ...patch };
+    for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
+    const qs = q.toString();
+    return qs ? `/stats?${qs}` : "/stats";
+  };
+  const pill = (active: boolean) =>
+    `px-3.5 py-1.5 text-xs font-semibold rounded-full transition no-underline ${
+      active ? "bg-primary text-on-primary shadow" : "text-ink-2 hover:text-ink"
+    }`;
+
   return (
     <>
       <div className="flex items-center gap-3.5 mb-5 flex-wrap">
@@ -193,6 +239,19 @@ export default async function StatsPage({ searchParams }: {
           <p className="m-0 mt-0.5 text-sm text-ink-2">{t("stats_sub")}</p>
         </div>
         <div className="flex-1" />
+        {/* View: projects or tasks */}
+        <nav className="inline-flex border border-line rounded-full overflow-hidden bg-surface-2 p-0.5 gap-0.5" aria-label={t("nav_stats")}>
+          <Link href={href({ view: undefined })} className={pill(view === "projects")}>{t("stats_view_projects")}</Link>
+          <Link href={href({ view: "tasks" })} className={pill(view === "tasks")}>{t("stats_view_tasks")}</Link>
+        </nav>
+        {/* Time range */}
+        <nav className="inline-flex border border-line rounded-full overflow-hidden bg-surface-2 p-0.5 gap-0.5" aria-label={t("stats_range")}>
+          {(["w", "m", "q", "y"] as const).map((r) => (
+            <Link key={r} href={href({ range: r === "m" ? undefined : r })} className={pill(range === r)}>
+              {t(`range_${r}`)}
+            </Link>
+          ))}
+        </nav>
         {user.role === "senior" && (
           <ScopeSelect
             param="section"
@@ -206,109 +265,145 @@ export default async function StatsPage({ searchParams }: {
         <ExportCsvButton rows={csvRows(tasks, lang)} filename={`echo-stats-${new Date().toISOString().slice(0, 10)}.csv`} />
       </div>
 
-      <StatTiles stats={stats} extras={extras} />
+      <StatTiles stats={tilesStats} extras={extras} filterable />
 
-      {/* Row 1: the trend beside the leaderboard, equal heights */}
-      <div className="grid gap-5 lg:[grid-template-columns:1.7fr_1fr] mb-5">
-        <ChartCard
-          title={t("completions_trend")}
-          sub={t("completions_trend_sub")}
-          chart={<LineChart points={trend} seriesLabel={t("st_done")} />}
-          table={<TrendTable points={trend} seriesLabel={t("st_done")} />}
-        />
-        <div className="card h-full flex flex-col">
-          <div className="mb-3">
-            <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
-              <Icon name="award" size={16} className="text-ink-3" /> {t("leaderboard")}
-            </h3>
-            <p className="m-0 text-xs text-ink-3">{t("leaderboard_sub")}</p>
+      {view === "projects" ? (
+        projects.length === 0 ? (
+          <div className="card text-center text-ink-3 py-14 text-sm">
+            <Icon name="folder" size={32} className="mx-auto mb-2 opacity-60" /> {t("proj_empty")}
           </div>
-          {contributors.length === 0 && (
-            <div className="text-center text-ink-3 py-6 text-sm">{t("leaderboard_empty")}</div>
-          )}
-          {contributors.map((c, i) => (
-            <div key={c.user.id} className="flex items-center gap-3 py-2.5 border-b border-grid last:border-b-0">
-              <span className={`w-6 h-6 rounded-full grid place-items-center text-[0.7rem] font-bold shrink-0
-                ${i === 0 ? "bg-accent-soft text-primary" : "bg-surface-2 text-ink-3 border border-line"}`}>
-                {i + 1}
-              </span>
-              <Avatar name={c.user.name} size="sm" />
-              <span className="flex-1 min-w-0 text-sm font-semibold truncate">{c.user.name[lang]}</span>
-              <span className="text-sm font-bold tabular-nums text-primary">{c.count}</span>
+        ) : (
+          <>
+            <div className="grid gap-5 lg:grid-cols-2 mb-5">
+              <ChartCard
+                title={t("avg_progress")}
+                sub={t("avg_progress_sub")}
+                chart={<ProgressBars rows={projRows} />}
+                table={<ProgressTable rows={projRows} groupLabel={t("project")} />}
+              />
+              <ChartCard
+                title={t("by_project")}
+                sub={t("by_project_sub")}
+                chart={<TeamBars rows={projBarRows} />}
+                table={<TeamBarsTable rows={projBarRows} />}
+              />
             </div>
-          ))}
-        </div>
-      </div>
+            <div className="card">
+              <div className="mb-3">
+                <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
+                  <Icon name="folder" size={16} className="text-ink-3" /> {t("brk_title")}
+                </h3>
+                <p className="m-0 text-xs text-ink-3">{t("brk_sub")}</p>
+              </div>
+              <BreakdownTable rows={projBreakdown} groupLabel={t("project")} />
+            </div>
+          </>
+        )
+      ) : (
+        <>
+          {/* Row 1: the trend beside the leaderboard, equal heights */}
+          <div className="grid gap-5 lg:[grid-template-columns:1.7fr_1fr] mb-5">
+            <ChartCard
+              title={t("completions_trend_n", { n: String(Math.min(RANGES[range], 90)) })}
+              sub={t("completions_trend_sub")}
+              chart={<LineChart points={trend} seriesLabel={t("st_done")} />}
+              table={<TrendTable points={trend} seriesLabel={t("st_done")} />}
+            />
+            <div className="card h-full flex flex-col">
+              <div className="mb-3">
+                <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
+                  <Icon name="award" size={16} className="text-ink-3" /> {t("leaderboard")}
+                </h3>
+                <p className="m-0 text-xs text-ink-3">{t("leaderboard_sub")}</p>
+              </div>
+              {contributors.length === 0 && (
+                <div className="text-center text-ink-3 py-6 text-sm">{t("leaderboard_empty")}</div>
+              )}
+              {contributors.map((c, i) => (
+                <div key={c.user.id} className="flex items-center gap-3 py-2.5 border-b border-grid last:border-b-0">
+                  <span className={`w-6 h-6 rounded-full grid place-items-center text-[0.7rem] font-bold shrink-0
+                    ${i === 0 ? "bg-accent-soft text-primary" : "bg-surface-2 text-ink-3 border border-line"}`}>
+                    {i + 1}
+                  </span>
+                  <Avatar name={c.user.name} size="sm" />
+                  <span className="flex-1 min-w-0 text-sm font-semibold truncate">{c.user.name[lang]}</span>
+                  <span className="text-sm font-bold tabular-nums text-primary">{c.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      {/* Row 2: today's shape of the work */}
-      <div className="grid gap-5 lg:grid-cols-3 mb-5">
-        <ChartCard
-          title={t("status_mix")}
-          sub={t("status_mix_sub")}
-          chart={<Donut stats={stats} centerLabel={t("tasks_total")} />}
-          table={<StatusTable stats={stats} />}
-        />
-        <ChartCard
-          title={t("due_outlook")}
-          sub={t("due_outlook_sub")}
-          chart={<ColumnChart rows={dueBuckets} countLabel={t("open_tasks")} />}
-          table={<BucketTable rows={dueBuckets} groupLabel={t("bucket")} countLabel={t("open_tasks")} />}
-        />
-        <ChartCard
-          title={t("prio_mix")}
-          sub={t("prio_mix_sub")}
-          chart={<ArcChart slices={prioBuckets.map((b) => ({ id: b.id, label: b.label, value: b.count, color: b.color! }))} centerLabel={t("open_tasks")} />}
-          table={<BucketTable rows={prioBuckets} groupLabel={t("bucket")} countLabel={t("open_tasks")} />}
-        />
-      </div>
+          {/* Row 2: today's shape of the work */}
+          <div className="grid gap-5 lg:grid-cols-3 mb-5">
+            <ChartCard
+              title={t("status_mix")}
+              sub={t("status_mix_sub")}
+              chart={<Donut stats={stats} centerLabel={t("tasks_total")} />}
+              table={<StatusTable stats={stats} />}
+            />
+            <ChartCard
+              title={t("due_outlook")}
+              sub={t("due_outlook_sub")}
+              chart={<ColumnChart rows={dueBuckets} countLabel={t("open_tasks")} />}
+              table={<BucketTable rows={dueBuckets} groupLabel={t("bucket")} countLabel={t("open_tasks")} />}
+            />
+            <ChartCard
+              title={t("prio_mix")}
+              sub={t("prio_mix_sub")}
+              chart={<ArcChart slices={prioBuckets.map((b) => ({ id: b.id, label: b.label, value: b.count, color: b.color! }))} centerLabel={t("open_tasks")} />}
+              table={<BucketTable rows={prioBuckets} groupLabel={t("bucket")} countLabel={t("open_tasks")} />}
+            />
+          </div>
 
-      {/* Row 3: how the open work is moving */}
-      <div className="grid gap-5 lg:grid-cols-3 mb-5">
-        <ChartCard
-          title={t("prog_dist")}
-          sub={t("prog_dist_sub")}
-          chart={<ColumnChart rows={progBuckets} countLabel={t("open_tasks")} />}
-          table={<BucketTable rows={progBuckets} groupLabel={t("progress")} countLabel={t("open_tasks")} />}
-        />
-        <ChartCard
-          title={t("aging_title")}
-          sub={t("aging_sub")}
-          chart={<BucketBars rows={ageBuckets} countLabel={t("open_tasks")} />}
-          table={<BucketTable rows={ageBuckets} groupLabel={t("bucket")} countLabel={t("open_tasks")} />}
-        />
-        <ChartCard
-          title={t("weekday_title")}
-          sub={t("weekday_sub")}
-          chart={<RadialBars rows={weekdayBuckets} countLabel={t("st_done")} />}
-          table={<BucketTable rows={weekdayBuckets} groupLabel={t("bucket")} countLabel={t("st_done")} />}
-        />
-      </div>
+          {/* Row 3: how the open work is moving */}
+          <div className="grid gap-5 lg:grid-cols-3 mb-5">
+            <ChartCard
+              title={t("prog_dist")}
+              sub={t("prog_dist_sub")}
+              chart={<ColumnChart rows={progBuckets} countLabel={t("open_tasks")} />}
+              table={<BucketTable rows={progBuckets} groupLabel={t("progress")} countLabel={t("open_tasks")} />}
+            />
+            <ChartCard
+              title={t("aging_title")}
+              sub={t("aging_sub")}
+              chart={<BucketBars rows={ageBuckets} countLabel={t("open_tasks")} />}
+              table={<BucketTable rows={ageBuckets} groupLabel={t("bucket")} countLabel={t("open_tasks")} />}
+            />
+            <ChartCard
+              title={t("weekday_title")}
+              sub={t("weekday_sub")}
+              chart={<RadialBars rows={weekdayBuckets} countLabel={t("st_done")} />}
+              table={<BucketTable rows={weekdayBuckets} groupLabel={t("bucket")} countLabel={t("st_done")} />}
+            />
+          </div>
 
-      {/* Row 4: the per-group pair, side by side at one height */}
-      <div className="grid gap-5 lg:grid-cols-2 mb-5">
-        <ChartCard
-          title={t("avg_progress")}
-          sub={t("avg_progress_sub")}
-          chart={<ProgressBars rows={rows} />}
-          table={<ProgressTable rows={rows} groupLabel={groups.groupLabel} />}
-        />
-        <ChartCard
-          title={user.role === "manager" ? t("by_member") : t("by_team")}
-          sub={t("by_team_sub")}
-          chart={<TeamBars rows={barRows} />}
-          table={<TeamBarsTable rows={barRows} />}
-        />
-      </div>
+          {/* Row 4: the per-group pair, side by side at one height */}
+          <div className="grid gap-5 lg:grid-cols-2 mb-5">
+            <ChartCard
+              title={t("avg_progress")}
+              sub={t("avg_progress_sub")}
+              chart={<ProgressBars rows={rows} />}
+              table={<ProgressTable rows={rows} groupLabel={groups.groupLabel} />}
+            />
+            <ChartCard
+              title={user.role === "manager" ? t("by_member") : t("by_team")}
+              sub={t("by_team_sub")}
+              chart={<TeamBars rows={barRows} />}
+              table={<TeamBarsTable rows={barRows} />}
+            />
+          </div>
 
-      <div className="card">
-        <div className="mb-3">
-          <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
-            <Icon name="list-checks" size={16} className="text-ink-3" /> {t("brk_title")}
-          </h3>
-          <p className="m-0 text-xs text-ink-3">{t("brk_sub")}</p>
-        </div>
-        <BreakdownTable rows={breakdown} groupLabel={groups.groupLabel} />
-      </div>
+          <div className="card">
+            <div className="mb-3">
+              <h3 className="m-0 text-base font-bold inline-flex items-center gap-2">
+                <Icon name="list-checks" size={16} className="text-ink-3" /> {t("brk_title")}
+              </h3>
+              <p className="m-0 text-xs text-ink-3">{t("brk_sub")}</p>
+            </div>
+            <BreakdownTable rows={breakdown} groupLabel={groups.groupLabel} />
+          </div>
+        </>
+      )}
     </>
   );
 }

@@ -22,12 +22,13 @@ export function LineChart({ points, seriesLabel }: { points: TrendPoint[]; serie
         </g>
       ))}
       <polygon points={area} fill="var(--accent)" opacity={0.1} className="chart-fill-fade" />
+      <polyline points={line} fill="none" stroke="var(--accent)" strokeWidth={5} strokeLinejoin="round" aria-hidden style={{ filter: "blur(6px)", opacity: 0.45 }} className="chart-fill-fade" />
       <polyline points={line} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" pathLength={1} className="chart-draw" />
       {pts.map((p, i) => (
         <g key={i}>
           <circle cx={p[0]} cy={p[1]} r={11} fill="transparent" data-tt={`${points[i].label}|${points[i].count} ${seriesLabel}`} className="cursor-pointer" />
-          <circle cx={p[0]} cy={p[1]} r={points[i].count ? 3.5 : 2} fill="var(--accent)" pointerEvents="none" />
-          {(i % 2 === 0 || points.length <= 8) && (
+          <circle cx={p[0]} cy={p[1]} r={points.length > 40 ? (points[i].count ? 2 : 0) : points[i].count ? 3.5 : 2} fill="var(--accent)" pointerEvents="none" />
+          {i % Math.max(1, Math.ceil(points.length / 8)) === 0 && (
             <text x={p[0]} y={H - 8} textAnchor="middle" fontSize={10} fill="var(--ink-3)">{points[i].label}</text>
           )}
         </g>

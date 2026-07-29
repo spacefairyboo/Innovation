@@ -19,7 +19,7 @@ export function BucketBars({ rows, countLabel }: { rows: BucketRow[]; countLabel
           >
             <div
               className="h-full rounded-e bar-grow"
-              style={{ width: `${(r.count / max) * 100}%`, background: r.color ?? "var(--accent)", animationDelay: `${0.1 + i * 0.07}s` }}
+              style={{ width: `${(r.count / max) * 100}%`, background: r.color ?? "var(--accent)", boxShadow: `0 0 12px color-mix(in srgb, ${r.color ?? "var(--accent)"} 45%, transparent)`, animationDelay: `${0.1 + i * 0.07}s` }}
             />
           </div>
           <div className="w-8 text-xs font-semibold text-ink-2 tabular-nums text-end">{r.count}</div>

@@ -73,6 +73,8 @@ export interface Task {
   progress: number;
   priority: Priority;
   title: Localized;
+  /** Free-form context: what the task is about, links, constraints. */
+  description: string | null;
   due: string | null; // YYYY-MM-DD
   updatedAt: number;
   createdAt: number;

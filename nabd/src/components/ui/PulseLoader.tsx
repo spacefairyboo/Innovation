@@ -1,7 +1,10 @@
-/* The Echo loading mark: a circular soundwave. Flowing rings of fine wavy
-   lines drift around a quiet center, two layers turning in opposite
-   directions, with a slow breathing pulse. Pure SVG and CSS, so it renders
-   instantly in loading states. */
+/* The Echo mark: a circular soundwave of flowing wavy line-rings, two
+   layers turning in opposite directions with a slow breathing pulse.
+   One drawing serves as both the brand logo (EchoMark, on the login and
+   the portal sidebar) and the loading state (PulseLoader). Pure SVG and
+   CSS, so it renders instantly everywhere. */
+
+import { useId } from "react";
 
 const N = 140;
 
@@ -18,31 +21,51 @@ function ringPath(R0: number, a1: number, k1: number, a2: number, k2: number, ph
 }
 
 /* Each layer is a bundle of slightly phase-shifted copies: the "many fine
-   lines" ribbon look. Computed once at module load. */
-const LAYER_A = Array.from({ length: 7 }, (_, j) => ringPath(36 - j * 0.5, 4.2, 3, 2.6, 5, j * 0.42));
-const LAYER_B = Array.from({ length: 7 }, (_, j) => ringPath(32.5 - j * 0.45, 3.4, 4, 2.2, 6, 1.3 + j * 0.5));
+   lines" ribbon look. The waves reach wide, almost to the frame's edge. */
+const LAYER_A = Array.from({ length: 7 }, (_, j) => ringPath(40 - j * 0.6, 5.2, 3, 3.2, 5, j * 0.42));
+const LAYER_B = Array.from({ length: 7 }, (_, j) => ringPath(35.5 - j * 0.5, 4.2, 4, 2.6, 6, 1.3 + j * 0.5));
 
-export function PulseLoader({ size = 96, label }: { size?: number; label?: string }) {
+/** The drawing itself. `mono` strokes with the surrounding text color
+    (for dark or photographic surfaces); otherwise the brand gradient. */
+function Rings({ size, mono }: { size: number; mono?: boolean }) {
+  const gradId = useId();
+  const stroke = mono ? "currentColor" : `url(#${gradId})`;
+  // Fine 0.7-unit lines vanish below ~64px; the small mark strokes heavier.
+  const sw = size <= 64 ? 1.6 : 0.7;
   return (
-    <div className="flex flex-col items-center gap-3" role="status" aria-live="polite">
-      <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="pulse-loader pulse-breathe">
+    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="pulse-loader pulse-breathe">
+      {!mono && (
         <defs>
-          <linearGradient id="pulse-grad" x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stopColor="var(--primary)" />
             <stop offset="1" stopColor="var(--accent)" />
           </linearGradient>
         </defs>
-        <g className="pulse-rotor">
-          {LAYER_A.map((d, i) => (
-            <path key={i} d={d} fill="none" stroke="url(#pulse-grad)" strokeWidth={0.7} opacity={0.65} />
-          ))}
-        </g>
-        <g className="pulse-rotor-rev">
-          {LAYER_B.map((d, i) => (
-            <path key={i} d={d} fill="none" stroke="url(#pulse-grad)" strokeWidth={0.6} opacity={0.5} />
-          ))}
-        </g>
-      </svg>
+      )}
+      <g className="pulse-rotor">
+        {LAYER_A.map((d, i) => (
+          <path key={i} d={d} fill="none" stroke={stroke} strokeWidth={sw} opacity={0.65} />
+        ))}
+      </g>
+      <g className="pulse-rotor-rev">
+        {LAYER_B.map((d, i) => (
+          <path key={i} d={d} fill="none" stroke={stroke} strokeWidth={sw * 0.85} opacity={0.5} />
+        ))}
+      </g>
+    </svg>
+  );
+}
+
+/** The brand logo: the living mark, no status semantics. */
+export function EchoMark({ size = 40, mono = false }: { size?: number; mono?: boolean }) {
+  return <Rings size={size} mono={mono} />;
+}
+
+/** The loading state: the same mark announced as busy, with an optional label. */
+export function PulseLoader({ size = 96, label }: { size?: number; label?: string }) {
+  return (
+    <div className="flex flex-col items-center gap-3" role="status" aria-live="polite">
+      <Rings size={size} />
       {label && <span className="text-sm font-semibold text-ink-2">{label}</span>}
     </div>
   );

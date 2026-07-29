@@ -34,6 +34,7 @@ function mapTask(r: Record<string, unknown>, history: TaskUpdate[], assigneeIds:
     status: r.status as TaskStatus, progress: Number(r.progress),
     priority: r.priority as Priority,
     title: { en: r.title_en as string, ar: r.title_ar as string },
+    description: (r.description as string | null) ?? null,
     due: (r.due as string) ?? null, updatedAt: Number(r.updated_at),
     createdAt: Number(r.created_at ?? r.updated_at),
     source: ((r.source as string) ?? "manual") as TaskSource,
@@ -191,7 +192,7 @@ export function getTaskAdvice(taskId: string): SavedAdviceRow | null {
 }
 
 /* ---------- writes ---------- */
-type TaskPatch = Partial<Pick<Task, "status" | "progress" | "priority" | "due" | "tags" | "projectId">>
+type TaskPatch = Partial<Pick<Task, "status" | "progress" | "priority" | "due" | "tags" | "projectId" | "description">>
   & { title?: string; assigneeIds?: string[] };
 
 export function updateTask(
@@ -237,6 +238,7 @@ function updateTaskInner(
     title_ar: patch.title ?? existing.title.ar,
     tags: patch.tags ?? existing.tags,
     projectId: patch.projectId !== undefined ? patch.projectId : existing.projectId,
+    description: patch.description !== undefined ? patch.description : existing.description,
   };
   if (next.status === "done") next.progress = 100;
 
@@ -253,8 +255,8 @@ function updateTaskInner(
   for (const c of changes) logAudit(taskId, changedBy, now, c);
 
   db.prepare(
-    "UPDATE tasks SET owner_id=?, team_id=?, status=?, progress=?, priority=?, due=?, title_en=?, title_ar=?, tags=?, project_id=?, updated_at=? WHERE id=?",
-  ).run(ownerId, teamId, next.status, next.progress, next.priority, next.due, next.title_en, next.title_ar, JSON.stringify(next.tags), next.projectId, now, taskId);
+    "UPDATE tasks SET owner_id=?, team_id=?, status=?, progress=?, priority=?, due=?, title_en=?, title_ar=?, tags=?, project_id=?, description=?, updated_at=? WHERE id=?",
+  ).run(ownerId, teamId, next.status, next.progress, next.priority, next.due, next.title_en, next.title_ar, JSON.stringify(next.tags), next.projectId, next.description, now, taskId);
 
   if (nextAssignees) {
     db.prepare("DELETE FROM task_assignees WHERE task_id = ?").run(taskId);
@@ -273,7 +275,7 @@ function updateTaskInner(
 
 export function createTask(input: {
   title: string; assigneeIds: string[]; due: string | null; priority: Priority; createdBy: string;
-  source?: TaskSource; tags?: string[]; projectId?: string | null;
+  source?: TaskSource; tags?: string[]; projectId?: string | null; description?: string | null;
 }): Task {
   return withTransaction(() => {
     const db = getDB();
@@ -283,11 +285,11 @@ export function createTask(input: {
     const id = "k" + Math.random().toString(36).slice(2, 10);
     const now = Date.now();
     db.prepare(
-      "INSERT INTO tasks (id, owner_id, team_id, status, progress, priority, title_en, title_ar, due, updated_at, created_at, source, tags, project_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO tasks (id, owner_id, team_id, status, progress, priority, title_en, title_ar, due, updated_at, created_at, source, tags, project_id, description) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     ).run(
       id, owner.id, owner.teamId, "pending", 0, input.priority,
       input.title, input.title, input.due, now, now, input.source ?? "manual",
-      JSON.stringify(input.tags ?? []), input.projectId ?? null,
+      JSON.stringify(input.tags ?? []), input.projectId ?? null, input.description ?? null,
     );
     const ins = db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
     for (const uid of assignees) ins.run(id, uid);

@@ -214,11 +214,28 @@ export function seed(d: DatabaseSync) {
   ensureDemoPasswords(d);
   ensurePhoneExts(d);
   ensureExpandedOrg(d);
+  ensureDemoProjects(d);
 }
 
 /* Demo Outlook calendar — meetings the Graph sync would pull from each
    user's mailbox. Times are relative to "now" so the current month is
    always populated. */
+
+/** Demo projects with a few linked tasks; idempotent for existing databases. */
+export function ensureDemoProjects(d: DatabaseSync): void {
+  const ins = d.prepare("INSERT OR IGNORE INTO projects (id, name, created_by, ts) VALUES (?,?,?,?)");
+  const now = Date.now();
+  ins.run("p1", "Website Launch", "m1", now);
+  ins.run("p2", "Q3 Campaign", "m3", now);
+  ins.run("p3", "Compliance Drive", "s1", now);
+  const link = d.prepare("UPDATE tasks SET project_id = ? WHERE id = ? AND project_id IS NULL");
+  for (const [pid, tid] of [
+    ["p1", "k1"], ["p1", "k3"], ["p1", "k16"],
+    ["p2", "k11"], ["p2", "k13"], ["p2", "k14"],
+    ["p3", "k2"], ["p3", "k17"], ["p3", "k6"],
+  ] as const) link.run(pid, tid);
+}
+
 export function seedMeetings(d: DatabaseSync) {
   const at = (dayOffset: number, hour: number, durMin = 60) => {
     const start = new Date();

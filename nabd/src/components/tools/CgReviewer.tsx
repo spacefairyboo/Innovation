@@ -7,7 +7,7 @@
 import { useRef, useState, useTransition } from "react";
 import { reviewDocsAction } from "@/app/actions";
 import { useI18n } from "@/components/providers";
-import { Icon, PulseLoader } from "@/components/ui";
+import { GlassIcon, Icon, PulseLoader } from "@/components/ui";
 import type { ReviewedDoc } from "@/server/actions/toolActions";
 
 const KIND_META: Record<string, { icon: string; color: string; labelKey: string }> = {
@@ -33,9 +33,7 @@ function FileDrop({ label, sub, multiple, files, onFiles, icon }: {
   return (
     <div className="card !p-5 flex flex-col gap-3">
       <div className="flex items-center gap-3">
-        <span className="w-10 h-10 rounded-xl grid place-items-center bg-accent-soft text-primary shrink-0">
-          <Icon name={icon} size={18} />
-        </span>
+        <GlassIcon name={icon} size={52} icon={24} />
         <div>
           <h3 className="m-0 text-base font-bold">{label}</h3>
           <p className="m-0 text-xs text-ink-3">{sub}</p>

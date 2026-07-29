@@ -8,6 +8,7 @@ import { useI18n } from "@/components/providers";
 import { Icon } from "@/components/ui";
 import { TaskListSection } from "./TaskList";
 import type { AssigneeOption, ProjectOption, TaskVM } from "./types";
+import type { EffStatus } from "@/lib/types";
 
 type TabId = "mine" | "email" | "suggested" | "delegated";
 
@@ -30,6 +31,7 @@ export function TaskTabs({ myVms, delegatedVms, emailVms = [], suggestions, sugg
   assignees?: AssigneeOption[];
   projects?: ProjectOption[];
   initialQuery?: string;
+  initialStatus?: EffStatus | "all";
 }) {
   const { t } = useI18n();
   const [tab, setTab] = useState<TabId>("mine");

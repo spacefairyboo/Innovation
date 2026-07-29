@@ -69,6 +69,7 @@ function taskContext(task: Task, user: User, lang: Lang): string {
   return [
     `Today: ${todayISO()}`,
     `Task: ${task.title[lang] || task.title.en}`,
+    task.description ? `Description: ${task.description}` : "",
     `Status: ${effStatus(task)} (stored: ${task.status}) · Progress: ${task.progress}%`,
     `Priority: ${task.priority} · Due: ${task.due ?? "none"}`,
     task.tags.length ? `Tags: ${task.tags.join(", ")}` : "",
