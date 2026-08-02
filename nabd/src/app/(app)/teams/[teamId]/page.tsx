@@ -43,7 +43,7 @@ export default async function TeamPage({ params, searchParams }: {
   return (
     <>
       <div className="flex items-center gap-3.5 mb-5 flex-wrap">
-        <Link href="/teams" className="icon-btn no-underline" aria-label={t("nav_teams")}>
+        <Link href="/" className="icon-btn no-underline" aria-label={t("nav_dashboard")}>
           <Icon name={lang === "ar" ? "chevron-right" : "chevron-left"} size={18} />
         </Link>
         <TeamGlyph name={team.name[lang]} size="lg" />

@@ -366,10 +366,10 @@ export default async function Dashboard({
             </p>
             <div className='flex items-center gap-2.5 mt-4 flex-wrap'>
               <Link
-                href={`/teams?section=${focusSection.id}`}
+                href={`/stats?section=${focusSection.id}`}
                 className='inline-flex items-center gap-2 rounded-full px-4.5 py-2.5 text-sm font-semibold no-underline text-white border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition'
               >
-                <Icon name='building' size={16} /> {t('open_section')}
+                <Icon name='trending-up' size={16} /> {t('nav_stats')}
               </Link>
             </div>
           </div>
