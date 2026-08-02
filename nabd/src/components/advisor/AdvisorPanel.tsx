@@ -6,6 +6,7 @@
    replaces it. Space is reserved while the model writes, so nothing jumps. */
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { adviseTaskAction } from "@/app/actions";
 import { useI18n } from "@/components/providers";
 import { Icon, PulseLoader, Select, StatusChip } from "@/components/ui";
@@ -89,6 +90,9 @@ export function AdvisorPanel({ tasks, saved }: { tasks: AdvisorTaskOption[]; sav
             <StatusChip status={picked.eff} />
             <span className="tabular-nums">{picked.progress}%</span>
             {picked.due && <span className="inline-flex items-center gap-1"><Icon name="calendar" size={12} /> {picked.due}</span>}
+            <Link href={`/task/${picked.id}`} className="inline-flex items-center gap-1 font-semibold text-primary no-underline hover:underline">
+              <Icon name="eye" size={12} /> {t("view_task")}
+            </Link>
           </div>
         )}
       </div>

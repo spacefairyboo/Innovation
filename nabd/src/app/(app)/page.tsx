@@ -37,9 +37,45 @@ import {
   type Task,
 } from '@/lib/types';
 import {
-  doneThisWeekCount, greetingKey, recentActivity, sectionCardVMs, unitCardVMs,
+  doneThisWeekCount, greetingKey, recentActivity, sectionCardVMs, toVM, unitCardVMs,
 } from '@/server/vm';
 import { OrgCardGrid } from '@/components/teams';
+import { TaskListSection } from '@/components/tasks';
+
+/** The Latest-activity feed; every entry links to its task. */
+function ActivityFeed({ activity, lang, t }: {
+  activity: ReturnType<typeof recentActivity>;
+  lang: 'en' | 'ar';
+  t: (k: string, v?: Record<string, string | number>) => string;
+}) {
+  if (activity.length === 0) {
+    return <div className='text-center text-ink-3 py-6 text-sm'>{t('no_activity')}</div>;
+  }
+  return (
+    <>
+      {activity.map(({ task, h, daysAgo }, i) => {
+        const owner = (h.byId ? getUser(h.byId) : null) ?? getUser(task.ownerId)!;
+        const when = daysAgo <= 0 ? t('today') : daysAgo === 1 ? t('yesterday') : t('days_ago', { d: daysAgo });
+        return (
+          <div key={i} className='flex items-center gap-3 py-2.5 border-b border-grid last:border-b-0'>
+            <Avatar name={owner.name} size='sm' />
+            <div className='flex-1 min-w-0'>
+              <div className='font-semibold text-sm flex items-center gap-2 flex-wrap'>
+                <Link href={`/task/${task.id}`} className='no-underline text-ink hover:underline'>
+                  {task.title[lang]}
+                </Link>
+                <StatusChip status={h.status} />
+              </div>
+              <div className='text-xs text-ink-3 mt-0.5'>
+                {h.text[lang]} — {owner.name[lang]} · {when}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
 
 /** Blocked/delayed first; the remaining slots go to high-value open work. */
 function mattersMost(
@@ -121,7 +157,7 @@ export default async function Dashboard({
     const attention = mattersMost(tasks, lang, 8).filter(
       (x) => x.eff !== 'value',
     );
-    const activity = recentActivity(tasks, 5);
+    const activity = recentActivity(tasks, 8);
     const kpis = [
       {
         label: t('tasks_total'),
@@ -226,63 +262,46 @@ export default async function Dashboard({
           ))}
         </div>
 
-        <div className='grid gap-5 lg:[grid-template-columns:1.55fr_1fr] items-start'>
-          <div className='grid gap-5 min-w-0'>
-            <div className='card'>
-              <div className='mb-3'>
-                <h3 className='m-0 text-base font-bold'>
-                  {t('needs_attention')}
-                </h3>
-                <p className='m-0 text-xs text-ink-3'>
-                  {t('needs_attention_sub')}
-                </p>
-              </div>
-              <AttentionList items={attention} canNudge />
-            </div>
-            <div className='card'>
-              <h3 className='m-0 mb-3 text-base font-bold'>
-                {t('updates_feed')}
+        {/* The chart card stretches to the attention list's height, no
+            further: the donut stays compact so the row reads as one band. */}
+        <div className='grid gap-5 lg:[grid-template-columns:1.55fr_1fr] mb-5'>
+          <div className='card'>
+            <div className='mb-3'>
+              <h3 className='m-0 text-base font-bold'>
+                {t('needs_attention')}
               </h3>
-              {activity.length === 0 && (
-                <div className='text-center text-ink-3 py-6 text-sm'>
-                  {t('no_activity')}
-                </div>
-              )}
-              {activity.map(({ task, h, daysAgo }, i) => {
-                const owner =
-                  (h.byId ? getUser(h.byId) : null) ?? getUser(task.ownerId)!;
-                const when =
-                  daysAgo <= 0
-                    ? t('today')
-                    : daysAgo === 1
-                      ? t('yesterday')
-                      : t('days_ago', { d: daysAgo });
-                return (
-                  <div
-                    key={i}
-                    className='flex items-center gap-3 py-2.5 border-b border-grid last:border-b-0'
-                  >
-                    <Avatar name={owner.name} size='sm' />
-                    <div className='flex-1 min-w-0'>
-                      <div className='font-semibold text-sm flex items-center gap-2 flex-wrap'>
-                        {task.title[lang]} <StatusChip status={h.status} />
-                      </div>
-                      <div className='text-xs text-ink-3 mt-0.5'>
-                        {h.text[lang]} — {owner.name[lang]} · {when}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              <p className='m-0 text-xs text-ink-3'>
+                {t('needs_attention_sub')}
+              </p>
             </div>
+            <AttentionList items={attention} canNudge />
           </div>
           <ChartCard
             title={t('status_mix')}
             sub={t('status_mix_sub')}
-            chart={<Donut stats={stats} centerLabel={t('tasks_total')} />}
+            chart={<div className='max-w-64 mx-auto w-full'><Donut stats={stats} centerLabel={t('tasks_total')} /></div>}
             table={<StatusTable stats={stats} />}
           />
         </div>
+
+        <div className='card mb-5'>
+          <h3 className='m-0 mb-3 text-base font-bold'>
+            {t('updates_feed')}
+          </h3>
+          <ActivityFeed activity={activity} lang={lang} t={t} />
+        </div>
+
+        {/* Every task in this unit, as the filterable table */}
+        <div className='mb-2'>
+          <h3 className='m-0 text-base font-bold'>{t('unit_tasks')}</h3>
+          <p className='m-0 text-xs text-ink-3'>{t('unit_tasks_sub')}</p>
+        </div>
+        <TaskListSection
+          vms={tasks.map((x) => toVM(x, user))}
+          canEdit
+          canNudge
+          pageSize={10}
+        />
       </>
     );
   }
@@ -406,7 +425,7 @@ export default async function Dashboard({
           <OrgCardGrid cards={sectionUnits} />
         </div>
 
-        <div className='grid gap-5 lg:[grid-template-columns:1.55fr_1fr] items-start'>
+        <div className='grid gap-5 lg:[grid-template-columns:1.55fr_1fr] mb-5'>
           <div className='card'>
             <div className='mb-3'>
               <h3 className='m-0 text-base font-bold'>
@@ -421,10 +440,31 @@ export default async function Dashboard({
           <ChartCard
             title={t('status_mix')}
             sub={t('status_mix_sub')}
-            chart={<Donut stats={stats} centerLabel={t('tasks_total')} />}
+            chart={<div className='max-w-64 mx-auto w-full'><Donut stats={stats} centerLabel={t('tasks_total')} /></div>}
             table={<StatusTable stats={stats} />}
           />
         </div>
+
+        <div className='card mb-5'>
+          <h3 className='m-0 mb-3 text-base font-bold'>
+            {t('updates_feed')}
+          </h3>
+          <ActivityFeed activity={recentActivity(tasks, 8)} lang={lang} t={t} />
+        </div>
+
+        {/* Every task across this section's units, as the filterable table */}
+        <div className='mb-2'>
+          <h3 className='m-0 text-base font-bold'>{t('section_tasks')}</h3>
+          <p className='m-0 text-xs text-ink-3'>{t('section_tasks_sub')}</p>
+        </div>
+        <TaskListSection
+          vms={tasks.map((x) => toVM(x, user))}
+          canEdit
+          canNudge
+          showTeam
+          teamFilter
+          pageSize={10}
+        />
       </>
     );
   }

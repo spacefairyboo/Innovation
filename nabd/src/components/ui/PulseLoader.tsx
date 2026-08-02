@@ -26,14 +26,24 @@ const LAYER_A = Array.from({ length: 7 }, (_, j) => ringPath(40 - j * 0.6, 5.2, 
 const LAYER_B = Array.from({ length: 7 }, (_, j) => ringPath(35.5 - j * 0.5, 4.2, 4, 2.6, 6, 1.3 + j * 0.5));
 
 /** The drawing itself. `mono` strokes with the surrounding text color
-    (for dark or photographic surfaces); otherwise the brand gradient. */
-function Rings({ size, mono }: { size: number; mono?: boolean }) {
+    (for dark or photographic surfaces); `bold` thickens the lines and
+    lifts their opacity, for placements that must read at a glance. */
+function Rings({ size, mono, bold }: { size: number; mono?: boolean; bold?: boolean }) {
   const gradId = useId();
   const stroke = mono ? "currentColor" : `url(#${gradId})`;
   // Fine 0.7-unit lines vanish below ~64px; the small mark strokes heavier.
-  const sw = size <= 64 ? 1.6 : 0.7;
+  const sw = (size <= 64 ? 1.6 : 0.7) * (bold ? 1.7 : 1);
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" aria-hidden className="pulse-loader pulse-breathe">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      aria-hidden
+      className="pulse-loader pulse-breathe"
+      // The stylesheet tints the loader with the brand color; a mono mark
+      // must take the surrounding text color instead (white on the login).
+      style={mono ? { color: "inherit" } : undefined}
+    >
       {!mono && (
         <defs>
           <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
@@ -44,12 +54,12 @@ function Rings({ size, mono }: { size: number; mono?: boolean }) {
       )}
       <g className="pulse-rotor">
         {LAYER_A.map((d, i) => (
-          <path key={i} d={d} fill="none" stroke={stroke} strokeWidth={sw} opacity={0.65} />
+          <path key={i} d={d} fill="none" stroke={stroke} strokeWidth={sw} opacity={bold ? 0.9 : 0.65} />
         ))}
       </g>
       <g className="pulse-rotor-rev">
         {LAYER_B.map((d, i) => (
-          <path key={i} d={d} fill="none" stroke={stroke} strokeWidth={sw * 0.85} opacity={0.5} />
+          <path key={i} d={d} fill="none" stroke={stroke} strokeWidth={sw * 0.85} opacity={bold ? 0.75 : 0.5} />
         ))}
       </g>
     </svg>
@@ -57,8 +67,8 @@ function Rings({ size, mono }: { size: number; mono?: boolean }) {
 }
 
 /** The brand logo: the living mark, no status semantics. */
-export function EchoMark({ size = 40, mono = false }: { size?: number; mono?: boolean }) {
-  return <Rings size={size} mono={mono} />;
+export function EchoMark({ size = 40, mono = false, bold = false }: { size?: number; mono?: boolean; bold?: boolean }) {
+  return <Rings size={size} mono={mono} bold={bold} />;
 }
 
 /** The loading state: the same mark announced as busy, with an optional label. */

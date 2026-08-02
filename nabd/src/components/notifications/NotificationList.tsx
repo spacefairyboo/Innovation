@@ -3,6 +3,7 @@
 /* Notification feed with kudos / nudge quick actions. */
 
 import { useTransition } from "react";
+import Link from "next/link";
 import { markNotificationsRead } from "@/app/actions";
 import { useI18n, useToast } from "@/components/providers";
 import { relTime } from "@/components/ui";
@@ -58,7 +59,9 @@ export function NotificationList({ notifs, names, canNudge }: {
                 <Icon name={st.ico} size={16} />
               </span>
               <div className="flex-1 text-sm min-w-0">
-                <b className="block">{nn.head}</b>
+                <Link href={`/task/${nn.taskId}`} className="block font-bold no-underline text-ink hover:underline">
+                  {nn.head}
+                </Link>
                 <span className="text-ink-2 text-xs">{nn.body}</span>
               </div>
               <div className="flex flex-col gap-1.5 items-end shrink-0">

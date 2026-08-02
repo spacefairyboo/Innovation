@@ -4,6 +4,7 @@
    unit line, a status chip, and a quiet remind bell for leads. Theme
    variables keep it right in both light and dark. */
 
+import Link from "next/link";
 import { useI18n, useToast } from "@/components/providers";
 import { Icon, StatusChip } from "@/components/ui";
 import type { EffStatus } from "@/lib/types";
@@ -34,7 +35,9 @@ export function AttentionList({ items, canNudge = false }: { items: AttentionIte
       {items.map((x) => (
         <div key={x.id} className="flex items-center gap-3 py-3.5 border-b border-grid last:border-b-0 last:pb-1 first:pt-1 row-hover px-2 -mx-2">
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-bold truncate">{x.title}</div>
+            <Link href={`/task/${x.id}`} className="block text-sm font-bold truncate no-underline text-ink hover:underline">
+              {x.title}
+            </Link>
             <div className="text-xs text-ink-3 truncate mt-0.5">{x.ownerName} · {x.teamLabel}</div>
           </div>
           {x.eff === "value" ? (
