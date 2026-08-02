@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdviceView } from "@/components/advisor";
-import { TaskFullView } from "@/components/tasks";
+import { TaskFullView, TaskReaderView } from "@/components/tasks";
 import type { AssigneeOption } from "@/components/tasks";
 import { Icon } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
@@ -45,7 +45,12 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
 
   return (
     <>
-      <TaskFullView vm={toVM(task, user)} canEdit={canEdit} assignees={assignees} colleagues={colleagues} backHref={backHref} />
+      {canEdit ? (
+        <TaskFullView vm={toVM(task, user)} canEdit={canEdit} assignees={assignees} colleagues={colleagues} backHref={backHref} />
+      ) : (
+        // Watchers get a page built for reading, not a locked-down form.
+        <TaskReaderView vm={toVM(task, user)} backHref={backHref} />
+      )}
 
       {/* The latest AI plan written for this task, kept for reference. */}
       {savedPlan && (

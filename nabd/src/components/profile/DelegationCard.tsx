@@ -5,7 +5,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { endDelegationAction, startDelegationAction } from "@/app/actions";
 import { useI18n, useToast } from "@/components/providers";
-import { Icon } from "@/components/ui";
+import { Icon, Select } from "@/components/ui";
 import type { Localized } from "@/lib/types";
 
 export interface DelegationView {
@@ -69,19 +69,21 @@ export function DelegationCard({ active, colleagues }: {
           <label className="text-xs font-bold text-ink-3 uppercase tracking-wide -mb-1.5" htmlFor="delegate-select">
             {t("delegation_delegate")}
           </label>
-          <select
+          <Select
             id="delegate-select"
-            className="field-input"
+            className="w-full"
+            size="md"
+            ariaLabel={t("delegation_delegate")}
             value={delegateId}
-            onChange={(e) => setDelegateId(e.target.value)}
-          >
-            <option value="">{t("delegation_pick")}</option>
-            {colleagues.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name[lang]}{c.teamName ? ` — ${c.teamName[lang]}` : ""}
-              </option>
-            ))}
-          </select>
+            onChange={setDelegateId}
+            options={[
+              { value: "", label: t("delegation_pick") },
+              ...colleagues.map((c) => ({
+                value: c.id,
+                label: `${c.name[lang]}${c.teamName ? ` — ${c.teamName[lang]}` : ""}`,
+              })),
+            ]}
+          />
 
           <label className="text-xs font-bold text-ink-3 uppercase tracking-wide -mb-1.5" htmlFor="delegate-end">
             {t("delegation_end_date")}

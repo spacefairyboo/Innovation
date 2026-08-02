@@ -8,7 +8,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { adviseTaskAction } from "@/app/actions";
 import { useI18n } from "@/components/providers";
-import { Icon, PulseLoader, StatusChip } from "@/components/ui";
+import { Icon, PulseLoader, Select, StatusChip } from "@/components/ui";
 import { AdviceView } from "./AdviceView";
 import type { TaskAdvice } from "@/server/services/advisorService";
 import type { EffStatus } from "@/lib/types";
@@ -71,14 +71,15 @@ export function AdvisorPanel({ tasks, saved }: { tasks: AdvisorTaskOption[]; sav
         <label className="block text-sm font-bold mb-0.5" htmlFor="adv-task">{t("adv_pick")}</label>
         <p className="m-0 mb-3 text-xs text-ink-3">{t("adv_pick_hint")}</p>
         <div className="flex gap-2.5 flex-wrap items-center">
-          <select
+          <Select
             id="adv-task"
-            className="field-input !w-auto max-w-full flex-1 min-w-52"
+            className="max-w-full flex-1 min-w-52"
+            size="md"
+            ariaLabel={t("adv_pick")}
             value={taskId}
-            onChange={(e) => pick(e.target.value)}
-          >
-            {tasks.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
-          </select>
+            onChange={pick}
+            options={tasks.map((x) => ({ value: x.id, label: x.title }))}
+          />
           <button className="btn-primary" onClick={generate} disabled={pending || !taskId}>
             <Icon name="sparkles" size={15} /> {advice ? t("adv_regen") : t("adv_generate")}
           </button>

@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/components/providers";
 import { downloadCsv } from "@/lib/csv";
 import { Icon } from "./Icon";
+import { Select } from "./Select";
 
 export interface DataColumn<T> {
   id: string;
@@ -149,16 +150,17 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportN
           />
         </div>
         {columns.filter((c) => c.filter && (facets.get(c.id)?.length ?? 0) > 1).map((c) => (
-          <select
+          <Select
             key={c.id}
-            className="field-input !w-auto !py-2 text-sm"
-            value={filters[c.id] ?? ""}
-            onChange={(e) => { setFilters((f) => ({ ...f, [c.id]: e.target.value })); setPage(0); }}
             title={c.header}
-          >
-            <option value="">{c.header}: {t("table_all")}</option>
-            {facets.get(c.id)!.map((v) => <option key={v} value={v}>{v}</option>)}
-          </select>
+            ariaLabel={c.header}
+            value={filters[c.id] ?? ""}
+            onChange={(v) => { setFilters((f) => ({ ...f, [c.id]: v })); setPage(0); }}
+            options={[
+              { value: "", label: `${c.header}: ${t("table_all")}` },
+              ...facets.get(c.id)!.map((v) => ({ value: v, label: v })),
+            ]}
+          />
         ))}
         {filtersActive && (
           <button className="btn-ghost btn-sm" onClick={() => { setQ(""); setFilters({}); setPage(0); }}>
@@ -267,13 +269,13 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportN
             total: filtered.length,
           })}
         </span>
-        <select
-          className="field-input !w-auto !py-1.5 text-xs"
+        <Select
+          size="xs"
+          ariaLabel={t("table_page")}
           value={String(pageSize)}
-          onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }}
-        >
-          {pageSizes.map((n) => <option key={n} value={n}>{n} / {t("table_page")}</option>)}
-        </select>
+          onChange={(v) => { setPageSize(Number(v)); setPage(0); }}
+          options={pageSizes.map((n) => ({ value: String(n), label: `${n} / ${t("table_page")}` }))}
+        />
         <div className="flex-1" />
         {pages > 1 && (
           <div className="flex items-center gap-2">

@@ -54,10 +54,10 @@ const fmtTime = (d: Date, lang: Lang, tz?: string) =>
 const localToday = (tz?: string) => (tz ? new Date().toLocaleDateString("en-CA", { timeZone: tz }) : todayISO());
 
 /** One line of live context per task, for both ChatGPT and the local engine. */
-function taskLine(t: Task, lang: Lang): string {
+function taskLine(t: Task, lang: Lang, userId: string): string {
   const owner = getUser(t.ownerId);
   const team = getTeam(t.teamId);
-  const open = getChecklist(t.id).filter((c) => !c.done).map((c) => c.text);
+  const open = getChecklist(t.id, userId).filter((c) => !c.done).map((c) => c.text);
   const parts = [
     `"${t.title[lang]}"`,
     `status: ${effStatus(t)}`,
@@ -178,7 +178,7 @@ export async function chatgptRespond(
     `You are the assistant inside Echo, a bilingual task-management app. You help ${user.name[lang]} understand and manage their work.`,
     `Right now it is ${fmtDate(now, "en", tz)}, ${fmtTime(now, "en", tz)} (the user's local time). Today's date in ISO form is ${localToday(tz)}.`,
     `The tasks the user can see, from live data:`,
-    tasks.length ? tasks.map((t) => taskLine(t, lang)).join("\n") : "(none)",
+    tasks.length ? tasks.map((t) => taskLine(t, lang, user.id)).join("\n") : "(none)",
     ``,
     `The organization (sections, then their units with heads and members):`,
     orgLines(lang),
@@ -257,10 +257,10 @@ function listLines(tasks: Task[], lang: Lang): string {
 }
 
 /** Short practical guidance for one task, from its own data. */
-function miniPlan(t: Task, lang: Lang): string {
+function miniPlan(t: Task, lang: Lang, userId: string): string {
   const ar = lang === "ar";
   const steps: string[] = [];
-  const open = getChecklist(t.id).filter((c) => !c.done).map((c) => c.text);
+  const open = getChecklist(t.id, userId).filter((c) => !c.done).map((c) => c.text);
   const note = t.history.find((h) => h.text[lang])?.text[lang];
   if (effStatus(t) === "blocked") {
     steps.push(ar
@@ -358,7 +358,7 @@ function answerLocally(message: string, user: User, lang: Lang, tasks: Task[], o
       : `${dueMatch.label === "overdue" ? "Overdue" : `Due ${dueMatch.label}`}:\n${listLines(dueMatch.list, lang)}`;
     if (wantsHow) {
       reply += ar ? "\n\nطريقة التعامل معها:\n" : "\n\nHow to approach them:\n";
-      reply += dueMatch.list.slice(0, 4).map((t) => "• " + miniPlan(t, lang)).join("\n");
+      reply += dueMatch.list.slice(0, 4).map((t) => "• " + miniPlan(t, lang, user.id)).join("\n");
     }
     return reply;
   }
@@ -368,7 +368,7 @@ function answerLocally(message: string, user: User, lang: Lang, tasks: Task[], o
     const blocked = tasks.filter((t) => effStatus(t) === "blocked");
     if (!blocked.length) return ar ? "لا توجد مهام متعثرة حاليًا." : "Nothing is blocked right now.";
     return (ar ? "المهام المتعثرة:\n" : "Blocked right now:\n") + listLines(blocked, lang)
-      + (wantsHow ? "\n\n" + blocked.slice(0, 3).map((t) => "• " + miniPlan(t, lang)).join("\n") : "");
+      + (wantsHow ? "\n\n" + blocked.slice(0, 3).map((t) => "• " + miniPlan(t, lang, user.id)).join("\n") : "");
   }
 
   // Progress / status of a specific task ("it" falls back to the last one discussed)
@@ -411,7 +411,7 @@ function answerLocally(message: string, user: User, lang: Lang, tasks: Task[], o
     const ranked = [...open].sort((a, b) => taskValue(b).score - taskValue(a).score).slice(0, 3);
     if (!ranked.length) return ar ? "كل شيء مكتمل. وقت مناسب للتخطيط." : "Everything is complete. A good time to plan ahead.";
     return (ar ? "أقترح البدء بهذه، بالترتيب:\n" : "I would start with these, in order:\n")
-      + ranked.map((t) => "• " + miniPlan(t, lang)).join("\n");
+      + ranked.map((t) => "• " + miniPlan(t, lang, user.id)).join("\n");
   }
 
   // Anything gone quiet?

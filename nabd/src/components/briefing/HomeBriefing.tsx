@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/providers";
-import { Icon } from "@/components/ui";
+import { Icon, Select } from "@/components/ui";
 import { matchesLang, naturalScore, voiceGender, voiceLabel } from "./voiceUtils";
 
 export interface BriefScope {
@@ -144,14 +144,13 @@ export function HomeBriefing({ scopes }: { scopes: BriefScope[] }) {
       {/* Controls: scope, narration language, voice, speed */}
       <div className="flex items-center gap-2 flex-wrap pt-3 border-t border-grid">
         {scopes.length > 1 && (
-          <select
-            className="field-input !w-auto !py-1.5 text-sm"
-            value={scopeId}
-            onChange={(e) => { stop(); setScopeId(e.target.value); }}
+          <Select
             title={t("podcast_scope")}
-          >
-            {scopes.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-          </select>
+            ariaLabel={t("podcast_scope")}
+            value={scopeId}
+            onChange={(v) => { stop(); setScopeId(v); }}
+            options={scopes.map((s) => ({ value: s.id, label: s.label }))}
+          />
         )}
         <div className="inline-flex rounded-xl overflow-hidden border border-line" role="group" aria-label={t("podcast_lang")}>
           {(["en", "ar"] as const).map((l) => (
@@ -167,32 +166,28 @@ export function HomeBriefing({ scopes }: { scopes: BriefScope[] }) {
           ))}
         </div>
         {voices.length > 0 && (
-          <select
-            className="field-input !w-auto !py-1.5 text-sm max-w-48"
-            value={voiceURI}
-            onChange={(e) => pickVoice(e.target.value)}
+          <Select
+            className="max-w-48"
             title={t("voice")}
-          >
-            {(["female", "male", "other"] as const).map((g) => {
-              const group = voices.filter((v) => voiceGender(v) === g);
-              if (!group.length) return null;
-              return (
-                <optgroup key={g} label={t(g === "female" ? "voice_female" : g === "male" ? "voice_male" : "voice_other")}>
-                  {group.map((v) => (
-                    <option key={v.voiceURI} value={v.voiceURI}>{voiceLabel(v, lang)}</option>
-                  ))}
-                </optgroup>
-              );
-            })}
-          </select>
+            ariaLabel={t("voice")}
+            value={voiceURI}
+            onChange={pickVoice}
+            options={(["female", "male", "other"] as const).flatMap((g) =>
+              voices
+                .filter((v) => voiceGender(v) === g)
+                .map((v) => ({
+                  value: v.voiceURI,
+                  label: voiceLabel(v, lang),
+                  group: t(g === "female" ? "voice_female" : g === "male" ? "voice_male" : "voice_other"),
+                })))}
+          />
         )}
-        <select
-          className="field-input !w-auto !py-1.5 text-sm"
+        <Select
+          ariaLabel={t("podcast_speed")}
           value={String(rate)}
-          onChange={(e) => changeRate(Number(e.target.value))}
-        >
-          {[0.8, 1, 1.25, 1.5].map((r) => <option key={r} value={r}>{t("podcast_speed")} {r}×</option>)}
-        </select>
+          onChange={(v) => changeRate(Number(v))}
+          options={[0.8, 1, 1.25, 1.5].map((r) => ({ value: String(r), label: `${t("podcast_speed")} ${r}×` }))}
+        />
       </div>
     </div>
   );

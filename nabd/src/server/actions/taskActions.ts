@@ -84,7 +84,14 @@ export async function saveTask(input: {
 
   if (input.id) {
     const { user: editor, task } = await assertCanEdit(input.id);
-    const assigneeIds = input.assigneeIds?.length ? vetAssignees(editor, input.assigneeIds) : undefined;
+    // Vet only a *changed* assignee list. The form echoes the current list
+    // back untouched, and an unchanged list must never block the save (an
+    // employee co-assigned with a colleague may not "assign" that colleague,
+    // but they are not assigning anyone - they are leaving it as is).
+    const requested = input.assigneeIds?.length ? [...new Set(input.assigneeIds)] : undefined;
+    const unchanged = !requested
+      || (requested.length === task.assigneeIds.length && requested.every((id) => task.assigneeIds.includes(id)));
+    const assigneeIds = requested && !unchanged ? vetAssignees(editor, requested) : undefined;
     const note = boundedText(input.note, 2000);
     // Overdue tasks stay Delayed until the due date moves or they complete.
     const locked = delayLocked(task, status, due);
@@ -94,7 +101,7 @@ export async function saveTask(input: {
       note ? { en: note, ar: note } : null,
       editor.id,
     );
-    if (input.checklist) saveChecklist(input.id, sanitizeChecklist(input.checklist));
+    if (input.checklist) saveChecklist(input.id, editor.id, sanitizeChecklist(input.checklist));
     refresh();
     return { delayedLocked: locked };
   } else {
@@ -108,15 +115,15 @@ export async function saveTask(input: {
       title, description: description ?? null, assigneeIds, due, priority, createdBy: user.id,
       tags, projectId: projectId ?? null,
     });
-    if (input.checklist?.length) saveChecklist(task.id, sanitizeChecklist(input.checklist));
+    if (input.checklist?.length) saveChecklist(task.id, user.id, sanitizeChecklist(input.checklist));
   }
   refresh();
   return { delayedLocked: false };
 }
 
 export async function saveTaskChecklist(taskId: string, items: ChecklistItem[]) {
-  await assertCanEdit(taskId);
-  saveChecklist(taskId, sanitizeChecklist(items));
+  const { user } = await assertCanEdit(taskId);
+  saveChecklist(taskId, user.id, sanitizeChecklist(items));
   refresh();
 }
 
@@ -224,7 +231,7 @@ export async function applyTaskEdit(taskId: string, edit: {
   // Checklist edits: append a new item, or fuzzy-match one and mark it done.
   let checklistMatched: string | null = null;
   if (edit.checklistAdd !== undefined || edit.checklistDone !== undefined) {
-    const items = getChecklist(taskId);
+    const items = getChecklist(taskId, user.id);
     const addText = boundedText(edit.checklistAdd, 300);
     if (addText) items.push({ text: addText, done: false });
     const doneText = boundedText(edit.checklistDone, 300)?.toLowerCase();
@@ -243,7 +250,7 @@ export async function applyTaskEdit(taskId: string, edit: {
         checklistMatched = items[best].text;
       }
     }
-    saveChecklist(taskId, sanitizeChecklist(items));
+    saveChecklist(taskId, user.id, sanitizeChecklist(items));
   }
 
   bumpStreak(user.id);

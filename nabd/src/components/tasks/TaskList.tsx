@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from "react";
 import { useI18n } from "@/components/providers";
-import { Icon } from "@/components/ui";
+import { Icon, Select } from "@/components/ui";
 import { TaskRow } from "./TaskRow";
 import { TaskModal } from "./TaskModal";
 import { STATUS_META, STATUS_ORDER, effStatus, type EffStatus, type Priority } from "@/lib/types";
@@ -88,41 +88,49 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
-          <select className="field-input !w-auto !py-2 text-sm" value={status} onChange={(e) => setStatus(e.target.value as EffStatus | "all")}>
-            <option value="all">{t("st_all")}</option>
-            {STATUS_ORDER.map((s) => (
-              <option key={s} value={s}>{t(STATUS_META[s].labelKey)}</option>
-            ))}
-          </select>
+          <Select
+            ariaLabel={t("st_all")}
+            value={status}
+            onChange={(v) => setStatus(v as EffStatus | "all")}
+            options={[
+              { value: "all", label: t("st_all") },
+              ...STATUS_ORDER.map((s) => ({ value: s, label: t(STATUS_META[s].labelKey) })),
+            ]}
+          />
           {teamFilter && teamOptions.length > 1 && (
-            <select className="field-input !w-auto !py-2 text-sm" value={team} onChange={(e) => setTeam(e.target.value)}>
-              <option value="all">{t("all_teams")}</option>
-              {teamOptions.map((o) => (
-                <option key={o.id} value={o.id}>{o.label}</option>
-              ))}
-            </select>
+            <Select
+              ariaLabel={t("all_teams")}
+              value={team}
+              onChange={setTeam}
+              options={[{ value: "all", label: t("all_teams") }, ...teamOptions.map((o) => ({ value: o.id, label: o.label }))]}
+            />
           )}
           {projectOptions.length > 0 && (
-            <select className="field-input !w-auto !py-2 text-sm" value={project} onChange={(e) => setProject(e.target.value)}>
-              <option value="all">{t("project_all")}</option>
-              {projectOptions.map((o) => (
-                <option key={o.id} value={o.id}>{o.label}</option>
-              ))}
-            </select>
+            <Select
+              ariaLabel={t("project_all")}
+              value={project}
+              onChange={setProject}
+              options={[{ value: "all", label: t("project_all") }, ...projectOptions.map((o) => ({ value: o.id, label: o.label }))]}
+            />
           )}
           {tagOptions.length > 0 && (
-            <select className="field-input !w-auto !py-2 text-sm" value={tag} onChange={(e) => setTag(e.target.value)}>
-              <option value="all">{t("tag_all")}</option>
-              {tagOptions.map((x) => (
-                <option key={x} value={x}>#{x}</option>
-              ))}
-            </select>
+            <Select
+              ariaLabel={t("tag_all")}
+              value={tag}
+              onChange={setTag}
+              options={[{ value: "all", label: t("tag_all") }, ...tagOptions.map((x) => ({ value: x, label: `#${x}` }))]}
+            />
           )}
-          <select className="field-input !w-auto !py-2 text-sm" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
-            <option value="due">{t("sort_by")}: {t("sort_due")}</option>
-            <option value="priority">{t("sort_by")}: {t("sort_priority")}</option>
-            <option value="updated">{t("sort_by")}: {t("sort_updated")}</option>
-          </select>
+          <Select
+            ariaLabel={t("sort_by")}
+            value={sort}
+            onChange={(v) => setSort(v as SortKey)}
+            options={[
+              { value: "due", label: `${t("sort_by")}: ${t("sort_due")}` },
+              { value: "priority", label: `${t("sort_by")}: ${t("sort_priority")}` },
+              { value: "updated", label: `${t("sort_by")}: ${t("sort_updated")}` },
+            ]}
+          />
           {valueFilter && (
             <button
               className="btn-sm inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold cursor-pointer transition border"

@@ -6,7 +6,7 @@
 
 import { useMemo, useState } from "react";
 import { useI18n } from "@/components/providers";
-import { Avatar, DataTable, Icon, type DataColumn } from "@/components/ui";
+import { Avatar, DataTable, Icon, Select, type DataColumn } from "@/components/ui";
 import type { Localized, Role } from "@/lib/types";
 
 export interface DirectoryRow {
@@ -101,15 +101,16 @@ export function DirectoryTable({ rows, sections }: {
     <div className="flex flex-col gap-4">
       {/* Headcount for the chosen scope */}
       <div className="flex gap-3 flex-wrap items-center">
-        <select
-          className="field-input !w-auto !py-2 text-sm"
+        <Select
+          searchable
+          ariaLabel={t("dir_section")}
           value={sectionId}
-          onChange={(e) => setSectionId(e.target.value)}
-          aria-label={t("dir_section")}
-        >
-          <option value="">{t("dir_all_sections")}</option>
-          {sections.map((s) => <option key={s.id} value={s.id}>{s.name[lang]}</option>)}
-        </select>
+          onChange={setSectionId}
+          options={[
+            { value: "", label: t("dir_all_sections") },
+            ...sections.map((s) => ({ value: s.id, label: s.name[lang] })),
+          ]}
+        />
         <div className="flex-1" />
       </div>
       <div className="grid gap-3 rise-stagger [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]">
