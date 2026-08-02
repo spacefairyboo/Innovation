@@ -60,7 +60,7 @@ export function StatTiles({ stats, extras = [], filterable = false }: {
         );
         const style = {
           backgroundImage: `radial-gradient(130% 110% at 0% 0%, color-mix(in srgb, ${x.edge} 13%, transparent), transparent 58%)`,
-          ...(active ? { boxShadow: `inset 0 0 0 2px ${x.edge}, 0 0 16px color-mix(in srgb, ${x.edge} 30%, transparent)` } : {}),
+          ...(active ? { boxShadow: `inset 0 0 0 2px ${x.edge}` } : {}),
         };
         return clickable ? (
           <button

@@ -19,7 +19,6 @@ export function ColumnChart({ rows, countLabel }: { rows: ColumnRow[]; countLabe
             style={{
               height: `${Math.max((r.count / max) * 100, 2)}%`,
               background: r.color ?? "var(--accent)",
-              boxShadow: `0 0 14px color-mix(in srgb, ${r.color ?? "var(--accent)"} 45%, transparent)`,
               animationDelay: `${0.1 + i * 0.08}s`,
             }}
           />
