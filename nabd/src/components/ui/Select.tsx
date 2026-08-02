@@ -17,10 +17,12 @@ export interface SelectOption {
   group?: string;
 }
 
+/* Fixed heights so a row of mixed controls (search, filters, buttons)
+   lines up: md matches form fields, sm matches toolbar controls. */
 const SIZES = {
   md: "px-3.5 py-2.5 text-sm rounded-2xl gap-2",
-  sm: "px-3 py-2 text-sm rounded-xl gap-2",
-  xs: "px-2.5 py-1.5 text-xs rounded-xl gap-1.5",
+  sm: "h-9 px-3 text-sm rounded-xl gap-2",
+  xs: "h-8 px-2.5 text-xs rounded-xl gap-1.5",
 } as const;
 
 /** Search appears once a list is big enough for scanning to hurt. */
@@ -87,7 +89,10 @@ export function Select({ value, options, onChange, ariaLabel, id, title, classNa
       const r = anchor.getBoundingClientRect();
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      menu.style.minWidth = `${Math.max(r.width, 200)}px`;
+      // The panel matches its trigger's width and only grows when option
+      // text genuinely needs the room - never a fixed floor wider than the
+      // control that opened it.
+      menu.style.minWidth = `${r.width}px`;
       menu.style.maxWidth = `${Math.min(380, vw - 16)}px`;
       const mw = menu.offsetWidth;
       const mh = menu.offsetHeight;
