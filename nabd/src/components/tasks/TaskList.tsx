@@ -1,30 +1,40 @@
 "use client";
 
-/* The filterable task list: search, status, sort, high-value filter. */
+/* Every task list is a real table now, built on DataTable: each column can
+   be sorted by clicking its header and the faceted columns (status,
+   priority, unit, project, value) carry their own filter dropdowns. Search,
+   column visibility, CSV export, and pagination come with the table. */
 
-import { useMemo, useState } from "react";
-import { useI18n } from "@/components/providers";
-import { Icon, Select } from "@/components/ui";
-import { TaskRow } from "./TaskRow";
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { quickDone } from "@/app/actions";
+import { useI18n, useToast } from "@/components/providers";
+import { DataTable, dueInfo, Icon, relTime, StatusChip, type DataColumn } from "@/components/ui";
+import { DelegationChip, ValueChip } from "./TaskChips";
 import { TaskModal } from "./TaskModal";
-import { STATUS_META, STATUS_ORDER, effStatus, type EffStatus, type Priority } from "@/lib/types";
+import { STATUS_META, effStatus, isStale, type EffStatus, type Priority } from "@/lib/types";
 import type { AssigneeOption, ProjectOption, TaskVM } from "./types";
 
-type SortKey = "due" | "priority" | "updated";
-const PRIO_RANK: Record<Priority, number> = { high: 0, med: 1, low: 2 };
+const PRIO_CLS: Record<Priority, string> = {
+  high: "text-[var(--st-blocked)]",
+  med: "text-[var(--st-pending)]",
+  low: "text-ink-3",
+};
+const PRIO_KEY: Record<Priority, string> = { high: "prio_high", med: "prio_med", low: "prio_low" };
 
-export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFilters, teamFilter, valueFilter, pageSize, assignees, projects, initialQuery, initialStatus }: {
+export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, teamFilter, valueFilter, pageSize, assignees, projects, initialQuery, initialStatus }: {
   vms: TaskVM[];
   mine?: boolean;
   canEdit?: boolean;
   canNudge?: boolean;
   showTeam?: boolean;
+  /** Kept for call-site compatibility; the table always ships its toolbar. */
   withFilters?: boolean;
-  /** Oversight roles: show a unit selector next to the other filters. */
+  /** Oversight roles: show the unit column with its filter. */
   teamFilter?: boolean;
-  /** Managers: show the "High value only" toggle. */
+  /** Managers: add the high-value facet column. */
   valueFilter?: boolean;
-  /** Long lists: page through pageSize rows at a time. */
+  /** First page size offered by the table's pager. */
   pageSize?: number;
   assignees?: AssigneeOption[];
   projects?: ProjectOption[];
@@ -32,157 +42,205 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, withFi
   initialStatus?: EffStatus | "all";
 }) {
   const { t, lang } = useI18n();
-  const [q, setQ] = useState(initialQuery ?? "");
-  const [status, setStatus] = useState<EffStatus | "all">(initialStatus ?? "all");
-  const [team, setTeam] = useState("all");
-  const [tag, setTag] = useState("all");
-  const [project, setProject] = useState("all");
-  const [sort, setSort] = useState<SortKey>("due");
-  const [highOnly, setHighOnly] = useState(false);
-  const [page, setPage] = useState(0);
+  const toast = useToast();
+  const [, startTransition] = useTransition();
   const [editing, setEditing] = useState<TaskVM | null>(null);
 
-  const teamOptions = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const v of vms) if (!seen.has(v.task.teamId)) seen.set(v.task.teamId, v.teamName[lang]);
-    return [...seen.entries()].map(([id, label]) => ({ id, label }));
-  }, [vms, lang]);
+  const editableFor = (vm: TaskVM) => (vm.editable !== undefined ? vm.editable : (mine || canEdit));
+  const withTeamCol = showTeam || teamFilter;
 
-  const tagOptions = useMemo(
-    () => [...new Set(vms.flatMap((v) => v.task.tags))].sort(),
-    [vms],
-  );
-  const projectOptions = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const v of vms) if (v.task.projectId && v.projectName) seen.set(v.task.projectId, v.projectName);
-    return [...seen.entries()].map(([id, label]) => ({ id, label }));
-  }, [vms]);
-
-  const filtered = useMemo(() => {
-    let out = vms;
-    if (q) out = out.filter((v) => v.task.title[lang].toLowerCase().includes(q.toLowerCase()));
-    if (status !== "all") out = out.filter((v) => effStatus(v.task) === status);
-    if (team !== "all") out = out.filter((v) => v.task.teamId === team);
-    if (tag !== "all") out = out.filter((v) => v.task.tags.includes(tag));
-    if (project !== "all") out = out.filter((v) => v.task.projectId === project);
-    if (highOnly) out = out.filter((v) => v.value.high);
-    const bySort = (a: TaskVM, b: TaskVM) =>
-      sort === "priority" ? PRIO_RANK[a.task.priority] - PRIO_RANK[b.task.priority]
-      : sort === "updated" ? b.task.updatedAt - a.task.updatedAt
-      : (a.task.due ?? "9999").localeCompare(b.task.due ?? "9999");
-    return [...out].sort((a, b) =>
-      Number(a.task.status === "done") - Number(b.task.status === "done") || bySort(a, b));
-  }, [vms, q, status, team, tag, project, sort, highOnly, lang]);
+  const columns: DataColumn<TaskVM>[] = [
+    {
+      id: "title",
+      header: t("task_title"),
+      value: (vm) => vm.task.title[lang],
+      cell: (vm) => {
+        const done = vm.task.status === "done";
+        return (
+          <div className="flex items-center gap-2 flex-wrap min-w-44">
+            <Link
+              href={`/task/${vm.task.id}`}
+              className={`no-underline hover:underline font-semibold ${done ? "text-ink-3 line-through decoration-1" : "text-ink"}`}
+            >
+              {vm.task.title[lang]}
+            </Link>
+            <ValueChip value={vm.value} />
+            <DelegationChip delegation={vm.delegation} />
+            {isStale(vm.task) && <span className="text-[0.68rem] font-semibold text-[var(--st-pending)]">{t("stale")}</span>}
+          </div>
+        );
+      },
+    },
+    {
+      id: "status",
+      header: t("status_col"),
+      value: (vm) => t(STATUS_META[effStatus(vm.task)].labelKey),
+      cell: (vm) => <StatusChip status={effStatus(vm.task)} />,
+      filter: true,
+    },
+    {
+      id: "priority",
+      header: t("priority"),
+      value: (vm) => t(PRIO_KEY[vm.task.priority]),
+      cell: (vm) => (
+        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${PRIO_CLS[vm.task.priority]}`}>
+          <Icon name="flag" size={12} /> {t(PRIO_KEY[vm.task.priority])}
+        </span>
+      ),
+      filter: true,
+    },
+    {
+      id: "progress",
+      header: t("progress"),
+      value: (vm) => vm.task.progress,
+      cell: (vm) => (
+        <span className="flex items-center gap-2 min-w-24">
+          <span className="flex-1 h-1.5 rounded-full bg-grid overflow-hidden">
+            <span
+              className="block h-full rounded-full"
+              style={{ width: `${vm.task.progress}%`, background: vm.task.status === "done" ? "var(--ch-done)" : "var(--primary)" }}
+            />
+          </span>
+          <span className="text-xs text-ink-3 tabular-nums w-8 text-end">{vm.task.progress}%</span>
+        </span>
+      ),
+    },
+    {
+      id: "due",
+      header: t("due_date"),
+      value: (vm) => vm.task.due ?? "",
+      cell: (vm) => {
+        const due = dueInfo(vm.task.due, t, lang);
+        if (!vm.task.due) return <span className="text-ink-3">-</span>;
+        return (
+          <span className={`inline-flex items-center gap-1 text-xs tabular-nums whitespace-nowrap ${due.overdue ? "text-[var(--st-delayed)] font-semibold" : ""}`}>
+            <Icon name="calendar" size={12} /> {vm.task.due}
+          </span>
+        );
+      },
+    },
+    ...(withTeamCol
+      ? [{
+          id: "team",
+          header: t("team"),
+          value: (vm: TaskVM) => vm.teamName[lang],
+          cell: (vm: TaskVM) => <span className="text-xs">{vm.teamName[lang]}</span>,
+          filter: true,
+        }]
+      : []),
+    {
+      id: "project",
+      header: t("project"),
+      value: (vm) => vm.projectName ?? "",
+      cell: (vm) => vm.projectName
+        ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary"><Icon name="folder" size={12} /> {vm.projectName}</span>
+        : <span className="text-ink-3">-</span>,
+      filter: true,
+    },
+    ...(valueFilter
+      ? [{
+          id: "value",
+          header: t("value_col"),
+          value: (vm: TaskVM) => (vm.value.high ? t("value_high") : ""),
+          cell: (vm: TaskVM) => (vm.value.high
+            ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--st-pending)]"><Icon name="sparkles" size={12} /> {t("value_high")}</span>
+            : <span className="text-ink-3">-</span>),
+          filter: true,
+          defaultHidden: true,
+        }]
+      : []),
+    {
+      id: "assignees",
+      header: t("assignees"),
+      value: (vm) => vm.assignees.map((a) => a.name[lang]).join(lang === "ar" ? "، " : ", "),
+      cell: (vm) => (
+        <span className="text-xs text-ink-2">
+          {vm.assignees.map((a) => a.name[lang]).join(lang === "ar" ? "، " : ", ")}
+        </span>
+      ),
+      defaultHidden: !!mine,
+    },
+    {
+      id: "tags",
+      header: t("tags"),
+      value: (vm) => vm.task.tags.map((x) => `#${x}`).join(" "),
+      cell: (vm) => vm.task.tags.length
+        ? (
+          <span className="flex gap-1 flex-wrap">
+            {vm.task.tags.map((tag) => (
+              <span key={tag} className="inline-flex items-center rounded-full border border-line bg-surface-2 px-2 py-0.5 text-[0.68rem] font-semibold">#{tag}</span>
+            ))}
+          </span>
+        )
+        : <span className="text-ink-3">-</span>,
+      defaultHidden: true,
+    },
+    {
+      id: "updated",
+      header: t("updated"),
+      value: (vm) => vm.task.updatedAt,
+      cell: (vm) => <span className="text-xs text-ink-3 whitespace-nowrap">{relTime(vm.task.updatedAt, t)}</span>,
+    },
+    {
+      id: "actions",
+      header: "",
+      value: () => "",
+      sortable: false,
+      align: "end",
+      cell: (vm) => {
+        const editable = editableFor(vm);
+        const eff = effStatus(vm.task);
+        return (
+          <span className="inline-flex items-center gap-1.5">
+            {editable && vm.task.status !== "done" && (
+              <button
+                className="icon-btn !w-8 !h-8"
+                title={t("mark_done")}
+                aria-label={t("mark_done")}
+                onClick={() => startTransition(async () => {
+                  await quickDone(vm.task.id);
+                  toast(t("status_set", { status: t("st_done") }));
+                })}
+              >
+                <Icon name="check" size={14} />
+              </button>
+            )}
+            {editable ? (
+              <button className="btn-primary btn-sm !py-1.5" onClick={() => setEditing(vm)}>
+                <Icon name="pencil" size={13} /> {t("update_btn")}
+              </button>
+            ) : (
+              <Link href={`/task/${vm.task.id}`} className="icon-btn !w-8 !h-8" title={t("view_task")} aria-label={t("view_task")}>
+                <Icon name="eye" size={14} />
+              </Link>
+            )}
+            {canNudge && !editable && (isStale(vm.task) || eff === "blocked") && (
+              <button className="btn-ghost btn-sm" onClick={() => toast(t("nudged", { who: vm.ownerName[lang] }))}>
+                <Icon name="bell" size={13} /> {t("nudge")}
+              </button>
+            )}
+          </span>
+        );
+      },
+    },
+  ];
 
   return (
-    <div className="card">
-      {withFilters && (
-        <div className="flex gap-2.5 flex-wrap items-center mb-4">
-          <div className="relative min-w-56 flex-1 max-w-xs">
-            <span className="absolute inset-y-0 start-3 grid place-items-center text-ink-3"><Icon name="search" size={15} /></span>
-            <input
-              type="search"
-              className="w-full border border-line rounded-xl ps-9 pe-3 py-2 bg-surface-2 text-ink text-sm focus:border-accent"
-              placeholder={t("search_tasks")}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </div>
-          <Select
-            ariaLabel={t("st_all")}
-            value={status}
-            onChange={(v) => setStatus(v as EffStatus | "all")}
-            options={[
-              { value: "all", label: t("st_all") },
-              ...STATUS_ORDER.map((s) => ({ value: s, label: t(STATUS_META[s].labelKey) })),
-            ]}
-          />
-          {teamFilter && teamOptions.length > 1 && (
-            <Select
-              ariaLabel={t("all_teams")}
-              value={team}
-              onChange={setTeam}
-              options={[{ value: "all", label: t("all_teams") }, ...teamOptions.map((o) => ({ value: o.id, label: o.label }))]}
-            />
-          )}
-          {projectOptions.length > 0 && (
-            <Select
-              ariaLabel={t("project_all")}
-              value={project}
-              onChange={setProject}
-              options={[{ value: "all", label: t("project_all") }, ...projectOptions.map((o) => ({ value: o.id, label: o.label }))]}
-            />
-          )}
-          {tagOptions.length > 0 && (
-            <Select
-              ariaLabel={t("tag_all")}
-              value={tag}
-              onChange={setTag}
-              options={[{ value: "all", label: t("tag_all") }, ...tagOptions.map((x) => ({ value: x, label: `#${x}` }))]}
-            />
-          )}
-          <Select
-            ariaLabel={t("sort_by")}
-            value={sort}
-            onChange={(v) => setSort(v as SortKey)}
-            options={[
-              { value: "due", label: `${t("sort_by")}: ${t("sort_due")}` },
-              { value: "priority", label: `${t("sort_by")}: ${t("sort_priority")}` },
-              { value: "updated", label: `${t("sort_by")}: ${t("sort_updated")}` },
-            ]}
-          />
-          {valueFilter && (
-            <button
-              className="btn-sm inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold cursor-pointer transition border"
-              aria-pressed={highOnly}
-              style={highOnly
-                ? { background: "rgb(201 143 19 / 0.16)", color: "var(--st-pending)", borderColor: "var(--st-pending)" }
-                : { background: "var(--surface-2)", color: "var(--ink-2)", borderColor: "var(--line)" }}
-              onClick={() => setHighOnly(!highOnly)}
-            >
-              <Icon name="sparkles" size={13} /> {t("value_filter")}
-            </button>
-          )}
-        </div>
-      )}
-      {(() => {
-        const pages = pageSize ? Math.max(1, Math.ceil(filtered.length / pageSize)) : 1;
-        const safePage = Math.min(page, pages - 1);
-        const visible = pageSize ? filtered.slice(safePage * pageSize, (safePage + 1) * pageSize) : filtered;
-        return (
-          <>
-            {visible.length ? (
-              visible.map((vm) => (
-                <TaskRow
-                  key={vm.task.id} vm={vm}
-                  mine={mine} canEdit={canEdit} canNudge={canNudge}
-                  showTeam={showTeam}
-                  onOpen={setEditing}
-                />
-              ))
-            ) : (
-              <div className="text-center text-ink-3 py-10 text-sm">
-                <Icon name="inbox" size={32} className="mx-auto mb-2 opacity-60" />
-                {t("no_tasks")}
-              </div>
-            )}
-            {pageSize !== undefined && pages > 1 && (
-              <div className="flex items-center gap-3 pt-4 mt-1 border-t border-grid">
-                <button className="btn-ghost btn-sm" disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>
-                  <Icon name={lang === "ar" ? "chevron-right" : "chevron-left"} size={13} /> {t("page_prev")}
-                </button>
-                <span className="flex-1 text-center text-xs text-ink-3 tabular-nums">
-                  {t("page_of", { p: safePage + 1, n: pages })}
-                </span>
-                <button className="btn-ghost btn-sm" disabled={safePage >= pages - 1} onClick={() => setPage(safePage + 1)}>
-                  {t("page_next")} <Icon name={lang === "ar" ? "chevron-left" : "chevron-right"} size={13} />
-                </button>
-              </div>
-            )}
-          </>
-        );
-      })()}
+    <>
+      <DataTable
+        rows={vms}
+        columns={columns}
+        rowKey={(vm) => vm.task.id}
+        searchPlaceholder={t("search_tasks")}
+        exportName="tasks"
+        pageSizes={pageSize ? [...new Set([pageSize, 25, 50])] : [10, 25, 50]}
+        initialQuery={initialQuery}
+        initialFilters={initialStatus && initialStatus !== "all"
+          ? { status: t(STATUS_META[initialStatus].labelKey) }
+          : undefined}
+        initialSort={{ id: "due", dir: "asc" }}
+      />
       {editing && <TaskModal vm={editing} assignees={assignees} projects={projects} onClose={() => setEditing(null)} />}
-    </div>
+    </>
   );
 }

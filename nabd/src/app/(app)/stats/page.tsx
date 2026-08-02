@@ -10,7 +10,7 @@ import {
   ArcChart, BreakdownTable, BucketBars, BucketTable, ChartCard, ColumnChart,
   Donut, LineChart, ProgressBars, ProgressTable, RadialBars, StatTiles,
   StatusTable, TeamBars, TeamBarsTable, TrendTable,
-  type BreakdownRow, type BucketRow, type StatTileExtra,
+  type BreakdownRow, type BucketRow,
 } from "@/components/charts";
 import { ExportCsvButton, ScopeSelect } from "@/components/dashboard";
 import { HealthChip, Icon } from "@/components/ui";
@@ -111,18 +111,6 @@ export default async function StatsPage({ searchParams }: {
 
   const today = todayISO();
   const weekEnd = isoInDays(7);
-  const extras: StatTileExtra[] = [
-    {
-      label: t("tile_done_week"), icon: "check-circle",
-      val: String(doneThisWeekCount(tasks)), edge: "var(--ch-done)",
-    },
-    {
-      label: t("tile_due_week"), icon: "calendar",
-      val: String(tasks.filter((x) => x.status !== "done" && x.due && x.due >= today && x.due <= weekEnd).length),
-      edge: "var(--ch-pending)",
-    },
-    { label: t("avg_progress"), icon: "target", val: `${avgProgress(tasks)}%`, edge: "var(--primary)" },
-  ];
 
   // Senior: group by unit across the org (or the focused section).
   // Section head: by unit in their section. Unit head: by member.
@@ -265,7 +253,7 @@ export default async function StatsPage({ searchParams }: {
         <ExportCsvButton rows={csvRows(tasks, lang)} filename={`echo-stats-${new Date().toISOString().slice(0, 10)}.csv`} />
       </div>
 
-      <StatTiles stats={tilesStats} extras={extras} filterable />
+      <StatTiles stats={tilesStats} filterable />
 
       {view === "projects" ? (
         projects.length === 0 ? (

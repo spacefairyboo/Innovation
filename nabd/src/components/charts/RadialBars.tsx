@@ -26,14 +26,6 @@ export function RadialBars({ rows, countLabel }: { rows: RadialRow[]; countLabel
               x2={CX + (INNER + SPAN) * Math.cos(rad)} y2={CY + (INNER + SPAN) * Math.sin(rad)}
               stroke="var(--grid)" strokeWidth={10} strokeLinecap="round"
             />
-            {r.count > 0 && (
-              <line
-                x1={CX + INNER * Math.cos(rad)} y1={CY + INNER * Math.sin(rad)}
-                x2={CX + len * Math.cos(rad)} y2={CY + len * Math.sin(rad)}
-                stroke="var(--accent)" strokeWidth={12} strokeLinecap="round"
-                aria-hidden style={{ filter: "blur(7px)", opacity: 0.45 }}
-              />
-            )}
             <line
               x1={CX + INNER * Math.cos(rad)} y1={CY + INNER * Math.sin(rad)}
               x2={CX + len * Math.cos(rad)} y2={CY + len * Math.sin(rad)}

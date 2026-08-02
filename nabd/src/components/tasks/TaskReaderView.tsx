@@ -99,11 +99,7 @@ export function TaskReaderView({ vm, backHref }: { vm: TaskVM; backHref: string 
               <div className="h-3 rounded-full bg-surface-2 overflow-hidden" role="progressbar" aria-valuenow={task.progress} aria-valuemin={0} aria-valuemax={100}>
                 <div
                   className="h-full rounded-full transition-all"
-                  style={{
-                    width: `${task.progress}%`,
-                    background: `var(--st-${eff})`,
-                    boxShadow: `0 0 12px color-mix(in srgb, var(--st-${eff}) 55%, transparent)`,
-                  }}
+                  style={{ width: `${task.progress}%`, background: `var(--st-${eff})` }}
                 />
               </div>
             </div>

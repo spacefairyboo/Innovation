@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { logoutAction, setLang, setTheme } from '@/app/actions';
 import { useI18n, useToast } from '@/components/providers';
-import { Avatar, EchoMark, Icon } from '@/components/ui';
+import { Avatar, Icon } from '@/components/ui';
 import { CommandPalette, type PaletteItem } from './CommandPalette';
 import { UserSwitcher } from './UserSwitcher';
 import { resetDemo } from '@/app/actions';

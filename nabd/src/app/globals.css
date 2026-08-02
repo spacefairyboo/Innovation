@@ -44,11 +44,13 @@
 
   /* Chart mark fills — validated palette (2px gaps, direct labels, icons,
      and table views provide the required secondary encoding / relief) */
-  --ch-done: #17a586;
-  --ch-ontrack: #2596be;
-  --ch-pending: #c98f13;
-  --ch-blocked: #d24a4a;
-  --ch-delayed: #e0702f;
+  /* Muted chart palette: hue keeps the status meaning, saturation stays
+     low so the marks read calmly against the glass cards. */
+  --ch-done: #4f9d89;
+  --ch-ontrack: #5b96ad;
+  --ch-pending: #b3954f;
+  --ch-blocked: #bd7a76;
+  --ch-delayed: #c48f66;
 }
 
 [data-theme="dark"] {
@@ -81,11 +83,11 @@
   --st-delayed: #f0a06c;    --st-delayed-bg: rgb(240 160 108 / 0.13);
 
   /* Dark-surface chart fills — validated separately against #0f2e29 */
-  --ch-done: #17a586;
-  --ch-ontrack: #2596be;
-  --ch-pending: #bd8a10;
-  --ch-blocked: #ab3838;
-  --ch-delayed: #d0501a;
+  --ch-done: #5da294;
+  --ch-ontrack: #75a1b4;
+  --ch-pending: #b59d68;
+  --ch-blocked: #b28480;
+  --ch-delayed: #bd9276;
 }
 
 /* Expose tokens as Tailwind color utilities (bg-surface, text-ink-2, …) */
@@ -498,16 +500,16 @@ body::after {
    top edge. Falls back to the plain card look where blur is unsupported. */
 .chart-glass {
   background:
-    linear-gradient(160deg, color-mix(in srgb, #ffffff 22%, transparent), transparent 46%),
-    color-mix(in srgb, var(--surface) 52%, transparent);
-  border: 1px solid color-mix(in srgb, #ffffff 48%, transparent);
+    linear-gradient(160deg, color-mix(in srgb, #ffffff 12%, transparent), transparent 46%),
+    color-mix(in srgb, var(--surface) 62%, transparent);
+  border: 1px solid color-mix(in srgb, #ffffff 38%, transparent);
   /* Standard property only: the minifier collapses a -webkit- pair into
      the prefixed form alone, which desktop Chromium then ignores. */
-  backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(24px) saturate(1.1);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.55),
+    inset 0 1px 0 rgb(255 255 255 / 0.35),
     0 2px 6px rgb(15 46 41 / 0.05),
-    0 18px 44px rgb(15 46 41 / 0.09);
+    0 18px 44px rgb(15 46 41 / 0.07);
 }
 [data-theme="dark"] .chart-glass {
   background:

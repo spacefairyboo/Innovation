@@ -30,9 +30,6 @@ export function Donut({ stats, centerLabel }: { stats: StatusCounts; centerLabel
   return (
     <div>
       <svg viewBox="0 0 200 184" role="img" aria-label={t("status_mix")} className="block w-full h-auto">
-        {segs.length > 0 && (
-          <g aria-hidden style={{ filter: "blur(9px)", opacity: 0.4 }}>{segs}</g>
-        )}
         <g className="donut-sweep">
           {segs.length ? segs : <circle r={R} cx={CX} cy={CY} fill="none" stroke="var(--grid)" strokeWidth={SW} />}
         </g>
