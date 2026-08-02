@@ -38,7 +38,7 @@ export interface DataColumn<T> {
 
 type SortDir = "asc" | "desc";
 
-export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportName, pageSizes = [10, 25, 50] }: {
+export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportName, pageSizes = [10, 25, 50], initialQuery, initialFilters, initialSort }: {
   rows: T[];
   columns: DataColumn<T>[];
   rowKey: (row: T) => string;
@@ -46,11 +46,17 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportN
   /** Enables the CSV export button, naming the downloaded file. */
   exportName?: string;
   pageSizes?: number[];
+  /** Pre-filled search text (e.g. arriving from a link). */
+  initialQuery?: string;
+  /** Pre-applied facet filters by column id (values must match `value`). */
+  initialFilters?: Record<string, string>;
+  /** Starting sort; the header click still cycles it as usual. */
+  initialSort?: { id: string; dir: SortDir };
 }) {
   const { t, lang } = useI18n();
-  const [q, setQ] = useState("");
-  const [sort, setSort] = useState<{ id: string; dir: SortDir } | null>(null);
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [q, setQ] = useState(initialQuery ?? "");
+  const [sort, setSort] = useState<{ id: string; dir: SortDir } | null>(initialSort ?? null);
+  const [filters, setFilters] = useState<Record<string, string>>(initialFilters ?? {});
   const [hidden, setHidden] = useState<Set<string>>(
     () => new Set(columns.filter((c) => c.defaultHidden).map((c) => c.id)),
   );
@@ -149,19 +155,28 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportN
             onChange={(e) => { setQ(e.target.value); setPage(0); }}
           />
         </div>
-        {columns.filter((c) => c.filter && (facets.get(c.id)?.length ?? 0) > 1).map((c) => (
-          <Select
-            key={c.id}
-            title={c.header}
-            ariaLabel={c.header}
-            value={filters[c.id] ?? ""}
-            onChange={(v) => { setFilters((f) => ({ ...f, [c.id]: v })); setPage(0); }}
-            options={[
-              { value: "", label: `${c.header}: ${t("table_all")}` },
-              ...facets.get(c.id)!.map((v) => ({ value: v, label: v })),
-            ]}
-          />
-        ))}
+        {columns.filter((c) => c.filter && (facets.get(c.id)?.length ?? 0) > 1).map((c) => {
+          // An externally applied filter value may not exist among the rows
+          // (e.g. a KPI tile filtered a status this tab doesn't have); keep
+          // it listed so the trigger shows it and it can be cleared.
+          const active = filters[c.id];
+          const vals = facets.get(c.id)!;
+          const extra = active && !vals.includes(active) ? [{ value: active, label: active }] : [];
+          return (
+            <Select
+              key={c.id}
+              title={c.header}
+              ariaLabel={c.header}
+              value={active ?? ""}
+              onChange={(v) => { setFilters((f) => ({ ...f, [c.id]: v })); setPage(0); }}
+              options={[
+                { value: "", label: `${c.header}: ${t("table_all")}` },
+                ...vals.map((v) => ({ value: v, label: v })),
+                ...extra,
+              ]}
+            />
+          );
+        })}
         {filtersActive && (
           <button className="btn-ghost btn-sm" onClick={() => { setQ(""); setFilters({}); setPage(0); }}>
             <Icon name="x" size={13} /> {t("table_clear")}
