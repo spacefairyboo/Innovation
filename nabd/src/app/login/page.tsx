@@ -32,7 +32,7 @@ export default async function LoginPage() {
         <div className="hidden lg:flex flex-col gap-10 rise-stagger" style={{ color: "#eefaf3" }}>
           <div className="flex items-center gap-3">
             <span className="text-white drop-shadow-md" aria-hidden>
-              <EchoMark size={56} mono />
+              <EchoMark size={56} mono bold />
             </span>
             <span className="font-bold text-2xl text-white [text-shadow:0_1px_10px_rgb(6_40_30/0.35)]">
               {t("appName")}

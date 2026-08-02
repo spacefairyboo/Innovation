@@ -31,6 +31,9 @@ export interface DataColumn<T> {
   sortable?: boolean;
   /** Adds a faceted dropdown filter with the column's distinct values. */
   filter?: boolean;
+  /** Multi-value cells (e.g. several assignees): the facet lists each value
+      separately and a row matches when ANY of its values is picked. */
+  filterValues?: (row: T) => string[];
   /** Start hidden; the columns menu can bring it back. */
   defaultHidden?: boolean;
   align?: "start" | "end";
@@ -90,8 +93,9 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportN
       if (!c.filter) continue;
       const seen = new Set<string>();
       for (const r of rows) {
-        const v = c.value(r);
-        if (v !== null && v !== "") seen.add(String(v));
+        for (const v of c.filterValues ? c.filterValues(r) : [c.value(r)]) {
+          if (v !== null && v !== "") seen.add(String(v));
+        }
       }
       out.set(c.id, [...seen].sort((a, b) => a.localeCompare(b)));
     }
@@ -103,7 +107,11 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportN
     for (const [id, val] of Object.entries(filters)) {
       if (!val) continue;
       const col = columns.find((c) => c.id === id);
-      if (col) out = out.filter((r) => String(col.value(r) ?? "") === val);
+      if (col) {
+        out = out.filter((r) => (col.filterValues
+          ? col.filterValues(r).some((v) => String(v) === val)
+          : String(col.value(r) ?? "") === val));
+      }
     }
     const needle = q.trim().toLowerCase();
     if (needle) {
@@ -149,7 +157,7 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportN
           <span className="absolute inset-y-0 start-3 grid place-items-center text-ink-3"><Icon name="search" size={15} /></span>
           <input
             type="search"
-            className="w-full border border-line rounded-xl ps-9 pe-3 py-2 bg-surface-2 text-ink text-sm focus:border-accent"
+            className="w-full h-9 border border-line rounded-xl ps-9 pe-3 bg-surface-2 text-ink text-sm focus:border-accent"
             placeholder={searchPlaceholder ?? t("table_search")}
             value={q}
             onChange={(e) => { setQ(e.target.value); setPage(0); }}
@@ -178,14 +186,14 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportN
           );
         })}
         {filtersActive && (
-          <button className="btn-ghost btn-sm" onClick={() => { setQ(""); setFilters({}); setPage(0); }}>
+          <button className="btn-ghost btn-sm !h-9" onClick={() => { setQ(""); setFilters({}); setPage(0); }}>
             <Icon name="x" size={13} /> {t("table_clear")}
           </button>
         )}
         <div className="flex-1" />
         <div ref={colsRef} className="relative">
           <button
-            className="btn-ghost btn-sm"
+            className="btn-ghost btn-sm !h-9"
             aria-haspopup="menu"
             aria-expanded={colsOpen}
             onClick={() => setColsOpen((o) => !o)}
@@ -214,7 +222,7 @@ export function DataTable<T>({ rows, columns, rowKey, searchPlaceholder, exportN
           )}
         </div>
         {exportName && (
-          <button className="btn-ghost btn-sm" onClick={exportCsv}>
+          <button className="btn-ghost btn-sm !h-9" onClick={exportCsv}>
             <Icon name="download" size={14} /> {t("export_csv")}
           </button>
         )}

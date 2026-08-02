@@ -181,6 +181,8 @@ export interface NotifView {
   ts: number;
   read: boolean;
   whoId: string;
+  /** The task behind the alert, so the feed can link to it. */
+  taskId: string;
 }
 
 export function notificationViews(user: User, lang: Lang): NotifView[] {
@@ -193,7 +195,7 @@ export function notificationViews(user: User, lang: Lang): NotifView[] {
     const vars = { task: task.title[lang], who: who.name[lang], team: team.name[lang], d: nn.staleDays ?? 0 };
     const key = nn.kind === "blocked" ? "notif_blocked" : nn.kind === "delayed" ? "notif_delayed" : nn.kind === "stale" ? "notif_stale" : "notif_done";
     return [{
-      id: nn.id, kind: nn.kind, ts: nn.ts, read: nn.read, whoId: nn.whoId,
+      id: nn.id, kind: nn.kind, ts: nn.ts, read: nn.read, whoId: nn.whoId, taskId: task.id,
       head: t(key, vars), body: t(`${key}_body`, vars),
     }];
   });

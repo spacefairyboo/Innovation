@@ -153,6 +153,9 @@ export function TaskListSection({ vms, mine, canEdit, canNudge, showTeam, teamFi
       id: "assignees",
       header: t("assignees"),
       value: (vm) => vm.assignees.map((a) => a.name[lang]).join(lang === "ar" ? "، " : ", "),
+      // The facet lists each person once; a shared task matches either name.
+      filter: true,
+      filterValues: (vm) => vm.assignees.map((a) => a.name[lang]),
       cell: (vm) => (
         <span className="text-xs text-ink-2">
           {vm.assignees.map((a) => a.name[lang]).join(lang === "ar" ? "، " : ", ")}
