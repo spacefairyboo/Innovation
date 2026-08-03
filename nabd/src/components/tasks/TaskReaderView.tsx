@@ -1,36 +1,73 @@
 "use client";
 
 /* Reader view — what a colleague who can see but not change a task gets.
-   Instead of a disabled form it reads like a briefing page: a hero with the
-   status, the description as prose, a large progress bar, a facts grid, and
-   the running activity feed. Private notes never appear here. */
+   A briefing page, not a disabled form: a dark hero band with the title,
+   status, and a progress ring; below it the story (description), one calm
+   details card, and the running activity feed. Private notes and the
+   assignee's AI plan never appear here. */
 
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/providers";
-import { dueInfo, Icon, relTime, StatusChip } from "@/components/ui";
+import { Avatar, dueInfo, Icon, relTime } from "@/components/ui";
 import { ActivityLog } from "./ActivityLog";
-import { DelegationChip, ValueChip } from "./TaskChips";
 import { STATUS_META, effStatus, type Priority } from "@/lib/types";
 import type { TaskVM } from "./types";
 
 const PRIO_KEY: Record<Priority, string> = { high: "prio_high", med: "prio_med", low: "prio_low" };
 
-/** One fact in the details grid: small label above, the value below. */
-function Fact({ icon, label, children, tone }: {
+/** A light pill on the dark hero band. */
+function HeroPill({ icon, children, tone }: { icon: string; children: React.ReactNode; tone?: string }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold backdrop-blur-md"
+      style={{ color: tone ?? "#eafaf5" }}
+    >
+      <Icon name={icon} size={13} /> {children}
+    </span>
+  );
+}
+
+/** The progress ring on the hero: one glance says how far along it is. */
+function ProgressRing({ pct }: { pct: number }) {
+  const R = 52;
+  const C = 2 * Math.PI * R;
+  return (
+    <div className="relative w-36 h-36 shrink-0" role="img" aria-label={`${pct}%`}>
+      <svg viewBox="0 0 128 128" className="w-full h-full -rotate-90">
+        <circle cx="64" cy="64" r={R} fill="none" stroke="rgb(255 255 255 / 0.14)" strokeWidth="10" />
+        <circle
+          cx="64" cy="64" r={R} fill="none"
+          stroke="#46c7b4" strokeWidth="10" strokeLinecap="round"
+          strokeDasharray={`${(pct / 100) * C} ${C}`}
+          className="transition-all"
+        />
+      </svg>
+      <span className="absolute inset-0 grid place-items-center rotate-0">
+        <span className="text-center">
+          <span className="block text-3xl font-bold text-white tabular-nums leading-none">{pct}%</span>
+        </span>
+      </span>
+    </div>
+  );
+}
+
+/** One row in the details card: icon, small label, roomy value. */
+function DetailRow({ icon, label, children, warn }: {
   icon: string;
   label: string;
   children: React.ReactNode;
-  tone?: "warn";
+  warn?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-line bg-surface-2 px-4 py-3 min-w-0">
-      <div className="flex items-center gap-1.5 text-[0.68rem] font-bold uppercase tracking-wide text-ink-3 mb-1">
-        <Icon name={icon} size={12} /> {label}
-      </div>
-      <div
-        className={`text-sm font-semibold leading-snug break-words ${tone === "warn" ? "text-[var(--st-delayed)]" : "text-ink"}`}
-      >
-        {children}
+    <div className="flex items-start gap-3.5 py-3 border-b border-grid last:border-b-0">
+      <span className="w-8 h-8 rounded-lg grid place-items-center shrink-0 bg-surface-2 text-ink-3 mt-0.5">
+        <Icon name={icon} size={15} />
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="text-[0.68rem] font-bold uppercase tracking-wide text-ink-3">{label}</div>
+        <div className={`text-sm font-semibold mt-0.5 break-words ${warn ? "text-[var(--st-delayed)]" : "text-ink"}`}>
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -47,35 +84,47 @@ export function TaskReaderView({ vm, backHref }: { vm: TaskVM; backHref: string 
 
   return (
     <>
-      {/* header */}
-      <div className="flex items-start gap-3.5 mb-4 flex-wrap">
-        <button className="icon-btn mt-1" onClick={() => router.push(backHref)} aria-label={t("cancel")}>
-          <Icon name={lang === "ar" ? "chevron-right" : "chevron-left"} size={18} />
-        </button>
+      {/* hero band */}
+      <div
+        className="relative overflow-hidden rounded-3xl p-6 md:p-8 mb-5 shadow-xl"
+        style={{ background: "var(--hero-bg)", border: "1px solid rgb(223 245 241 / 0.08)" }}
+      >
         <span
-          className="w-12 h-12 rounded-2xl grid place-items-center shrink-0"
-          style={{ background: `var(--st-${eff}-bg)`, color: `var(--st-${eff})` }}
-        >
-          <Icon name={STATUS_META[eff].icon} size={22} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 className="m-0 text-2xl font-bold leading-snug">{task.title[lang]}</h2>
-          <div className="mt-2 flex items-center gap-2 flex-wrap">
-            <StatusChip status={eff} />
-            <ValueChip value={vm.value} />
-            <DelegationChip delegation={vm.delegation} />
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-xs text-ink-3">
-              <Icon name="eye" size={12} /> {t("reader_badge")}
-            </span>
+          aria-hidden
+          className="absolute -top-24 -end-16 w-72 h-72 rounded-full pointer-events-none"
+          style={{ background: "rgb(70 199 180 / 0.2)", filter: "blur(70px)" }}
+        />
+        <div className="relative flex items-center gap-6 flex-wrap">
+          <div className="flex-1 min-w-64">
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                className="w-10 h-10 rounded-full grid place-items-center cursor-pointer border border-white/20 bg-white/10 text-white hover:bg-white/20 transition"
+                onClick={() => router.push(backHref)}
+                aria-label={t("cancel")}
+              >
+                <Icon name={lang === "ar" ? "chevron-right" : "chevron-left"} size={17} />
+              </button>
+              <span className="text-xs font-medium" style={{ color: "#7fa89e" }}>
+                {vm.teamName[lang]} · {createdStr}
+              </span>
+            </div>
+            <h2 className="m-0 mt-3 text-3xl font-bold text-white leading-snug">{task.title[lang]}</h2>
+            <div className="mt-3.5 flex items-center gap-2 flex-wrap">
+              <HeroPill icon={STATUS_META[eff].icon} tone={`var(--st-${eff})`}>
+                <span className="text-white">{t(STATUS_META[eff].labelKey)}</span>
+              </HeroPill>
+              {vm.value.high && <HeroPill icon="sparkles">{t("value_high")}</HeroPill>}
+              <HeroPill icon="eye">{t("reader_badge")}</HeroPill>
+            </div>
+            <p className="m-0 mt-4 text-xs leading-5 flex items-start gap-1.5 max-w-xl" style={{ color: "#9fc2b8" }}>
+              <Icon name="lock" size={12} className="mt-0.5 shrink-0" /> {t("reader_hint")}
+            </p>
           </div>
+          <ProgressRing pct={task.progress} />
         </div>
       </div>
 
-      <p className="m-0 mb-5 text-xs text-ink-3 flex items-start gap-1.5 max-w-2xl">
-        <Icon name="lock" size={13} className="mt-0.5 shrink-0" /> {t("reader_hint")}
-      </p>
-
-      <div className="grid gap-5 lg:[grid-template-columns:1.5fr_1fr] items-start">
+      <div className="grid gap-5 lg:[grid-template-columns:1.55fr_1fr] items-start">
         <div className="grid gap-5 min-w-0">
           {/* the story of the task */}
           <div className="card">
@@ -87,51 +136,40 @@ export function TaskReaderView({ vm, backHref }: { vm: TaskVM; backHref: string 
             ) : (
               <p className="m-0 text-sm text-ink-3 italic">{t("reader_no_desc")}</p>
             )}
-
-            {/* big progress read-out */}
-            <div className="mt-5 pt-4 border-t border-grid">
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-xs font-semibold text-ink-2">{t("progress")}</span>
-                <span className="text-2xl font-bold tabular-nums" style={{ color: `var(--st-${eff})` }}>
-                  {task.progress}%
-                </span>
-              </div>
-              <div className="h-3 rounded-full bg-surface-2 overflow-hidden" role="progressbar" aria-valuenow={task.progress} aria-valuemin={0} aria-valuemax={100}>
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{ width: `${task.progress}%`, background: `var(--st-${eff})` }}
-                />
-              </div>
-            </div>
           </div>
 
-          {/* the facts, scannable */}
-          <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
-            <Fact icon="user" label={t("assignees")}>
-              {vm.assignees.map((a) => a.name[lang]).join(joiner)}
-            </Fact>
-            {vm.assignees[0]?.managerName && (
-              <Fact icon="users" label={t("line_manager")}>{vm.assignees[0].managerName[lang]}</Fact>
-            )}
-            <Fact icon="building" label={t("profile_team")}>{vm.teamName[lang]}</Fact>
-            <Fact icon="flag" label={t("priority")}>{t(PRIO_KEY[task.priority])}</Fact>
-            {task.due && (
-              <Fact icon="calendar" label={t("due_date")} tone={dueView.overdue ? "warn" : undefined}>
-                {task.due}{dueView.text ? ` · ${dueView.text}` : ""}
-              </Fact>
-            )}
-            {vm.projectName && <Fact icon="folder" label={t("project")}>{vm.projectName}</Fact>}
-            <Fact icon="plus" label={t("created")}>{createdStr}</Fact>
-            <Fact icon="history" label={t("updated")}>{relTime(task.updatedAt, t)}</Fact>
-            {task.tags.length > 0 && (
-              <Fact icon="tag" label={t("tags")}>
-                <span className="flex gap-1.5 flex-wrap">
-                  {task.tags.map((x) => (
-                    <span key={x} className="rounded-full bg-accent-soft text-primary px-2 py-0.5 text-xs font-semibold">#{x}</span>
+          {/* one calm details card instead of a wall of boxes */}
+          <div className="card !py-2.5">
+            <DetailRow icon="user" label={t("assignees")}>
+              <span className="flex items-center gap-2 flex-wrap">
+                <span className="flex -space-x-1.5 rtl:space-x-reverse">
+                  {vm.assignees.slice(0, 4).map((a) => (
+                    <span key={a.id} className="ring-2 ring-[var(--surface-solid)] rounded-full"><Avatar name={a.name} size="sm" /></span>
                   ))}
                 </span>
-              </Fact>
+                {vm.assignees.map((a) => a.name[lang]).join(joiner)}
+              </span>
+            </DetailRow>
+            {vm.assignees[0]?.managerName && (
+              <DetailRow icon="users" label={t("line_manager")}>{vm.assignees[0].managerName[lang]}</DetailRow>
             )}
+            <DetailRow icon="flag" label={t("priority")}>{t(PRIO_KEY[task.priority])}</DetailRow>
+            {task.due && (
+              <DetailRow icon="calendar" label={t("due_date")} warn={dueView.overdue}>
+                {task.due}{dueView.text ? ` · ${dueView.text}` : ""}
+              </DetailRow>
+            )}
+            {vm.projectName && <DetailRow icon="folder" label={t("project")}>{vm.projectName}</DetailRow>}
+            {task.tags.length > 0 && (
+              <DetailRow icon="tag" label={t("tags")}>
+                <span className="flex gap-1.5 flex-wrap">
+                  {task.tags.map((x) => (
+                    <span key={x} className="rounded-full bg-accent-soft text-primary px-2.5 py-0.5 text-xs font-semibold">#{x}</span>
+                  ))}
+                </span>
+              </DetailRow>
+            )}
+            <DetailRow icon="history" label={t("updated")}>{relTime(task.updatedAt, t)}</DetailRow>
           </div>
         </div>
 
@@ -140,7 +178,7 @@ export function TaskReaderView({ vm, backHref }: { vm: TaskVM; backHref: string 
           <div className="flex items-center gap-1.5 text-sm font-bold mb-2">
             <Icon name="history" size={15} /> {t("reader_latest")}
           </div>
-          <div className="max-h-[32rem] overflow-y-auto">
+          <div className="max-h-[34rem] overflow-y-auto">
             <ActivityLog events={vm.activity} />
           </div>
         </div>
