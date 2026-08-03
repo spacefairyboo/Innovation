@@ -61,8 +61,7 @@ const MALE_MARKERS = ["male", " man", "david", "mark", "daniel", "alex", "fred",
   "tarik", "hasan", "william", "james", "george", "liam",
   // Arabic regional voices (Windows/Edge neural set, plus macOS Majed)
   "shakir", "hamdan", "bassel", "taim", "fahed", "rami", "jamal", "moaz", "laith", "hedi", "saleh", "ismael",
-  "majed", "abdullah", "omar"];
-const NATURAL_MARKERS = ["natural", "neural", "premium", "enhanced", "online", "google"];
+  "majed", "abdullah", "omar", " ali", "sami", "karim", "wassim"];
 
 export function voiceGender(v: SpeechSynthesisVoice): "female" | "male" | "other" {
   const n = v.name.toLowerCase();
@@ -71,5 +70,35 @@ export function voiceGender(v: SpeechSynthesisVoice): "female" | "male" | "other
   return "other";
 }
 
-export const naturalScore = (v: SpeechSynthesisVoice): number =>
-  NATURAL_MARKERS.some((m) => v.name.toLowerCase().includes(m)) ? 0 : 1;
+/* ---- naturalness ranking: higher is more human ----
+   Neural / enhanced / cloud-served voices first, the old robotic desktop
+   sets last. Used to keep only the best few voices in the pickers. */
+function naturalRank(v: SpeechSynthesisVoice): number {
+  const n = v.name.toLowerCase();
+  let s = 0;
+  if (/natural|neural/.test(n)) s += 8;
+  if (/premium|enhanced/.test(n)) s += 6;
+  if (/google/.test(n)) s += 5;
+  if (/online/.test(n)) s += 3;
+  if (!v.localService) s += 2;
+  if (/compact|espeak|eloquence|whisper|novelty|bells|zarvox|trinoids/.test(n)) s -= 8;
+  return s;
+}
+
+/** The short list the pickers show: the most natural voices for the
+    language, at most `perGender` women and `perGender` men. When the
+    gender lists cannot fill the slots (common for Arabic sets with
+    unrecognized names), the best remaining voices top the list up, so
+    every natural Arabic voice the platform has can still surface. */
+export function pickTopVoices(all: SpeechSynthesisVoice[], lang: "en" | "ar", perGender = 4): SpeechSynthesisVoice[] {
+  const seen = new Set<string>();
+  const cands = all
+    .filter((v) => matchesLang(v, lang) && !seen.has(v.voiceURI) && seen.add(v.voiceURI))
+    .sort((a, b) => naturalRank(b) - naturalRank(a) || a.name.localeCompare(b.name));
+  const female = cands.filter((v) => voiceGender(v) === "female").slice(0, perGender);
+  const male = cands.filter((v) => voiceGender(v) === "male").slice(0, perGender);
+  const picked = new Set([...female, ...male].map((v) => v.voiceURI));
+  const spare = perGender * 2 - picked.size;
+  const extra = spare > 0 ? cands.filter((v) => !picked.has(v.voiceURI)).slice(0, spare) : [];
+  return [...female, ...male, ...extra];
+}

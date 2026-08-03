@@ -10,7 +10,7 @@ import { canUpdateTask } from "./services/accessService";
 import { taskValue } from "@/lib/value";
 import type { TaskVM } from "@/components/tasks";
 import type { OrgCardVM } from "@/components/teams/OrgCardGrid";
-import { STATUS_META, countStatuses, effStatus, teamHealth, type Lang, type Task, type User } from "@/lib/types";
+import { DAY_MS, STATUS_META, countStatuses, effStatus, teamHealth, type Lang, type Task, type User } from "@/lib/types";
 
 /** `viewer` decides row-level edit rights: only an assignee (delegates are
     assignees while delegated) or the task's line manager may update it. */
@@ -101,6 +101,28 @@ export const doneThisWeekCount = (tasks: Task[]): number =>
 export function greetingKey(): string {
   const h = new Date().getHours();
   return h < 12 ? "greeting_morning" : h < 17 ? "greeting_afternoon" : "greeting_evening";
+}
+
+/** Completions per person over the trailing week, from attributed history. */
+export function topContributors(tasks: Task[], limit: number): { user: User; count: number }[] {
+  const cutoff = Date.now() - 7 * DAY_MS;
+  const seen = new Set<string>();
+  const counts = new Map<string, number>();
+  for (const task of tasks) {
+    for (const h of task.history) {
+      if (h.status !== "done" || h.ts < cutoff) continue;
+      const who = h.byId ?? task.ownerId;
+      const key = `${task.id}|${who}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      counts.set(who, (counts.get(who) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .map(([id, count]) => ({ user: getUser(id), count }))
+    .filter((x): x is { user: User; count: number } => x.user !== null)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
 }
 
 /** Recent history entries across a task set, with a relative-day count. */

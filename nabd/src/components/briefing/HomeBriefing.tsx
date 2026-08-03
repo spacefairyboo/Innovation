@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useI18n } from "@/components/providers";
 import { Icon, Select } from "@/components/ui";
-import { matchesLang, naturalScore, voiceGender, voiceLabel } from "./voiceUtils";
+import { pickTopVoices, voiceGender, voiceLabel } from "./voiceUtils";
 
 export interface BriefScope {
   id: string;
@@ -42,9 +42,7 @@ export function HomeBriefing({ scopes }: { scopes: BriefScope[] }) {
     const synth = window.speechSynthesis;
     if (!synth) return;
     const load = () => {
-      const forLang = synth.getVoices()
-        .filter((v) => matchesLang(v, spoken))
-        .sort((a, b) => naturalScore(a) - naturalScore(b) || a.name.localeCompare(b.name));
+      const forLang = pickTopVoices(synth.getVoices(), spoken);
       setVoices(forLang);
       const saved = localStorage.getItem(`echo-voice-${spoken}`);
       setVoiceURI(saved && forLang.some((v) => v.voiceURI === saved) ? saved : (forLang[0]?.voiceURI ?? ""));

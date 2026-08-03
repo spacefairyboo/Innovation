@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useI18n } from '@/components/providers';
 import { Icon, Select } from '@/components/ui';
-import { naturalScore, voiceGender } from './voiceUtils';
+import { pickTopVoices, voiceGender } from './voiceUtils';
 
 const BARS = 64;
 /** Deterministic pseudo-random bar heights so the waveform looks organic. */
@@ -79,13 +79,7 @@ export function PodcastPlayer({
     const synth = window.speechSynthesis;
     if (!synth) return;
     const load = () => {
-      const forLang = synth
-        .getVoices()
-        .filter((v) => v.lang.toLowerCase().startsWith(spoken))
-        .sort(
-          (a, b) =>
-            naturalScore(a) - naturalScore(b) || a.name.localeCompare(b.name),
-        );
+      const forLang = pickTopVoices(synth.getVoices(), spoken);
       setVoices(forLang);
       const saved = localStorage.getItem(`echo-voice-${spoken}`);
       setVoiceURI(

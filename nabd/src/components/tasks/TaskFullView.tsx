@@ -139,6 +139,13 @@ export function TaskFullView({ vm, canEdit, assignees, colleagues, backHref }: {
           <label className="block">
             <span className="block text-xs font-semibold text-ink-2 mb-1.5">{t("task_title")}</span>
             <input className="field-input" value={title} disabled={!canEdit} onChange={(e) => setTitle(e.target.value)} />
+            {/* The AI-kept version in the other language, when it differs */}
+            {task.title.en !== task.title.ar && (
+              <span className="mt-1.5 flex items-start gap-1.5 text-xs text-ink-3" dir="auto">
+                <Icon name="sparkles" size={12} className="mt-0.5 shrink-0 text-primary" />
+                {task.title[lang === "ar" ? "en" : "ar"]}
+              </span>
+            )}
           </label>
 
           <label className="block">
