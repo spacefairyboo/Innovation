@@ -46,7 +46,7 @@ function buildPaletteIndex(user: User, lang: Lang): PaletteItem[] {
       ? [['/stats', 'trending-up', t('nav_stats')] as [string, string, string]]
       : []),
     ['/calendar', 'calendar', t('nav_calendar')],
-    ...(user.role === 'senior' || user.role === 'section'
+    ...(user.role !== 'employee'
       ? [['/teams', 'users', t('nav_teams')] as [string, string, string]]
       : []),
     ...(user.role === 'senior'

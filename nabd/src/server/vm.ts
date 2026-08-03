@@ -60,6 +60,8 @@ export const sectionCardVMs = (lang: Lang, href: (id: string) => string): OrgCar
       headName: head?.name[lang] ?? "",
       members: teams.reduce((n, tm) => n + teamMembers(tm.id).length, 0),
       open: ts.total - ts.done,
+      done: ts.done,
+      total: ts.total,
       health: teamHealth(ts),
     };
   });
@@ -75,6 +77,8 @@ export const unitCardVMs = (sectionId: string, lang: Lang, href: (id: string) =>
       headName: getUser(team.managerId)?.name[lang] ?? "",
       members: teamMembers(team.id).length,
       open: ts.total - ts.done,
+      done: ts.done,
+      total: ts.total,
       health: teamHealth(ts),
     };
   });

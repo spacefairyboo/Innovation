@@ -337,7 +337,7 @@ export default async function Dashboard({
     const attention = mattersMost(tasks, lang, 8).filter(
       (x) => x.eff !== 'value',
     );
-    const sectionUnits = unitCardVMs(focusSection.id, lang, (id) => `/?unit=${id}`);
+    const sectionUnits = unitCardVMs(focusSection.id, lang, (id) => `/teams/${id}`);
     const kpis = [
       {
         label: t('tasks_total'),
@@ -559,13 +559,13 @@ export default async function Dashboard({
       ? {
           title: t('sections_glance'),
           sub: t('sections_glance_sub'),
-          cards: sectionCardVMs(lang, (id) => `/?section=${id}`),
+          cards: sectionCardVMs(lang, (id) => `/teams?section=${id}`),
         }
       : user.role === 'section' && user.sectionId
         ? {
             title: t('units_glance'),
             sub: t('units_glance_sub'),
-            cards: unitCardVMs(user.sectionId, lang, (id) => `/?unit=${id}`),
+            cards: unitCardVMs(user.sectionId, lang, (id) => `/teams/${id}`),
           }
         : null;
 

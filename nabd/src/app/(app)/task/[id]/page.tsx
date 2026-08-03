@@ -41,7 +41,9 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
 
   const { lang } = await getSession();
   const t = makeT(lang);
-  const savedPlan = savedAdviceFor(user, task.id);
+  // The saved AI plan is working guidance for the people doing the task:
+  // only assignees see it, never watchers or even the line manager.
+  const savedPlan = task.assigneeIds.includes(user.id) ? savedAdviceFor(user, task.id) : null;
 
   return (
     <>
