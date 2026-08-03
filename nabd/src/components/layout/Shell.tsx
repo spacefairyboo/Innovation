@@ -76,6 +76,9 @@ export function Shell({
       ...(user.role !== 'employee'
         ? [{ href: '/stats', ico: 'trending-up', label: t('nav_stats') }]
         : []),
+      ...(user.role === 'senior' || user.role === 'section'
+        ? [{ href: '/teams', ico: 'users', label: t('nav_teams') }]
+        : []),
     ],
     [
       { href: '/advisor', ico: 'lightbulb', label: t('nav_advisor') },

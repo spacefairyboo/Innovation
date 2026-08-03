@@ -8,6 +8,7 @@ import { bumpStreak, listUsers, sectionTeams, teamMembers } from "../repositorie
 import { createProject, getProject } from "../repositories/projectRepository";
 import { createTask, deleteTask, getChecklist, saveChecklist, updateTask } from "../repositories/taskRepository";
 import { boundedText, clampProgress, validDate, validPriority, validStatus } from "../validation";
+import { localizeChanged, localizeText } from "../services/translationService";
 import { assertCanEdit, delayLocked, refresh, sanitizeChecklist, vetAssignees } from "./guards";
 import type { ChecklistItem, Localized, Priority, TaskStatus, User } from "@/lib/types";
 
@@ -95,10 +96,14 @@ export async function saveTask(input: {
     const note = boundedText(input.note, 2000);
     // Overdue tasks stay Delayed until the due date moves or they complete.
     const locked = delayLocked(task, status, due);
+    // AI keeps both languages in step: a changed title or a new note is
+    // translated to the other language; unchanged titles keep their pair.
+    const titleLoc = (await localizeChanged(title, task.title)) ?? undefined;
+    const noteLoc = note ? await localizeText(note) : null;
     updateTask(
       input.id,
-      { title, description, due, priority, status: locked ? undefined : status, progress, assigneeIds, tags, projectId },
-      note ? { en: note, ar: note } : null,
+      { title, titleLoc, description, due, priority, status: locked ? undefined : status, progress, assigneeIds, tags, projectId },
+      noteLoc,
       editor.id,
     );
     if (input.checklist) saveChecklist(input.id, editor.id, sanitizeChecklist(input.checklist));
@@ -112,7 +117,8 @@ export async function saveTask(input: {
       ? [user.id]
       : vetAssignees(user, input.assigneeIds?.length ? input.assigneeIds : fallback);
     const task = createTask({
-      title, description: description ?? null, assigneeIds, due, priority, createdBy: user.id,
+      title, titleLoc: await localizeText(title), description: description ?? null,
+      assigneeIds, due, priority, createdBy: user.id,
       tags, projectId: projectId ?? null,
     });
     if (input.checklist?.length) saveChecklist(task.id, user.id, sanitizeChecklist(input.checklist));
@@ -150,7 +156,7 @@ export async function applyCheckin(taskId: string, patch: { status?: TaskStatus;
   updateTask(
     taskId,
     { status: locked ? undefined : status, progress: patch.progress !== undefined ? clampProgress(patch.progress) : undefined },
-    text ? { en: text, ar: text } : null,
+    text ? await localizeText(text) : null,
     user.id,
   );
   bumpStreak(user.id);
@@ -173,7 +179,7 @@ export async function createTaskFromChat(input: {
   const match = input.assigneeName ? resolveAssignee(user, input.assigneeName) : null;
   const assignee = match ?? user;
 
-  createTask({ title, assigneeIds: [assignee.id], due, priority, createdBy: user.id, source: "chat" });
+  createTask({ title, titleLoc: await localizeText(title), assigneeIds: [assignee.id], due, priority, createdBy: user.id, source: "chat" });
   refresh();
   return { assignee: assignee.name, fellBack: !!input.assigneeName?.trim() && !match };
 }
@@ -225,7 +231,8 @@ export async function applyTaskEdit(taskId: string, edit: {
   const note = boundedText(edit.note, 2000);
   const changesAnything = Object.values(patch).some((v) => v !== undefined) || note;
   if (changesAnything) {
-    updateTask(taskId, patch, note ? { en: note, ar: note } : null, user.id);
+    const chatTitleLoc = patch.title ? (await localizeChanged(patch.title, task.title)) ?? undefined : undefined;
+    updateTask(taskId, { ...patch, titleLoc: chatTitleLoc }, note ? await localizeText(note) : null, user.id);
   }
 
   // Checklist edits: append a new item, or fuzzy-match one and mark it done.

@@ -1,4 +1,4 @@
-/* Home — a calm start to the day: a short greeting with one insight, the
+/* Home — a calm start to the day: a short greeting, the
    spoken briefing front and center, and only the handful of items that
    truly matter. Deep analytics live on the Statistics page. The overview
    cascades down the responsibility hierarchy: the senior manager sees
@@ -11,10 +11,7 @@ import { AttentionList, type AttentionItem } from '@/components/dashboard';
 import { HomeBriefing } from '@/components/briefing';
 import { CheckinPanel } from '@/components/chat';
 import { Avatar, HealthChip, Icon, StatusChip } from '@/components/ui';
-import {
-  buildPodcastScript,
-  insightFor,
-} from '@/server/services/briefingService';
+import { buildPodcastScript } from '@/server/services/briefingService';
 import { makeT } from '@/lib/i18n';
 import { taskValue } from '@/lib/value';
 import {
@@ -37,7 +34,7 @@ import {
   type Task,
 } from '@/lib/types';
 import {
-  doneThisWeekCount, greetingKey, recentActivity, sectionCardVMs, toVM, unitCardVMs,
+  doneThisWeekCount, greetingKey, recentActivity, sectionCardVMs, toVM, topContributors, unitCardVMs,
 } from '@/server/vm';
 import { OrgCardGrid } from '@/components/teams';
 import { TaskListSection } from '@/components/tasks';
@@ -74,6 +71,39 @@ function ActivityFeed({ activity, lang, t }: {
         );
       })}
     </>
+  );
+}
+
+/** The trailing week's completions per person, beside the activity feed. */
+function ContributorsCard({ tasks, lang, t }: {
+  tasks: Task[];
+  lang: 'en' | 'ar';
+  t: (k: string, v?: Record<string, string | number>) => string;
+}) {
+  const contributors = topContributors(tasks, 5);
+  return (
+    <div className='card'>
+      <div className='mb-3'>
+        <h3 className='m-0 text-base font-bold inline-flex items-center gap-2'>
+          <Icon name='award' size={16} className='text-ink-3' /> {t('leaderboard')}
+        </h3>
+        <p className='m-0 text-xs text-ink-3'>{t('leaderboard_sub')}</p>
+      </div>
+      {contributors.length === 0 && (
+        <div className='text-center text-ink-3 py-6 text-sm'>{t('leaderboard_empty')}</div>
+      )}
+      {contributors.map((c, i) => (
+        <div key={c.user.id} className='flex items-center gap-3 py-2.5 border-b border-grid last:border-b-0'>
+          <span className={`w-6 h-6 rounded-full grid place-items-center text-[0.7rem] font-bold shrink-0
+            ${i === 0 ? 'bg-accent-soft text-primary' : 'bg-surface-2 text-ink-3 border border-line'}`}>
+            {i + 1}
+          </span>
+          <Avatar name={c.user.name} size='sm' />
+          <span className='flex-1 min-w-0 text-sm font-semibold truncate'>{c.user.name[lang]}</span>
+          <span className='text-sm font-bold tabular-nums text-primary'>{c.count}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -137,7 +167,6 @@ export default async function Dashboard({
       ? sectionTasks(focusSection.id)
       : scopeTasks(user);
   const stats = countStatuses(tasks);
-  const insight = insightFor(tasks, lang);
   const greeting = t(greetingKey());
   const health = teamHealth(stats);
   const dateStr = new Date().toLocaleDateString(lang === 'ar' ? 'ar' : 'en', {
@@ -222,12 +251,6 @@ export default async function Dashboard({
             <h2 className='m-0 mt-1 text-2xl font-bold text-white'>
               {focusTeam.name[lang]}
             </h2>
-
-            {/* short insight */}
-            {/* <p className="m-0 mt-2.5 text-sm leading-6 flex items-start gap-2 max-w-xl" style={{ color: "#b7d9d0" }}>
-              <Icon name={insight.icon} size={16} className="mt-1" />
-              <span>{insight.text}</span>
-            </p> */}
             <div className='flex items-center gap-2.5 mt-4 flex-wrap'>
               <Link
                 href={`/teams/${focusTeam.id}`}
@@ -284,11 +307,14 @@ export default async function Dashboard({
           />
         </div>
 
-        <div className='card mb-5'>
-          <h3 className='m-0 mb-3 text-base font-bold'>
-            {t('updates_feed')}
-          </h3>
-          <ActivityFeed activity={activity} lang={lang} t={t} />
+        <div className='grid gap-5 lg:[grid-template-columns:1.55fr_1fr] mb-5'>
+          <div className='card'>
+            <h3 className='m-0 mb-3 text-base font-bold'>
+              {t('updates_feed')}
+            </h3>
+            <ActivityFeed activity={activity} lang={lang} t={t} />
+          </div>
+          <ContributorsCard tasks={tasks} lang={lang} t={t} />
         </div>
 
         {/* Every task in this unit, as the filterable table */}
@@ -376,13 +402,6 @@ export default async function Dashboard({
             <h2 className='m-0 mt-1 text-2xl font-bold text-white'>
               {focusSection.name[lang]}
             </h2>
-            <p
-              className='m-0 mt-2.5 text-sm leading-6 flex items-start gap-2 max-w-xl'
-              style={{ color: '#b7d9d0' }}
-            >
-              <Icon name={insight.icon} size={16} className='mt-1' />
-              <span>{insight.text}</span>
-            </p>
             <div className='flex items-center gap-2.5 mt-4 flex-wrap'>
               <Link
                 href={`/stats?section=${focusSection.id}`}
@@ -445,11 +464,14 @@ export default async function Dashboard({
           />
         </div>
 
-        <div className='card mb-5'>
-          <h3 className='m-0 mb-3 text-base font-bold'>
-            {t('updates_feed')}
-          </h3>
-          <ActivityFeed activity={recentActivity(tasks, 8)} lang={lang} t={t} />
+        <div className='grid gap-5 lg:[grid-template-columns:1.55fr_1fr] mb-5'>
+          <div className='card'>
+            <h3 className='m-0 mb-3 text-base font-bold'>
+              {t('updates_feed')}
+            </h3>
+            <ActivityFeed activity={recentActivity(tasks, 8)} lang={lang} t={t} />
+          </div>
+          <ContributorsCard tasks={tasks} lang={lang} t={t} />
         </div>
 
         {/* Every task across this section's units, as the filterable table */}
@@ -585,11 +607,6 @@ export default async function Dashboard({
             </div>
           </div>
         </div>
-
-        {/* <p className="m-0 mb-4 text-sm text-ink-2 flex items-start gap-2 max-w-xl">
-          <Icon name={insight.icon} size={15} className="mt-1 shrink-0 text-primary" />
-          <span>{insight.text}</span>
-        </p> */}
 
         <div className='grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]'>
           {kpis.map((x) => (

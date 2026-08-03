@@ -6,6 +6,7 @@ import { getSession } from "../auth/session";
 import { getSuggestion, setSuggestionStatus } from "../repositories/inboxRepository";
 import { createTask } from "../repositories/taskRepository";
 import { refresh } from "./guards";
+import { localizeText } from "../services/translationService";
 
 /** Accepts an AI email suggestion: creates the task for the caller. */
 export async function addSuggestedTask(suggestionId: number) {
@@ -13,7 +14,7 @@ export async function addSuggestedTask(suggestionId: number) {
   const s = getSuggestion(suggestionId);
   if (!s || s.userId !== user.id) throw new Error("Not your suggestion");
   if (s.status !== "pending") return;
-  createTask({ title: s.title, assigneeIds: [user.id], due: s.due, priority: s.priority, createdBy: user.id, source: "email" });
+  createTask({ title: s.title, titleLoc: await localizeText(s.title), assigneeIds: [user.id], due: s.due, priority: s.priority, createdBy: user.id, source: "email" });
   setSuggestionStatus(suggestionId, "added");
   refresh();
 }

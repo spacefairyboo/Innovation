@@ -193,7 +193,9 @@ export function getTaskAdvice(taskId: string): SavedAdviceRow | null {
 
 /* ---------- writes ---------- */
 type TaskPatch = Partial<Pick<Task, "status" | "progress" | "priority" | "due" | "tags" | "projectId" | "description">>
-  & { title?: string; assigneeIds?: string[] };
+  & { title?: string; assigneeIds?: string[];
+      /** Both language versions at once (the AI-translated pair); wins over `title`. */
+      titleLoc?: { en: string; ar: string } };
 
 export function updateTask(
   taskId: string,
@@ -234,8 +236,13 @@ function updateTaskInner(
     progress: patch.progress ?? existing.progress,
     priority: patch.priority ?? existing.priority,
     due: patch.due !== undefined ? patch.due : existing.due,
-    title_en: patch.title ?? existing.title.en,
-    title_ar: patch.title ?? existing.title.ar,
+    // A plain single-language title only replaces the pair when it truly
+    // changed; re-submitting either side verbatim must keep both languages
+    // (otherwise every unrelated save would wipe the translation).
+    title_en: patch.titleLoc?.en
+      ?? (patch.title && patch.title !== existing.title.en && patch.title !== existing.title.ar ? patch.title : existing.title.en),
+    title_ar: patch.titleLoc?.ar
+      ?? (patch.title && patch.title !== existing.title.en && patch.title !== existing.title.ar ? patch.title : existing.title.ar),
     tags: patch.tags ?? existing.tags,
     projectId: patch.projectId !== undefined ? patch.projectId : existing.projectId,
     description: patch.description !== undefined ? patch.description : existing.description,
@@ -248,8 +255,9 @@ function updateTaskInner(
   if (next.progress !== existing.progress) changes.push({ field: "progress", from: String(existing.progress), to: String(next.progress) });
   if (next.priority !== existing.priority) changes.push({ field: "priority", from: existing.priority, to: next.priority });
   if (next.due !== existing.due) changes.push({ field: "due", from: existing.due, to: next.due });
-  if (patch.title && patch.title !== existing.title.en && patch.title !== existing.title.ar) {
-    changes.push({ field: "title", from: existing.title.en, to: patch.title });
+  const typedTitle = patch.titleLoc ? (hasArabicText(patch.titleLoc.ar) && patch.titleLoc.ar !== patch.titleLoc.en ? patch.titleLoc.ar : patch.titleLoc.en) : patch.title;
+  if (typedTitle && typedTitle !== existing.title.en && typedTitle !== existing.title.ar) {
+    changes.push({ field: "title", from: existing.title.en, to: typedTitle });
   }
   if (nextAssignees) changes.push({ field: "assignee", from: existing.assigneeIds.join(","), to: nextAssignees.join(",") });
   for (const c of changes) logAudit(taskId, changedBy, now, c);
@@ -273,9 +281,13 @@ function updateTaskInner(
   return getTask(taskId);
 }
 
+const hasArabicText = (s: string): boolean => /[؀-ۿ]/.test(s);
+
 export function createTask(input: {
   title: string; assigneeIds: string[]; due: string | null; priority: Priority; createdBy: string;
   source?: TaskSource; tags?: string[]; projectId?: string | null; description?: string | null;
+  /** Both language versions of the title (the AI-translated pair). */
+  titleLoc?: { en: string; ar: string };
 }): Task {
   return withTransaction(() => {
     const db = getDB();
@@ -288,7 +300,7 @@ export function createTask(input: {
       "INSERT INTO tasks (id, owner_id, team_id, status, progress, priority, title_en, title_ar, due, updated_at, created_at, source, tags, project_id, description) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     ).run(
       id, owner.id, owner.teamId, "pending", 0, input.priority,
-      input.title, input.title, input.due, now, now, input.source ?? "manual",
+      input.titleLoc?.en ?? input.title, input.titleLoc?.ar ?? input.title, input.due, now, now, input.source ?? "manual",
       JSON.stringify(input.tags ?? []), input.projectId ?? null, input.description ?? null,
     );
     const ins = db.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
