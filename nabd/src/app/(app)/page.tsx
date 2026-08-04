@@ -6,9 +6,8 @@
    opens one), a unit head their unit, a team member their own tasks. */
 
 import Link from 'next/link';
-import { ChartCard, Donut, StatusTable } from '@/components/charts';
 import { AttentionList } from '@/components/dashboard';
-import { ActivityFeed, ContributorsCard, mattersMost, SectionOverviewBody } from '@/components/overview/SectionOverview';
+import { mattersMost, SectionOverviewBody, UnitOverviewBody } from '@/components/overview/SectionOverview';
 import { HomeBriefing } from '@/components/briefing';
 import { CheckinPanel } from '@/components/chat';
 import { HealthChip, Icon } from '@/components/ui';
@@ -32,10 +31,9 @@ import {
   type Task,
 } from '@/lib/types';
 import {
-  doneThisWeekCount, greetingKey, recentActivity, sectionCardVMs, toVM, unitCardVMs,
+  doneThisWeekCount, greetingKey, sectionCardVMs, unitCardVMs,
 } from '@/server/vm';
 import { OrgCardGrid } from '@/components/teams';
-import { TaskListSection } from '@/components/tasks';
 
 export default async function Dashboard({
   searchParams,
@@ -82,36 +80,6 @@ export default async function Dashboard({
 
   /* ---------- Unit drill-down: the detailed per-unit overview ---------- */
   if (focusTeam) {
-    const attention = mattersMost(tasks, lang, 8).filter(
-      (x) => x.eff !== 'value',
-    );
-    const activity = recentActivity(tasks, 8);
-    const kpis = [
-      {
-        label: t('tasks_total'),
-        icon: 'clipboard-list',
-        val: String(stats.total),
-        edge: 'var(--accent)',
-      },
-      {
-        label: t('st_ontrack'),
-        icon: 'trending-up',
-        val: String(stats.ontrack),
-        edge: 'var(--ch-ontrack)',
-      },
-      {
-        label: t('needs_attention'),
-        icon: 'alert-triangle',
-        val: String(stats.blocked + stats.delayed),
-        edge: 'var(--ch-blocked)',
-      },
-      {
-        label: t('st_done'),
-        icon: 'check-circle',
-        val: String(stats.done),
-        edge: 'var(--ch-done)',
-      },
-    ];
     return (
       <>
         <div
@@ -164,69 +132,7 @@ export default async function Dashboard({
           </span>
         </div>
 
-        <div className='grid gap-3 mb-5 [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]'>
-          {kpis.map((x) => (
-            <div
-              key={x.label}
-              className='card relative overflow-hidden !p-4 flex flex-col gap-1'
-            >
-              <span
-                className='absolute start-0 top-0 bottom-0 w-1'
-                style={{ background: x.edge }}
-              />
-              <span className='text-xs font-semibold text-ink-2 flex items-center gap-1.5'>
-                <Icon name={x.icon} size={14} /> {x.label}
-              </span>
-              <span className='text-[1.8rem] font-bold leading-tight tabular-nums'>
-                {x.val}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* The chart card stretches to the attention list's height, no
-            further: the donut stays compact so the row reads as one band. */}
-        <div className='grid gap-5 lg:[grid-template-columns:1.55fr_1fr] mb-5'>
-          <div className='card'>
-            <div className='mb-3'>
-              <h3 className='m-0 text-base font-bold'>
-                {t('needs_attention')}
-              </h3>
-              <p className='m-0 text-xs text-ink-3'>
-                {t('needs_attention_sub')}
-              </p>
-            </div>
-            <AttentionList items={attention} canNudge />
-          </div>
-          <ChartCard
-            title={t('status_mix')}
-            sub={t('status_mix_sub')}
-            chart={<div className='max-w-64 mx-auto w-full'><Donut stats={stats} centerLabel={t('tasks_total')} /></div>}
-            table={<StatusTable stats={stats} />}
-          />
-        </div>
-
-        <div className='grid gap-5 lg:[grid-template-columns:1.55fr_1fr] mb-5'>
-          <div className='card'>
-            <h3 className='m-0 mb-3 text-base font-bold'>
-              {t('updates_feed')}
-            </h3>
-            <ActivityFeed activity={activity} lang={lang} t={t} />
-          </div>
-          <ContributorsCard tasks={tasks} lang={lang} t={t} />
-        </div>
-
-        {/* Every task in this unit, as the filterable table */}
-        <div className='mb-2'>
-          <h3 className='m-0 text-base font-bold'>{t('unit_tasks')}</h3>
-          <p className='m-0 text-xs text-ink-3'>{t('unit_tasks_sub')}</p>
-        </div>
-        <TaskListSection
-          vms={tasks.map((x) => toVM(x, user))}
-          canEdit
-          canNudge
-          pageSize={10}
-        />
+        <UnitOverviewBody teamId={focusTeam.id} user={user} lang={lang} t={t} />
       </>
     );
   }
