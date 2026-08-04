@@ -352,7 +352,10 @@ export function PodcastPlayer({
                 stop();
                 router.push(`/podcast?scope=${v}`);
               }}
-              options={scopeOptions.map((o) => ({ value: o.value, label: o.label }))}
+              options={scopeOptions.map((o) => ({
+                value: o.value,
+                label: o.label,
+              }))}
             />
           )}
           {voices.length > 0 && (
@@ -371,7 +374,9 @@ export function PodcastPlayer({
                   .filter((v) => voiceGender(v) === g)
                   .map((v) => ({
                     value: v.voiceURI,
-                    label: v.name.replace(/^Microsoft |^Google |\(.*\)$/g, '').trim(),
+                    label: v.name
+                      .replace(/^Microsoft |^Google |\(.*\)$/g, '')
+                      .trim(),
                     group: t(
                       g === 'female'
                         ? 'voice_female'
@@ -379,7 +384,8 @@ export function PodcastPlayer({
                           ? 'voice_male'
                           : 'voice_other',
                     ),
-                  })))}
+                  })),
+              )}
             />
           )}
           <Select
@@ -392,9 +398,6 @@ export function PodcastPlayer({
               label: `${t('podcast_speed')} ${r}×`,
             }))}
           />
-          {/* <p className="m-0 text-xs inline-flex items-center gap-1.5 basis-full" style={{ color: "#7fa89e" }}>
-            <Icon name="lock" size={12} /> {t("podcast_voice_note")}
-          </p> */}
         </div>
       </div>
 
