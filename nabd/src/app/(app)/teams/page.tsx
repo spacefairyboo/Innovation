@@ -8,13 +8,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { OrgCardGrid } from "@/components/teams";
+import { SectionOverviewBody } from "@/components/overview/SectionOverview";
 import { HealthChip, Icon } from "@/components/ui";
 import { makeT } from "@/lib/i18n";
 import { getSession } from "@/server/auth/session";
 import {
   allTasks, getUnit, listUnits, listUsers, sectionTasks, sectionTeams, teamMembers,
 } from "@/server/repositories";
-import { sectionCardVMs, unitCardVMs } from "@/server/vm";
+import { sectionCardVMs } from "@/server/vm";
 import { countStatuses, teamHealth, type Health, type Lang } from "@/lib/types";
 
 /** The dark banner card describing the level currently open. */
@@ -114,11 +115,8 @@ export default async function PcaOverviewPage({ searchParams }: {
             { href: `/stats?section=${section.id}`, icon: "trending-up", label: t("nav_stats") },
           ]}
         />
-        <div className="mb-3">
-          <h3 className="m-0 text-base font-bold">{t("units_title")}</h3>
-          <p className="m-0 text-xs text-ink-3">{t("units_glance_sub")}</p>
-        </div>
-        <OrgCardGrid cards={unitCardVMs(section.id, lang as Lang, (id) => `/teams/${id}`)} />
+        {/* The full section overview: KPIs, units, charts, and tasks */}
+        <SectionOverviewBody sectionId={section.id} user={user} lang={lang as Lang} t={t} />
       </>
     );
   }

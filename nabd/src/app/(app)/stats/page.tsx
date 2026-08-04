@@ -246,6 +246,10 @@ export default async function StatsPage({ searchParams }: {
       ) : (
         <>
           {/* Row 1: the trend beside the leaderboard, equal heights */}
+          <div className="mt-1 mb-2">
+            <h3 className="m-0 text-base font-bold">{t("stats_g_momentum")}</h3>
+            <p className="m-0 text-xs text-ink-3">{t("stats_g_momentum_sub")}</p>
+          </div>
           <div className="grid gap-5 lg:[grid-template-columns:1.7fr_1fr] mb-5">
             <ChartCard
               title={t("completions_trend_n", { n: String(Math.min(RANGES[range], 90)) })}
@@ -278,6 +282,10 @@ export default async function StatsPage({ searchParams }: {
           </div>
 
           {/* Row 2: today's shape of the work */}
+          <div className="mt-1 mb-2">
+            <h3 className="m-0 text-base font-bold">{t("stats_g_shape")}</h3>
+            <p className="m-0 text-xs text-ink-3">{t("stats_g_shape_sub")}</p>
+          </div>
           <div className="grid gap-5 lg:grid-cols-3 mb-5">
             <ChartCard
               title={t("status_mix")}
@@ -300,6 +308,10 @@ export default async function StatsPage({ searchParams }: {
           </div>
 
           {/* Row 4: the per-group pair, side by side at one height */}
+          <div className="mt-1 mb-2">
+            <h3 className="m-0 text-base font-bold">{t("stats_g_groups")}</h3>
+            <p className="m-0 text-xs text-ink-3">{t("stats_g_groups_sub")}</p>
+          </div>
           <div className="grid gap-5 lg:grid-cols-2 mb-5">
             <ChartCard
               title={t("avg_progress")}

@@ -34,7 +34,7 @@ export function Donut({ stats, centerLabel }: { stats: StatusCounts; centerLabel
           {segs.length ? segs : <circle r={R} cx={CX} cy={CY} fill="none" stroke="var(--grid)" strokeWidth={SW} />}
         </g>
         <text x={CX} y={CY - 2} textAnchor="middle" fontSize={30} fontWeight={700} fill="var(--ink)">{stats.total}</text>
-        <text x={CX} y={CY + 18} textAnchor="middle" fontSize={11} fontWeight={500} fill="var(--ink-3)">{centerLabel}</text>
+        <text x={CX} y={CY + 18} textAnchor="middle" fontSize={12} fontWeight={500} fill="var(--ink-3)">{centerLabel}</text>
       </svg>
       <Legend stats={stats} />
     </div>

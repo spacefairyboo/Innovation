@@ -44,13 +44,13 @@
 
   /* Chart mark fills — validated palette (2px gaps, direct labels, icons,
      and table views provide the required secondary encoding / relief) */
-  /* Muted chart palette: hue keeps the status meaning, saturation stays
-     low so the marks read calmly against the glass cards. */
-  --ch-done: #4f9d89;
-  --ch-ontrack: #5b96ad;
-  --ch-pending: #b3954f;
-  --ch-blocked: #bd7a76;
-  --ch-delayed: #c48f66;
+  /* Vibrant but flat chart palette: saturated status hues with no glow,
+     so charts pop against the glass cards without shouting. */
+  --ch-done: #1aa88a;
+  --ch-ontrack: #2b9fc7;
+  --ch-pending: #d09a1e;
+  --ch-blocked: #d95757;
+  --ch-delayed: #e57b3a;
 }
 
 [data-theme="dark"] {
@@ -83,11 +83,11 @@
   --st-delayed: #f0a06c;    --st-delayed-bg: rgb(240 160 108 / 0.13);
 
   /* Dark-surface chart fills — validated separately against #0f2e29 */
-  --ch-done: #5da294;
-  --ch-ontrack: #75a1b4;
-  --ch-pending: #b59d68;
-  --ch-blocked: #b28480;
-  --ch-delayed: #bd9276;
+  --ch-done: #2ab294;
+  --ch-ontrack: #46aed3;
+  --ch-pending: #d8a637;
+  --ch-blocked: #e07070;
+  --ch-delayed: #e98d55;
 }
 
 /* Expose tokens as Tailwind color utilities (bg-surface, text-ink-2, …) */

@@ -18,7 +18,7 @@ export function LineChart({ points, seriesLabel }: { points: TrendPoint[]; serie
       {gridVals.map((v) => (
         <g key={v}>
           <line x1={PX} x2={W - PX} y1={y(v)} y2={y(v)} stroke="var(--grid)" strokeWidth={1} />
-          <text x={PX - 6} y={y(v) + 3.5} textAnchor="end" fontSize={10} fill="var(--ink-3)">{v}</text>
+          <text x={PX - 6} y={y(v) + 3.5} textAnchor="end" fontSize={11.5} fill="var(--ink-3)">{v}</text>
         </g>
       ))}
       <polygon points={area} fill="var(--accent)" opacity={0.08} className="chart-fill-fade" />
@@ -28,7 +28,7 @@ export function LineChart({ points, seriesLabel }: { points: TrendPoint[]; serie
           <circle cx={p[0]} cy={p[1]} r={11} fill="transparent" data-tt={`${points[i].label}|${points[i].count} ${seriesLabel}`} className="cursor-pointer" />
           <circle cx={p[0]} cy={p[1]} r={points.length > 40 ? (points[i].count ? 2 : 0) : points[i].count ? 3.5 : 2} fill="var(--accent)" pointerEvents="none" />
           {i % Math.max(1, Math.ceil(points.length / 8)) === 0 && (
-            <text x={p[0]} y={H - 8} textAnchor="middle" fontSize={10} fill="var(--ink-3)">{points[i].label}</text>
+            <text x={p[0]} y={H - 8} textAnchor="middle" fontSize={11.5} fill="var(--ink-3)">{points[i].label}</text>
           )}
         </g>
       ))}
