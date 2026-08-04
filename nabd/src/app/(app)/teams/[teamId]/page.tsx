@@ -1,18 +1,20 @@
-/* Team drill-down: members, workload, status mix, and the team's tasks. */
+/* Unit page — the same shape as a section's page: the dark banner, KPI
+   tiles, needs-attention beside the status donut, latest activity beside
+   top contributors, the unit's task table, and the members card. */
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChartCard, Donut, MiniBars, StatTiles, StatusTable } from "@/components/charts";
+import { MiniBars } from "@/components/charts";
 import { ExportCsvButton } from "@/components/dashboard";
-import { HealthChip, Icon } from "@/components/ui";
-import { TaskListSection, type AssigneeOption } from "@/components/tasks";
-import { TeamGlyph } from "@/components/teams";
-import { Avatar } from "@/components/ui";
+import { LevelCard } from "@/components/overview/LevelCard";
+import { UnitOverviewBody } from "@/components/overview/SectionOverview";
+import { Avatar, Icon } from "@/components/ui";
+import { type AssigneeOption } from "@/components/tasks";
 import { makeT } from "@/lib/i18n";
-import { bySeniority, getTeam, getUnit, overseesTeam, teamMembers, teamTasks, userTasks } from "@/server/repositories";
+import { bySeniority, getTeam, getUnit, getUser, overseesTeam, teamMembers, teamTasks, userTasks } from "@/server/repositories";
 import { getSession } from "@/server/auth/session";
 import { countStatuses, teamHealth } from "@/lib/types";
-import { csvRows, toVM } from "@/server/vm";
+import { csvRows } from "@/server/vm";
 
 export default async function TeamPage({ params, searchParams }: {
   params: Promise<{ teamId: string }>;
@@ -34,40 +36,55 @@ export default async function TeamPage({ params, searchParams }: {
   const stats = countStatuses(tasks);
   const members = teamMembers(team.id);
   const unit = getUnit(team.unitId)!;
-  const h = teamHealth(stats);
+  const head = getUser(team.managerId);
 
-  const assignees: AssigneeOption[] | undefined = canManage
-    ? [...members].sort(bySeniority).map((m) => ({ id: m.id, name: m.name, teamName: team.name }))
-    : undefined;
+  const assignees: AssigneeOption[] = [...members]
+    .sort(bySeniority)
+    .map((m) => ({ id: m.id, name: m.name, teamName: team.name }));
 
   return (
     <>
-      <div className="flex items-center gap-3.5 mb-5 flex-wrap">
-        <Link href="/" className="icon-btn no-underline" aria-label={t("nav_dashboard")}>
-          <Icon name={lang === "ar" ? "chevron-right" : "chevron-left"} size={18} />
+      {/* breadcrumb up the hierarchy */}
+      {(user.role === "senior" || user.role === "section") && (
+        <Link
+          href={user.role === "senior" ? `/teams?section=${team.unitId}` : "/teams"}
+          className="inline-flex items-center gap-1.5 mb-4 text-xs font-semibold text-primary no-underline hover:underline"
+        >
+          <Icon name={lang === "ar" ? "chevron-right" : "chevron-left"} size={13} /> {unit.name[lang]}
         </Link>
-        <TeamGlyph name={team.name[lang]} size="lg" />
-        <div>
-          <h2 className="m-0 text-xl font-bold">{team.name[lang]}</h2>
-          <p className="m-0 mt-0.5 text-sm text-ink-2 flex items-center gap-1.5">
-            {unit.name[lang]} · {t("team_health")}: <HealthChip health={h} />
-          </p>
-        </div>
-        <div className="flex-1" />
-        {canManage && (
+      )}
+
+      <LevelCard
+        kicker={`${t("nav_teams")} · ${unit.name[lang]}`}
+        name={team.name[lang]}
+        headName={head?.name[lang] ?? ""}
+        chips={[
+          { icon: "users", label: `${members.length} ${t("members")}` },
+          { icon: "clipboard-list", label: `${stats.total - stats.done} ${t("active_tasks")}` },
+        ]}
+        health={teamHealth(stats)}
+        healthLabel={t("health_overall")}
+        links={[
+          { href: user.role === "manager" ? "/" : `/?unit=${team.id}`, icon: "layout-dashboard", label: t("nav_dashboard") },
+          { href: user.role === "senior" ? `/stats?section=${team.unitId}` : "/stats", icon: "trending-up", label: t("nav_stats") },
+        ]}
+      />
+
+      <UnitOverviewBody teamId={team.id} user={user} lang={lang} t={t} assignees={assignees} initialQuery={q} />
+
+      {/* the people behind the numbers */}
+      <div className="card mt-5">
+        <div className="mb-3 flex items-start gap-3 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <h3 className="m-0 text-base font-bold">{t("members")}</h3>
+          </div>
           <ExportCsvButton rows={csvRows(tasks, lang)} filename={`echo-${team.id}-${new Date().toISOString().slice(0, 10)}.csv`} />
-        )}
-      </div>
-
-      <StatTiles stats={stats} />
-
-      <div className="grid gap-5 lg:[grid-template-columns:1.1fr_1.6fr] items-start">
-        <div className="card">
-          <h3 className="m-0 mb-3 text-base font-bold">{t("members")}</h3>
+        </div>
+        <div className="grid gap-x-8 lg:grid-cols-2">
           {members.map((m) => {
             const mstats = countStatuses(userTasks(m.id));
             return (
-              <div key={m.id} className="flex items-center gap-3 py-3 border-b border-grid last:border-b-0">
+              <div key={m.id} className="flex items-center gap-3 py-3 border-b border-grid">
                 <Avatar name={m.name} />
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm flex items-center gap-2">
@@ -90,25 +107,6 @@ export default async function TeamPage({ params, searchParams }: {
             );
           })}
         </div>
-        <ChartCard
-          title={t("status_mix")}
-          sub={t("status_mix_sub")}
-          chart={<Donut stats={stats} centerLabel={t("tasks_total")} />}
-          table={<StatusTable stats={stats} />}
-        />
-      </div>
-
-      <div className="mt-5">
-        <TaskListSection
-          vms={tasks.map((x) => toVM(x, user))}
-          canEdit={canManage}
-          canNudge={canManage}
-          withFilters
-          valueFilter={canManage}
-          assignees={assignees}
-          initialQuery={q}
-          key={q ?? ""}
-        />
       </div>
     </>
   );
