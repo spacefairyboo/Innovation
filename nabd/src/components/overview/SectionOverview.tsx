@@ -143,7 +143,7 @@ export function SectionOverviewBody({ sectionId, user, lang, t }: {
         <OrgCardGrid cards={unitCardVMs(sectionId, lang, (id) => `/teams/${id}`)} />
       </div>
 
-      <div className="grid gap-5 lg:[grid-template-columns:1.55fr_1fr] mb-5">
+      <div className="grid gap-5 lg:[grid-template-columns:1.55fr_1fr] *:min-w-0 mb-5">
         <div className="card">
           <div className="mb-3">
             <h3 className="m-0 text-base font-bold">{t("needs_attention")}</h3>
@@ -159,7 +159,7 @@ export function SectionOverviewBody({ sectionId, user, lang, t }: {
         />
       </div>
 
-      <div className="grid gap-5 lg:[grid-template-columns:1.55fr_1fr] mb-5">
+      <div className="grid gap-5 lg:[grid-template-columns:1.55fr_1fr] *:min-w-0 mb-5">
         <div className="card">
           <h3 className="m-0 mb-3 text-base font-bold">{t("updates_feed")}</h3>
           <ActivityFeed activity={recentActivity(tasks, 8)} lang={lang} t={t} />
@@ -219,7 +219,7 @@ export function UnitOverviewBody({ teamId, user, lang, t, assignees, initialQuer
         ))}
       </div>
 
-      <div className="grid gap-5 lg:[grid-template-columns:1.55fr_1fr] mb-5">
+      <div className="grid gap-5 lg:[grid-template-columns:1.55fr_1fr] *:min-w-0 mb-5">
         <div className="card">
           <div className="mb-3">
             <h3 className="m-0 text-base font-bold">{t("needs_attention")}</h3>
@@ -235,7 +235,7 @@ export function UnitOverviewBody({ teamId, user, lang, t, assignees, initialQuer
         />
       </div>
 
-      <div className="grid gap-5 lg:[grid-template-columns:1.55fr_1fr] mb-5">
+      <div className="grid gap-5 lg:[grid-template-columns:1.55fr_1fr] *:min-w-0 mb-5">
         <div className="card">
           <h3 className="m-0 mb-3 text-base font-bold">{t("updates_feed")}</h3>
           <ActivityFeed activity={recentActivity(tasks, 8)} lang={lang} t={t} />

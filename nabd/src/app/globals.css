@@ -522,6 +522,10 @@ body::after {
     0 18px 44px rgb(0 0 0 / 0.24);
 }
 
+/* Scrollable rows that hide their scrollbar (mobile nav) */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
 /* Frosted glass panel that adapts to the active theme */
 .glass-card {
   background: color-mix(in srgb, var(--surface) 78%, transparent);

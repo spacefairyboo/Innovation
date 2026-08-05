@@ -371,13 +371,16 @@ export function Shell({
         </main>
       </div>
 
+      {/* When every destination fits, the row centers; with more items than
+          the phone is wide, it scrolls sideways instead of spilling out. */}
       <nav
-        className='md:hidden fixed bottom-3 inset-x-3 z-50 flex justify-around rounded-full px-2 py-1.5 shadow-2xl backdrop-blur-xl'
+        className='md:hidden fixed bottom-3 inset-x-3 z-50 flex rounded-full px-2 py-1.5 shadow-2xl backdrop-blur-xl overflow-x-auto no-scrollbar'
         style={{
           background: 'var(--side-bg)',
           border: '1px solid rgb(223 245 241 / 0.1)',
         }}
       >
+        <span aria-hidden className='flex-1 shrink-[2]' />
         {nav.map((item) => {
           const active = isActive(item.href);
           return (
@@ -405,6 +408,7 @@ export function Shell({
             </Link>
           );
         })}
+        <span aria-hidden className='flex-1 shrink-[2]' />
       </nav>
 
       {switcherOpen && (

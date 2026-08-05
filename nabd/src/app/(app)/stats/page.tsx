@@ -250,7 +250,7 @@ export default async function StatsPage({ searchParams }: {
             <h3 className="m-0 text-base font-bold">{t("stats_g_momentum")}</h3>
             <p className="m-0 text-xs text-ink-3">{t("stats_g_momentum_sub")}</p>
           </div>
-          <div className="grid gap-5 lg:[grid-template-columns:1.7fr_1fr] mb-5">
+          <div className="grid gap-5 lg:[grid-template-columns:1.7fr_1fr] *:min-w-0 mb-5">
             <ChartCard
               title={t("completions_trend_n", { n: String(Math.min(RANGES[range], 90)) })}
               sub={t("completions_trend_sub")}
