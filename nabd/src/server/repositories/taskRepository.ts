@@ -255,9 +255,10 @@ function updateTaskInner(
   if (next.progress !== existing.progress) changes.push({ field: "progress", from: String(existing.progress), to: String(next.progress) });
   if (next.priority !== existing.priority) changes.push({ field: "priority", from: existing.priority, to: next.priority });
   if (next.due !== existing.due) changes.push({ field: "due", from: existing.due, to: next.due });
-  const typedTitle = patch.titleLoc ? (hasArabicText(patch.titleLoc.ar) && patch.titleLoc.ar !== patch.titleLoc.en ? patch.titleLoc.ar : patch.titleLoc.en) : patch.title;
-  if (typedTitle && typedTitle !== existing.title.en && typedTitle !== existing.title.ar) {
-    changes.push({ field: "title", from: existing.title.en, to: typedTitle });
+  // titleLoc arrives from the background translator: a silent fill of the
+  // other language, never an audited change. Only a typed title is audited.
+  if (patch.title && !patch.titleLoc && patch.title !== existing.title.en && patch.title !== existing.title.ar) {
+    changes.push({ field: "title", from: existing.title.en, to: patch.title });
   }
   if (nextAssignees) changes.push({ field: "assignee", from: existing.assigneeIds.join(","), to: nextAssignees.join(",") });
   for (const c of changes) logAudit(taskId, changedBy, now, c);
@@ -280,8 +281,6 @@ function updateTaskInner(
   }
   return getTask(taskId);
 }
-
-const hasArabicText = (s: string): boolean => /[؀-ۿ]/.test(s);
 
 export function createTask(input: {
   title: string; assigneeIds: string[]; due: string | null; priority: Priority; createdBy: string;
@@ -310,6 +309,19 @@ export function createTask(input: {
     ).run(id, now, input.createdBy, "Task created", "أُنشئت المهمة", "pending", 0);
     return getTask(id)!;
   });
+}
+
+/** Background translation landing: rewrites the freshest note row that
+    still carries the typed text in both languages. */
+export function retranslateNote(taskId: string, typed: string, loc: { en: string; ar: string }): void {
+  getDB().prepare(
+    `UPDATE task_updates SET text_en = ?, text_ar = ?
+     WHERE rowid = (
+       SELECT rowid FROM task_updates
+       WHERE task_id = ? AND text_en = ? AND text_ar = ?
+       ORDER BY ts DESC LIMIT 1
+     )`,
+  ).run(loc.en, loc.ar, taskId, typed, typed);
 }
 
 export function deleteTask(taskId: string): void {

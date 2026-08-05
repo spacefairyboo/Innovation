@@ -6,9 +6,10 @@
 import { getSession } from "../auth/session";
 import { bumpStreak, listUsers, sectionTeams, teamMembers } from "../repositories/orgRepository";
 import { createProject, getProject } from "../repositories/projectRepository";
-import { createTask, deleteTask, getChecklist, saveChecklist, updateTask } from "../repositories/taskRepository";
+import { after } from "next/server";
+import { createTask, deleteTask, getChecklist, retranslateNote, saveChecklist, updateTask } from "../repositories/taskRepository";
 import { boundedText, clampProgress, validDate, validPriority, validStatus } from "../validation";
-import { localizeChanged, localizeText } from "../services/translationService";
+import { localizeText } from "../services/translationService";
 import { assertCanEdit, delayLocked, refresh, sanitizeChecklist, vetAssignees } from "./guards";
 import type { ChecklistItem, Localized, Priority, TaskStatus, User } from "@/lib/types";
 
@@ -50,6 +51,27 @@ function resolveAssignee(user: User, name: string): User | null {
     u.name.en.toLowerCase().split(/\s+/).includes(wanted) ||
     u.name.ar.split(/\s+/).includes(name.trim()) ||
     u.name.en.toLowerCase().startsWith(wanted)) ?? null;
+}
+
+
+/** Schedules the AI translation of a fresh title/note for after the
+    response: the save returns instantly with the text mirrored, and the
+    other language fills in silently a moment later. */
+function translateSoon(taskId: string, byId: string, typedTitle: string | null, typedNote: string | null) {
+  after(async () => {
+    try {
+      if (typedTitle) {
+        const loc = await localizeText(typedTitle);
+        if (loc.en !== loc.ar) updateTask(taskId, { titleLoc: loc }, null, byId);
+      }
+      if (typedNote) {
+        const loc = await localizeText(typedNote);
+        if (loc.en !== loc.ar) retranslateNote(taskId, typedNote, loc);
+      }
+    } catch {
+      // Translation is best effort; the mirrored text already stands.
+    }
+  });
 }
 
 export async function saveTask(input: {
@@ -96,16 +118,16 @@ export async function saveTask(input: {
     const note = boundedText(input.note, 2000);
     // Overdue tasks stay Delayed until the due date moves or they complete.
     const locked = delayLocked(task, status, due);
-    // AI keeps both languages in step: a changed title or a new note is
-    // translated to the other language; unchanged titles keep their pair.
-    const titleLoc = (await localizeChanged(title, task.title)) ?? undefined;
-    const noteLoc = note ? await localizeText(note) : null;
+    // AI keeps both languages in step, off the critical path: the save
+    // lands with mirrored text and the translation fills in right after.
+    const titleChanged = title !== task.title.en && title !== task.title.ar;
     updateTask(
       input.id,
-      { title, titleLoc, description, due, priority, status: locked ? undefined : status, progress, assigneeIds, tags, projectId },
-      noteLoc,
+      { title, description, due, priority, status: locked ? undefined : status, progress, assigneeIds, tags, projectId },
+      note ? { en: note, ar: note } : null,
       editor.id,
     );
+    translateSoon(input.id, editor.id, titleChanged ? title : null, note ?? null);
     if (input.checklist) saveChecklist(input.id, editor.id, sanitizeChecklist(input.checklist));
     refresh();
     return { delayedLocked: locked };
@@ -117,10 +139,11 @@ export async function saveTask(input: {
       ? [user.id]
       : vetAssignees(user, input.assigneeIds?.length ? input.assigneeIds : fallback);
     const task = createTask({
-      title, titleLoc: await localizeText(title), description: description ?? null,
+      title, description: description ?? null,
       assigneeIds, due, priority, createdBy: user.id,
       tags, projectId: projectId ?? null,
     });
+    translateSoon(task.id, user.id, title, null);
     if (input.checklist?.length) saveChecklist(task.id, user.id, sanitizeChecklist(input.checklist));
   }
   refresh();
@@ -156,9 +179,10 @@ export async function applyCheckin(taskId: string, patch: { status?: TaskStatus;
   updateTask(
     taskId,
     { status: locked ? undefined : status, progress: patch.progress !== undefined ? clampProgress(patch.progress) : undefined },
-    text ? await localizeText(text) : null,
+    text ? { en: text, ar: text } : null,
     user.id,
   );
+  if (text) translateSoon(taskId, user.id, null, text);
   bumpStreak(user.id);
   refresh();
   return { delayedLocked: locked };
@@ -179,7 +203,8 @@ export async function createTaskFromChat(input: {
   const match = input.assigneeName ? resolveAssignee(user, input.assigneeName) : null;
   const assignee = match ?? user;
 
-  createTask({ title, titleLoc: await localizeText(title), assigneeIds: [assignee.id], due, priority, createdBy: user.id, source: "chat" });
+  const chatTask = createTask({ title, assigneeIds: [assignee.id], due, priority, createdBy: user.id, source: "chat" });
+  translateSoon(chatTask.id, user.id, title, null);
   refresh();
   return { assignee: assignee.name, fellBack: !!input.assigneeName?.trim() && !match };
 }
@@ -231,8 +256,9 @@ export async function applyTaskEdit(taskId: string, edit: {
   const note = boundedText(edit.note, 2000);
   const changesAnything = Object.values(patch).some((v) => v !== undefined) || note;
   if (changesAnything) {
-    const chatTitleLoc = patch.title ? (await localizeChanged(patch.title, task.title)) ?? undefined : undefined;
-    updateTask(taskId, { ...patch, titleLoc: chatTitleLoc }, note ? await localizeText(note) : null, user.id);
+    const chatTitleChanged = !!patch.title && patch.title !== task.title.en && patch.title !== task.title.ar;
+    updateTask(taskId, patch, note ? { en: note, ar: note } : null, user.id);
+    translateSoon(taskId, user.id, chatTitleChanged ? patch.title! : null, note ?? null);
   }
 
   // Checklist edits: append a new item, or fuzzy-match one and mark it done.
