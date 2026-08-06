@@ -1,0 +1,192 @@
+==============================================================================
+  ECHO (صدى) — HOW THIS WEBSITE IS MADE
+  The technology, the skills, and the AI models behind it.
+==============================================================================
+
+
+------------------------------------------------------------------------------
+  1. THE BIG PICTURE
+------------------------------------------------------------------------------
+
+Echo is a bilingual (English / Arabic) task-management platform for the PCA
+department. It is one single web application: the same codebase serves the
+pages, runs the business logic, talks to the database, and calls the AI.
+There is no separate backend service - Next.js plays both roles.
+
+The flow of every screen:
+
+    Browser  →  Next.js page (server component)  →  repositories (SQL)
+             ←  rendered HTML with live data      ←  SQLite database
+
+The flow of every edit:
+
+    Browser  →  Server Action (a typed function call, no REST API needed)
+             →  validation → permission check → SQL write → audit log
+             →  AI translation runs in the background after the response
+
+
+------------------------------------------------------------------------------
+  2. CORE TECHNOLOGY STACK
+------------------------------------------------------------------------------
+
+Next.js 16 (App Router)
+  The framework. Pages live in src/app, render on the server with live
+  data, and stream HTML to the browser. Server Actions replace a REST
+  API: the UI calls typed server functions directly.
+
+React 19
+  The UI library. Interactive pieces (dialogs, dropdowns, the chat, the
+  podcast player) are client components; everything else stays on the
+  server for speed.
+
+TypeScript 5
+  Every file is typed - the task, user, and permission models in
+  src/lib/types.ts are shared by the server and the browser, so a
+  mismatch is a compile error, not a runtime surprise.
+
+Tailwind CSS 4
+  All styling, plus a custom design system in globals.css: the glass
+  cards, the aurora login backdrop, dark/light themes, and full
+  right-to-left (RTL) layout for Arabic.
+
+SQLite (node:sqlite)
+  The database - a single file (data/echo.db), no server to install.
+  The schema migrates itself on startup and seeds a full demo
+  organization on first run. Every write is parameterized SQL inside a
+  transaction.
+
+Supporting libraries
+  - openai            : the AI client (details in section 4)
+  - three.js          : the 3D presenter avatar on the podcast page
+  - @paper-design/shaders-react : the animated WebGL login background
+  - nodemailer        : sends the email briefing digest
+  - mammoth + docx    : reads and writes Word documents in the
+                        document-reviewer tool
+  - nspell + dictionary-en : offline spell-checking for document review
+
+
+------------------------------------------------------------------------------
+  3. HOW THE APP IS ORGANIZED (the layers)
+------------------------------------------------------------------------------
+
+  src/app            the pages (one folder per route)
+  src/components     the building blocks pages are made of
+  src/lib            shared logic: types, i18n strings, parsers
+  src/server
+    ├─ actions       what the UI is allowed to ask for (validated)
+    ├─ services      business rules: permissions, AI, briefings
+    ├─ repositories  all SQL, and nothing but SQL
+    └─ db            connection, migrations, demo seed
+
+The rule that keeps it clean: pages never touch SQL, repositories never
+make decisions, and every mutation passes through an action that
+re-checks the caller's session and authority on the server - the browser
+is never trusted.
+
+Bilingual by design
+  Every task title and note is stored twice (title_en / title_ar), every
+  interface string exists in both languages in src/lib/i18n.ts (~600
+  strings each), and the whole layout flips to RTL for Arabic users.
+
+Permissions follow the org chart
+  senior manager → sees everything
+  section head   → their section's units
+  unit head      → their unit
+  employee       → their own tasks
+  Only assignees and the task's line manager can change a task; every
+  change is recorded in an audit trail with who/when/old→new.
+
+
+------------------------------------------------------------------------------
+  4. THE AI MODELS USED
+------------------------------------------------------------------------------
+
+One cloud model + two browser AI engines, each doing a specific job.
+
+OpenAI  gpt-5.4-mini   (via the official openai SDK, Responses API)
+  The default cloud model; configurable with the OPENAI_MODEL
+  environment variable, keyed by OPENAI_API_KEY. It powers:
+
+  - Automatic translation      every typed title/note is translated
+                               AR↔EN in the background, right after the
+                               save (the save itself never waits)
+  - The check-in assistant     free-form chat: answers questions from
+                               live task data and carries out edits
+                               ("postpone the payment page to Monday")
+  - Bulk check-in matching     paste 20 updates at once; the model maps
+                               each line to the right task by meaning
+  - The AI Advisor             reads a task's full live context and
+                               writes a step-by-step plan
+  - Document reviewer          rewrites the per-document summary with
+                               real judgement
+
+  Important: every AI feature has a local fallback. With no API key the
+  app still works - translation mirrors the text, the assistant uses a
+  built-in bilingual parser (src/lib/parser.ts + nlp.ts), bulk matching
+  uses fuzzy title scoring, and the advisor uses a rule-based planner.
+
+Web Speech API - speech recognition  (in the browser, no cloud)
+  Voice updates: the mic button turns spoken English or Arabic into
+  text. The app asks the recognizer for several alternative transcripts
+  and picks the one that best matches your actual task titles.
+
+Web Speech API - speech synthesis  (in the browser, no cloud)
+  The daily podcast briefing is spoken aloud by the device's neural
+  voices; the app scores all installed voices and keeps only the four
+  most natural-sounding per gender, per language.
+
+
+------------------------------------------------------------------------------
+  5. THE SKILLS THAT BUILT IT
+------------------------------------------------------------------------------
+
+Engineering disciplines you can see in the code:
+
+  - Full-stack web development   server-rendered React, server actions,
+                                 streaming, caching and revalidation
+  - Database design              normalized schema, transactions,
+                                 self-migrating, audit logging
+  - Security thinking            server-side validation of every input,
+                                 session-based auth with hashed
+                                 passwords, role checks on every write,
+                                 parameterized SQL everywhere
+  - Internationalization         true bilingual data model, RTL layout,
+                                 locale-aware dates and numbers
+  - AI engineering               prompt design, structured JSON outputs,
+                                 background (non-blocking) AI calls,
+                                 graceful fallbacks when AI is absent
+  - UI/UX design                 a custom design system: glass surfaces,
+                                 custom dropdown/table/modal components,
+                                 dark mode, mobile responsiveness
+  - Data visualization           hand-built SVG charts (donut, columns,
+                                 lines, sparklines) - no chart library
+  - Testing                      end-to-end verification with Playwright
+                                 against a mock AI server, so AI flows
+                                 are testable without real API calls
+
+AI-assisted development
+  The codebase was developed with Claude Code (Anthropic's coding
+  agent). The .claude/skills folder in the repo contains the installed
+  assistant skills used during development - design guides, debugging
+  playbooks, and the Remotion video toolkit used for the promo video in
+  my-video/. These folders guide the AI assistant only; none of them
+  run in the website itself.
+
+
+------------------------------------------------------------------------------
+  6. RUNNING IT
+------------------------------------------------------------------------------
+
+  npm install          install dependencies
+  npm run dev          development server
+  npm run build        production build (type-checks everything)
+  npm run start        serve the production build
+
+  Optional environment variables (.env.local):
+    OPENAI_API_KEY     enables the real AI features
+    OPENAI_MODEL       override the default gpt-5.4-mini
+    DATA_DIR           where the SQLite file lives (default: data/)
+    SMTP settings      enable the real email digest
+
+  With no configuration at all, the app seeds a demo organization and
+  every feature runs with its local fallback.
