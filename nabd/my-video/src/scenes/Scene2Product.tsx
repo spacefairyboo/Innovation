@@ -155,7 +155,7 @@ const Highlight: React.FC<{
         height: `${h * 100}%`,
         borderRadius: 14,
         border: `2.5px solid ${COLORS.lime}`,
-        boxShadow: `0 0 ${28 + breathe * 16}px rgba(215, 240, 80, ${0.32 + breathe * 0.2}), inset 0 0 26px rgba(215, 240, 80, 0.10)`,
+        boxShadow: `0 0 ${28 + breathe * 16}px rgba(70, 199, 180, ${0.32 + breathe * 0.2}), inset 0 0 26px rgba(70, 199, 180, 0.10)`,
         scale: String(0.94 + pop * 0.06),
         opacity: pop * gone,
         pointerEvents: "none",

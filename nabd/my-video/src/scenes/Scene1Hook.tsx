@@ -2,8 +2,8 @@
  * SCENE 1 — HOOK (~7s)
  *
  * Beat 1: "Everything starts with an [✱ update]" — the cursor flies in
- * and clicks the neon pill; a spark flower blooms.
- * Beat 2: interruption pills rain diagonally; a giant lime "×10" slams in.
+ * and clicks the neon pill.
+ * Beat 2: interruption pills rain diagonally; a giant "×10" slams in.
  */
 import React from "react";
 import {
@@ -100,12 +100,12 @@ const BeatOne: React.FC = () => {
           padding: "18px 44px",
           borderRadius: 999,
           background: COLORS.lime,
-          boxShadow: `0 0 70px rgba(215, 240, 80, 0.55), 0 24px 60px rgba(2, 8, 5, 0.5)`,
+          boxShadow: `0 0 70px rgba(70, 199, 180, 0.55), 0 24px 60px rgba(2, 8, 5, 0.5)`,
           fontFamily: FONTS.display,
           fontWeight: 800,
           fontSize: 84,
           letterSpacing: "-0.02em",
-          color: "#12351F",
+          color: "#06231C",
         }}
       >
         <svg width="52" height="52" viewBox="0 0 100 100">
@@ -116,7 +116,7 @@ const BeatOne: React.FC = () => {
               cy="28"
               rx="12"
               ry="24"
-              fill="#12351F"
+              fill="#06231C"
               transform={`rotate(${i * 45} 50 50)`}
             />
           ))}
@@ -187,7 +187,7 @@ const BeatTwo: React.FC = () => {
             fontSize: 330,
             letterSpacing: "-0.04em",
             color: COLORS.lime,
-            textShadow: "0 0 120px rgba(215, 240, 80, 0.5)",
+            textShadow: "0 0 120px rgba(70, 199, 180, 0.5)",
             opacity: springIn(frame, fps, 42, 80),
           }}
         >

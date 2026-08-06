@@ -131,8 +131,8 @@ export const SceneOutro: React.FC = () => {
           fontWeight: 800,
           fontSize: 34,
           letterSpacing: "-0.01em",
-          color: "#12351F",
-          boxShadow: `0 0 90px rgba(215, 240, 80, 0.5), 0 26px 70px rgba(2, 8, 5, 0.55)`,
+          color: "#06231C",
+          boxShadow: `0 0 90px rgba(70, 199, 180, 0.5), 0 26px 70px rgba(2, 8, 5, 0.55)`,
         }}
       >
         {BRAND.cta}

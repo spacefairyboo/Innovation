@@ -1,9 +1,9 @@
 /**
- * ECHO — motion-graphics product film (~46s)
+ * ECHO — product film (~58s)
  *
- * Six scenes joined with quick fades. Deep emerald + neon chartreuse,
- * kinetic type, and the REAL Echo interfaces (public/screens/) as the
- * hero footage. Music placeholder activates via constants/AUDIO.
+ * Hook → real dashboard → voice-first → clarity → the Advisor → feature
+ * sweep → CTA, joined with quick fades. Deep emerald + the app's cyan
+ * accent, kinetic type, and the REAL Echo interfaces as the footage.
  */
 import React from "react";
 import { AbsoluteFill, Sequence, staticFile } from "remotion";
@@ -15,6 +15,7 @@ import { Scene1Hook } from "./scenes/Scene1Hook";
 import { Scene2Product } from "./scenes/Scene2Product";
 import { Scene3Voice } from "./scenes/Scene3Voice";
 import { Scene4Clarity } from "./scenes/Scene4Clarity";
+import { SceneAdvisor } from "./scenes/SceneAdvisor";
 import { Scene5Sweep } from "./scenes/Scene5Sweep";
 import { SceneOutro } from "./scenes/SceneOutro";
 
@@ -45,7 +46,11 @@ export const EchoAd: React.FC = () => {
           <Scene4Clarity />
         </TransitionSeries.Sequence>
         {cut}
-        <TransitionSeries.Sequence durationInFrames={SCENES.sweep} name="5 — Feature sweep">
+        <TransitionSeries.Sequence durationInFrames={SCENES.advisor} name="5 — The Advisor">
+          <SceneAdvisor />
+        </TransitionSeries.Sequence>
+        {cut}
+        <TransitionSeries.Sequence durationInFrames={SCENES.sweep} name="6 — Feature sweep">
           <Scene5Sweep />
         </TransitionSeries.Sequence>
         {cut}
@@ -71,16 +76,26 @@ const SoundMix: React.FC = () => {
     product: SCENES.hook - t,
     voice: SCENES.hook + SCENES.product - 2 * t,
     clarity: SCENES.hook + SCENES.product + SCENES.voice - 3 * t,
-    sweep: SCENES.hook + SCENES.product + SCENES.voice + SCENES.clarity - 4 * t,
+    advisor:
+      SCENES.hook + SCENES.product + SCENES.voice + SCENES.clarity - 4 * t,
+    sweep:
+      SCENES.hook +
+      SCENES.product +
+      SCENES.voice +
+      SCENES.clarity +
+      SCENES.advisor -
+      5 * t,
     outro:
       SCENES.hook +
       SCENES.product +
       SCENES.voice +
       SCENES.clarity +
+      SCENES.advisor +
       SCENES.sweep -
-      5 * t,
+      6 * t,
   };
-  const clicks = [64, start.outro + 168]; // hook pill click, outro CTA click
+  // Cursor clicks: hook pill, the Advisor "Write my plan", the outro CTA.
+  const clicks = [64, start.advisor + 92, start.outro + 168];
 
   return (
     <>

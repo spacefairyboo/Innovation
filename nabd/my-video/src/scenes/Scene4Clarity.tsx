@@ -38,7 +38,7 @@ export const Scene4Clarity: React.FC = () => {
           top: -280,
           width: 900,
           height: 900,
-          background: `radial-gradient(circle, rgba(215, 240, 80, 0.5) 0%, transparent 60%)`,
+          background: `radial-gradient(circle, rgba(70, 199, 180, 0.5) 0%, transparent 60%)`,
         }}
       />
 
@@ -52,12 +52,14 @@ export const Scene4Clarity: React.FC = () => {
             left: -700,
             whiteSpace: "nowrap",
             translate: `${row.dir * frame * row.speed}px 0px`,
-            fontFamily: FONTS.display,
+            // Editorial serif for the giant rows — a deliberate contrast
+            // to the app's grotesque UI type.
+            fontFamily: FONTS.serif,
             fontWeight: 900,
-            fontSize: 300,
-            letterSpacing: "-0.02em",
+            fontSize: 290,
+            letterSpacing: "0.01em",
             color: row.filled ? "rgba(18, 53, 36, 0.9)" : "transparent",
-            WebkitTextStroke: row.filled ? undefined : `2.5px rgba(18, 53, 36, 0.3)`,
+            WebkitTextStroke: row.filled ? undefined : `2px rgba(18, 53, 36, 0.32)`,
             opacity: fadeIn(frame, 4 + i * 8, 20),
           }}
         >

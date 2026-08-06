@@ -16,9 +16,9 @@ import { COLORS, SCREENS } from "../constants";
 import { FONTS } from "../fonts";
 import { drift, oscillate, springIn } from "../utils/animations";
 
+// The Advisor has its own dedicated scene now — this sweep covers the rest.
 const PANELS = [
   { src: SCREENS.tasks, label: "My Tasks" },
-  { src: SCREENS.advisor, label: "AI Advisor" },
   { src: SCREENS.podcast, label: "Podcast briefings" },
   { src: SCREENS.teams, label: "Team overview" },
 ];
@@ -27,7 +27,7 @@ export const Scene5Sweep: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   // The whole train glides right-to-left across the scene.
-  const train = drift(frame, durationInFrames, 340, -1210);
+  const train = drift(frame, durationInFrames, 400, -820);
 
   return (
     <AbsoluteFill>
