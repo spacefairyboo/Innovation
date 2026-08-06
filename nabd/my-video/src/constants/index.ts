@@ -86,7 +86,7 @@ export const SCREENS = {
 export const AUDIO = {
   enabled: true,
   music: "audio/music-bed.wav", // 58.5s pad progression, soft drums (Am7–Fmaj7–Cmaj7–G6)
-  musicVolume: 0.4,
+  musicVolume: 0.1,
   click: "audio/click.wav",
   narration: {
     hook: "audio/vo-hook.wav",

@@ -52,14 +52,12 @@ export const Scene4Clarity: React.FC = () => {
             left: -700,
             whiteSpace: "nowrap",
             translate: `${row.dir * frame * row.speed}px 0px`,
-            // Editorial serif for the giant rows — a deliberate contrast
-            // to the app's grotesque UI type.
-            fontFamily: FONTS.serif,
+            fontFamily: FONTS.display,
             fontWeight: 900,
-            fontSize: 290,
-            letterSpacing: "0.01em",
+            fontSize: 300,
+            letterSpacing: "-0.02em",
             color: row.filled ? "rgba(18, 53, 36, 0.9)" : "transparent",
-            WebkitTextStroke: row.filled ? undefined : `2px rgba(18, 53, 36, 0.32)`,
+            WebkitTextStroke: row.filled ? undefined : `2.5px rgba(18, 53, 36, 0.3)`,
             opacity: fadeIn(frame, 4 + i * 8, 20),
           }}
         >

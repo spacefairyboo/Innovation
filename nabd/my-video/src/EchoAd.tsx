@@ -30,27 +30,45 @@ export const EchoAd: React.FC = () => {
   return (
     <AbsoluteFill style={{ background: COLORS.ink }}>
       <TransitionSeries>
-        <TransitionSeries.Sequence durationInFrames={SCENES.hook} name="1 — Hook">
+        <TransitionSeries.Sequence
+          durationInFrames={SCENES.hook}
+          name="1 — Hook"
+        >
           <Scene1Hook />
         </TransitionSeries.Sequence>
         {cut}
-        <TransitionSeries.Sequence durationInFrames={SCENES.product} name="2 — Real dashboard">
+        <TransitionSeries.Sequence
+          durationInFrames={SCENES.product}
+          name="2 — Real dashboard"
+        >
           <Scene2Product />
         </TransitionSeries.Sequence>
         {cut}
-        <TransitionSeries.Sequence durationInFrames={SCENES.voice} name="3 — Voice-first">
+        <TransitionSeries.Sequence
+          durationInFrames={SCENES.voice}
+          name="3 — Voice-first"
+        >
           <Scene3Voice />
         </TransitionSeries.Sequence>
         {cut}
-        <TransitionSeries.Sequence durationInFrames={SCENES.clarity} name="4 — Clarity">
+        <TransitionSeries.Sequence
+          durationInFrames={SCENES.clarity}
+          name="4 — Clarity"
+        >
           <Scene4Clarity />
         </TransitionSeries.Sequence>
         {cut}
-        <TransitionSeries.Sequence durationInFrames={SCENES.advisor} name="5 — The Advisor">
+        <TransitionSeries.Sequence
+          durationInFrames={SCENES.advisor}
+          name="5 — The Advisor"
+        >
           <SceneAdvisor />
         </TransitionSeries.Sequence>
         {cut}
-        <TransitionSeries.Sequence durationInFrames={SCENES.sweep} name="6 — Feature sweep">
+        <TransitionSeries.Sequence
+          durationInFrames={SCENES.sweep}
+          name="6 — Feature sweep"
+        >
           <Scene5Sweep />
         </TransitionSeries.Sequence>
         {cut}
