@@ -3,10 +3,9 @@
    form floats on frosted glass above it. */
 
 import { LoginBackdrop, LoginForm } from '@/components/auth';
-import { EchoMark, Icon } from '@/components/ui';
+import { EchoMark } from '@/components/ui';
 import { makeT } from '@/lib/i18n';
 import { getSession } from '@/server/auth/session';
-import { DEMO_PASSWORD } from '@/server/db/seed';
 
 export default async function LoginPage() {
   const { lang } = await getSession();
