@@ -44,7 +44,7 @@ export const SCENES = {
   product: 300, // real dashboard flythrough
   voice: 270, // neon phone + real mobile screens
   clarity: 240, // light typography section + stats/calendar
-  sweep: 180, // fast screen carousel
+  sweep: 270, // screen carousel + the Advisor pitch
   outro: 240, // logo, tagline, CTA
 } as const;
 
@@ -56,7 +56,7 @@ export const TOTAL_DURATION =
   SCENES.clarity +
   SCENES.sweep +
   SCENES.outro -
-  5 * TRANSITION_FRAMES; // = 1380 frames = 46s
+  5 * TRANSITION_FRAMES; // = 1470 frames = 49s
 
 // ─── Real product screenshots ────────────────────────────────────────────────
 // Captured from the running Echo app (dark theme) — see my-video/public/screens.
@@ -75,12 +75,24 @@ export const SCREENS = {
   mobilePodcast: "screens/m-podcast.png",
 } as const;
 
-// ─── Audio placeholders ──────────────────────────────────────────────────────
-// v3 is music-driven (no voiceover). Drop a track into public/audio/ and set
-// enabled: true. An upbeat, minimal electronic bed suits the motion style.
+// ─── Audio ───────────────────────────────────────────────────────────────────
+// Narration: edge-tts neural voice (en-US-AndrewNeural). Music: composed
+// 90 BPM ambient-electronic bed (pads, sub, kick w/ sidechain, hats, arp)
+// rendered by scripts kept in the session scratchpad. Replace any file in
+// public/audio/ with a pro recording — same names, no code changes needed.
 export const AUDIO = {
-  enabled: false,
-  music: "audio/music-upbeat.mp3", // ~46s, energetic but clean
+  enabled: true,
+  music: "audio/music-bed.wav", // 48s pad progression (Am7–Fmaj7–Cmaj7–G6)
+  musicVolume: 0.4,
+  click: "audio/click.wav",
+  narration: {
+    hook: "audio/vo-hook.wav",
+    product: "audio/vo-product.wav",
+    voice: "audio/vo-voice.wav",
+    clarity: "audio/vo-clarity.wav",
+    sweep: "audio/vo-sweep.wav", // the Advisor pitch (from advisorService.ts)
+    outro: "audio/vo-outro.wav",
+  },
 } as const;
 
 // ─── Brand copy ──────────────────────────────────────────────────────────────

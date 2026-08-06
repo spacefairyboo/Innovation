@@ -20,11 +20,16 @@ import {
   EmeraldBg,
   GlowBlob,
   KineticText,
-  SparkFlower,
 } from "../components/shared/motion";
 import { COLORS } from "../constants";
 import { FONTS } from "../fonts";
-import { seededRandom, springIn, springPop, staggered } from "../utils/animations";
+import {
+  EASE_OUT,
+  seededRandom,
+  springIn,
+  springPop,
+  staggered,
+} from "../utils/animations";
 
 export const Scene1Hook: React.FC = () => {
   return (
@@ -49,24 +54,30 @@ const BeatOne: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const pill = springPop(frame, fps, 42);
-  const pressed = frame >= 64 && frame < 72;
+  // Press: quick dip, then a springy bounce-back.
+  const press = interpolate(frame, [63, 67, 70], [1, 0.88, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const bounce = 1 + springPop(frame, fps, 70) * 0.05 - (frame > 70 ? 0.05 : 0);
+  // Zoom-through exit: the whole beat scales up as it fades.
   const out = interpolate(frame, [durationInFrames - 14, durationInFrames - 2], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const zoomOut = 1 + (1 - out) * 0.08;
 
-  // Cursor glides in from bottom-right to the pill, then clicks.
-  const cx = interpolate(frame, [16, 58], [1560, 1208], {
+  // Cursor glides in on a slight arc with an eased landing.
+  const cp = interpolate(frame, [14, 58], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
+    easing: EASE_OUT,
   });
-  const cy = interpolate(frame, [16, 58], [960, 545], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const cx = 1560 + (1208 - 1560) * cp;
+  const cy = 960 + (545 - 960) * cp - Math.sin(cp * Math.PI) * 130;
 
   return (
-    <AbsoluteFill style={{ opacity: out }}>
+    <AbsoluteFill style={{ opacity: out, scale: String(zoomOut) }}>
       <div style={{ position: "absolute", left: 250, top: 380 }}>
         <KineticText
           segments={[{ text: "Everything starts" }, { text: "with an" }]}
@@ -81,7 +92,7 @@ const BeatOne: React.FC = () => {
           position: "absolute",
           left: 856,
           top: 500,
-          scale: String(pill * (pressed ? 0.93 : 1)),
+          scale: String(pill * press * bounce),
           opacity: pill,
           display: "flex",
           alignItems: "center",
@@ -112,7 +123,6 @@ const BeatOne: React.FC = () => {
         </svg>
         update
       </div>
-      {frame > 66 ? <SparkFlower x={1235} y={520} size={130} from={66} /> : null}
       <Cursor x={cx} y={cy} clickAt={64} />
     </AbsoluteFill>
   );
@@ -130,6 +140,8 @@ const BeatTwo: React.FC = () => {
         const p = springIn(frame, fps, at, 110);
         const x = 130 + seededRandom(i * 7) * 1450;
         const y = 90 + seededRandom(i * 13) * 700;
+        // After landing, each pill keeps sinking gently — the pile grows heavy.
+        const settleDrift = Math.max(0, frame - at) * 0.22;
         return (
           <div
             key={i}
@@ -137,9 +149,9 @@ const BeatTwo: React.FC = () => {
               position: "absolute",
               left: x,
               top: y,
-              rotate: `${(seededRandom(i) - 0.5) * 10}deg`,
+              rotate: `${(seededRandom(i) - 0.5) * 10 + Math.max(0, frame - at) * 0.02 * (i % 2 ? 1 : -1)}deg`,
               opacity: p * 0.92,
-              translate: `0px ${(1 - p) * -80}px`,
+              translate: `0px ${(1 - p) * -80 + settleDrift}px`,
               padding: "13px 26px",
               borderRadius: 999,
               background: "rgba(10, 29, 18, 0.85)",
@@ -164,7 +176,8 @@ const BeatTwo: React.FC = () => {
           top: 310,
           display: "flex",
           justifyContent: "center",
-          scale: String(0.85 + springPop(frame, fps, 42) * 0.15),
+          scale: String(0.82 + springPop(frame, fps, 42) * 0.18),
+          rotate: `${(1 - springIn(frame, fps, 42, 90)) * -7}deg`,
         }}
       >
         <div

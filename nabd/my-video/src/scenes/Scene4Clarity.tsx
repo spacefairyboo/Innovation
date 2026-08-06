@@ -16,6 +16,7 @@ const DARK = "#123524";
 
 export const Scene4Clarity: React.FC = () => {
   const frame = useCurrentFrame();
+  const { fps: fps2 } = useVideoConfig();
 
   const rows: Array<{ y: number; dir: number; filled: boolean; speed: number }> = [
     { y: 30, dir: -1, filled: false, speed: 0.7 },
@@ -112,6 +113,9 @@ export const Scene4Clarity: React.FC = () => {
           strokeWidth="30"
           strokeLinecap="round"
           opacity="0.7"
+          pathLength={1}
+          strokeDasharray={1}
+          strokeDashoffset={1 - springIn(frame, fps2, 80, 110)}
         />
       </svg>
       <svg
@@ -126,6 +130,9 @@ export const Scene4Clarity: React.FC = () => {
           stroke="url(#limegrad)"
           strokeWidth="26"
           strokeLinecap="round"
+          pathLength={1}
+          strokeDasharray={1}
+          strokeDashoffset={1 - springIn(frame, fps2, 96, 110)}
         />
         <defs>
           <linearGradient id="limegrad" x1="0" y1="1" x2="1" y2="0">
@@ -157,7 +164,8 @@ const ScreenCard: React.FC<{
         position: "absolute",
         left,
         top: top + (1 - enter) * 120 + oscillate(frame, 170, 6, phase),
-        rotate: `${rotate}deg`,
+        // Overshoot the tilt on entry, then settle into the final angle.
+        rotate: `${rotate + (1 - enter) * (rotate > 0 ? 10 : -10) + oscillate(frame, 210, 0.5, phase)}deg`,
         opacity: enter,
         borderRadius: 16,
         overflow: "hidden",

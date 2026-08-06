@@ -52,13 +52,15 @@ export const Scene3Voice: React.FC = () => {
       <AuroraRing x={1560} y={880} radius={620} intensity={0.65} />
       <GlowBlob x={210} y={140} radius={400} color={COLORS.tealGlow} opacity={0.35} />
 
-      {/* The neon phone with the real app inside */}
+      {/* The neon phone with the real app inside — swings upright as it
+          enters, then floats. */}
       <div
         style={{
           position: "absolute",
           left: 330,
           top: 110 + (1 - enter) * 90 + oscillate(frame, 160, 7),
-          rotate: "-3deg",
+          rotate: `${-3 - (1 - enter) * 7 + oscillate(frame, 200, 0.6)}deg`,
+          transformOrigin: "50% 80%",
           opacity: enter,
         }}
       >
@@ -98,7 +100,19 @@ export const Scene3Voice: React.FC = () => {
         <div style={{ height: 24 }} />
 
         <Sequence durationInFrames={SWAP_AT} layout="none">
-          <div>
+          <div
+            style={{
+              // Slide-and-fade exit before the tasks beat takes over.
+              opacity: interpolate(frame, [SWAP_AT - 14, SWAP_AT - 3], [1, 0], {
+                extrapolateLeft: "clamp",
+                extrapolateRight: "clamp",
+              }),
+              translate: `0px ${interpolate(frame, [SWAP_AT - 14, SWAP_AT - 3], [0, -26], {
+                extrapolateLeft: "clamp",
+                extrapolateRight: "clamp",
+              })}px`,
+            }}
+          >
             <KineticText
               segments={[{ text: "Speak." }, { text: "Echo does the typing.", tone: "lime" }]}
               from={26}
@@ -106,9 +120,17 @@ export const Scene3Voice: React.FC = () => {
               width={860}
             />
             <div style={{ marginTop: 46, display: "flex", alignItems: "center", gap: 26 }}>
-              {/* Live mic dot + lime waveform */}
+              {/* Live mic dot + lime waveform ramping up as it "hears" */}
               <MicDot />
-              <LimeWave bars={30} width={330} height={56} />
+              <LimeWave
+                bars={30}
+                width={330}
+                height={56}
+                energy={interpolate(frame, [64, 100], [0.15, 1], {
+                  extrapolateLeft: "clamp",
+                  extrapolateRight: "clamp",
+                })}
+              />
             </div>
           </div>
         </Sequence>

@@ -6,7 +6,7 @@
  * hero footage. Music placeholder activates via constants/AUDIO.
  */
 import React from "react";
-import { AbsoluteFill, staticFile } from "remotion";
+import { AbsoluteFill, Sequence, staticFile } from "remotion";
 import { Audio } from "@remotion/media";
 import { linearTiming, TransitionSeries } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
@@ -54,8 +54,49 @@ export const EchoAd: React.FC = () => {
         </TransitionSeries.Sequence>
       </TransitionSeries>
 
-      {/* Music placeholder — drop the file in public/audio and enable. */}
-      {AUDIO.enabled ? <Audio src={staticFile(AUDIO.music)} volume={0.8} /> : null}
+      {AUDIO.enabled ? <SoundMix /> : null}
     </AbsoluteFill>
+  );
+};
+
+/**
+ * Music bed + per-scene narration + cursor-click ticks.
+ * Scene start frames account for the transition overlaps; each narration
+ * starts a few frames into its scene for breathing room.
+ */
+const SoundMix: React.FC = () => {
+  const t = TRANSITION_FRAMES;
+  const start = {
+    hook: 0,
+    product: SCENES.hook - t,
+    voice: SCENES.hook + SCENES.product - 2 * t,
+    clarity: SCENES.hook + SCENES.product + SCENES.voice - 3 * t,
+    sweep: SCENES.hook + SCENES.product + SCENES.voice + SCENES.clarity - 4 * t,
+    outro:
+      SCENES.hook +
+      SCENES.product +
+      SCENES.voice +
+      SCENES.clarity +
+      SCENES.sweep -
+      5 * t,
+  };
+  const clicks = [64, start.outro + 168]; // hook pill click, outro CTA click
+
+  return (
+    <>
+      <Audio src={staticFile(AUDIO.music)} volume={AUDIO.musicVolume} />
+      {(
+        Object.keys(AUDIO.narration) as Array<keyof typeof AUDIO.narration>
+      ).map((scene) => (
+        <Sequence key={scene} from={start[scene] + 8} layout="none">
+          <Audio src={staticFile(AUDIO.narration[scene])} volume={1} />
+        </Sequence>
+      ))}
+      {clicks.map((at, i) => (
+        <Sequence key={`click-${i}`} from={at} layout="none">
+          <Audio src={staticFile(AUDIO.click)} volume={0.7} />
+        </Sequence>
+      ))}
+    </>
   );
 };

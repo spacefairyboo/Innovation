@@ -20,11 +20,10 @@ import {
   GlowBlob,
   Kicker,
   KineticText,
-  SparkFlower,
 } from "../components/shared/motion";
 import { BRAND, COLORS } from "../constants";
 import { FONTS } from "../fonts";
-import { fadeIn, springIn } from "../utils/animations";
+import { fadeIn, oscillate, springIn, springPop } from "../utils/animations";
 
 export const SceneOutro: React.FC = () => {
   const frame = useCurrentFrame();
@@ -108,7 +107,7 @@ export const SceneOutro: React.FC = () => {
         {BRAND.sub}
       </div>
 
-      {/* CTA + cursor click + spark */}
+      {/* CTA + cursor click */}
       <div
         style={{
           position: "absolute",
@@ -116,7 +115,15 @@ export const SceneOutro: React.FC = () => {
           top: 726,
           translate: `-50% ${(1 - ctaIn) * 40}px`,
           opacity: ctaIn,
-          scale: String(frame >= clickAt && frame < clickAt + 8 ? 0.94 : 1),
+          // Idle breathing, a quick press dip, then a springy bounce-back.
+          scale: String(
+            (1 + oscillate(frame, 80, 0.012)) *
+              interpolate(frame, [clickAt - 1, clickAt + 3, clickAt + 6], [1, 0.9, 1], {
+                extrapolateLeft: "clamp",
+                extrapolateRight: "clamp",
+              }) *
+              (1 + springPop(frame, fps, clickAt + 6) * 0.04 - (frame > clickAt + 6 ? 0.04 : 0)),
+          ),
           padding: "22px 58px",
           borderRadius: 999,
           background: COLORS.lime,
@@ -130,9 +137,6 @@ export const SceneOutro: React.FC = () => {
       >
         {BRAND.cta}
       </div>
-      {frame > clickAt + 2 ? (
-        <SparkFlower x={1105} y={745} size={110} from={clickAt + 2} />
-      ) : null}
       <Cursor x={cx} y={cy} clickAt={clickAt} />
 
       {/* Fade out */}
