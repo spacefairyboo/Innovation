@@ -6,6 +6,7 @@
    did not recognize, through the same validated edit path as the form. */
 
 import { getSession } from "../auth/session";
+import { config } from "../config";
 import { chatHistory, saveChatMessage, type ChatMessage } from "../repositories/chatRepository";
 import { scopeTasks } from "../services/accessService";
 import { assistantAnswer, chatgptRespond } from "../services/assistantService";
@@ -83,6 +84,10 @@ export async function askAssistant(message: string, ctx?: AskContext): Promise<s
     }
   }
 
+  // In AI-only test mode the built-in engine stays out of it: reaching here
+  // means the model itself answered with nothing usable, and saying so is
+  // more useful than a local answer that hides the failure.
+  if (config.openai.aiOnly) return makeT(lang)("ai_only_failed");
   return assistantAnswer(text, user, lang, tasks, opts);
 }
 
