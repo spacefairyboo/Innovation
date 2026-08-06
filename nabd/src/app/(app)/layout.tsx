@@ -3,6 +3,7 @@
    cookie exists before any page in this group renders. */
 
 import { AppProviders } from '@/components/providers';
+import { config } from '@/server/config';
 import { Shell, type ShellUser } from '@/components/layout';
 import type { PaletteItem } from '@/components/layout';
 import { getSession } from '@/server/auth/session';
@@ -105,7 +106,7 @@ export default async function AppLayout({
   const users = listUsers().map(withTeamName);
 
   return (
-    <AppProviders lang={lang}>
+    <AppProviders lang={lang} aiOnly={config.openai.aiOnly}>
       <Shell
         user={withTeamName(user)}
         users={users}

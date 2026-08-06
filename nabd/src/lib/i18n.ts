@@ -290,6 +290,8 @@ export const I18N: Record<Lang, Record<string, string>> = {
       'Unable to capture audio. Check microphone permissions and try again.',
     assistant_thinking: 'Thinking',
     assistant_error: 'Unable to connect to the AI assistant. Please try again.',
+    ai_only_failed:
+      'AI-only mode is on and the model returned nothing usable for that message. The built-in engine is standing down, so nothing was applied.',
     checkin_ask: 'Daily check-in: how is “{task}” going?',
     //podcast
     podcast_title: 'Daily audio briefing',
@@ -845,6 +847,8 @@ export const I18N: Record<Lang, Record<string, string>> = {
     voice_error: 'تعذّر التقاط الصوت. تحقق من أذونات الميكروفون وحاول مرة أخرى.',
     assistant_thinking: 'أفكر',
     assistant_error: 'تعذّر الاتصال بمساعد الذكاء الاصطناعي. حاول مرة أخرى.',
+    ai_only_failed:
+      'وضع الذكاء الاصطناعي فقط مُفعّل، ولم يُرجع النموذج نتيجة صالحة لهذه الرسالة. المحرك المدمج متوقف، لذلك لم يُطبَّق أي تغيير.',
     checkin_ask: 'تسجيل اليوم: كيف تسير «{task}»؟',
     podcast_title: 'الملخص الصوتي اليومي',
     podcast_sub: 'سرد صوتي لمهام فريقك.',

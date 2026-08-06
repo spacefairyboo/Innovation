@@ -33,6 +33,11 @@ export const config = {
   openai: {
     apiKey: env("OPENAI_API_KEY"),
     model: env("OPENAI_MODEL") ?? "gpt-5.4-mini",
+    /** Testing switch (AI_ONLY=1): stand the built-in engines down so every
+        request has to reach the model, and a failed call says so instead of
+        being answered locally. Needs a key — without one there is nothing to
+        fall forward to, so the flag is ignored. */
+    get aiOnly() { return this.enabled && /^(1|true|yes)$/i.test(env("AI_ONLY") ?? ""); },
     get enabled() { return !!this.apiKey; },
   },
 

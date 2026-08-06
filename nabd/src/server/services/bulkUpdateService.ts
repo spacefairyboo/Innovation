@@ -105,6 +105,9 @@ export async function matchBulkUpdates(text: string, tasks: Task[], lang: Lang):
   const lines = splitBulk(text);
   if (!lines.length) return [];
   const ai = await aiMatch(lines, tasks, lang);
+  // AI-only test mode: whatever the model returned stands on its own, with
+  // no local backfill and no fallback, so its matching can be judged.
+  if (config.openai.aiOnly) return ai ?? lines.map((line) => ({ line, taskId: null }));
   if (ai) {
     // The AI decides the match; the local parser still backfills a status
     // or percentage it left out but the line plainly states.

@@ -1,1 +1,1 @@
-export { AppProviders, useI18n, useToast } from "./AppProviders";
+export { AppProviders, useAiOnly, useI18n, useToast } from "./AppProviders";

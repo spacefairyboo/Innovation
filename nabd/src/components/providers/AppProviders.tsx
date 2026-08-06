@@ -19,7 +19,13 @@ interface Toast { id: number; title: string; body?: string }
 const ToastCtx = createContext<(title: string, body?: string) => void>(() => {});
 export const useToast = () => useContext(ToastCtx);
 
-export function AppProviders({ lang, children }: { lang: Lang; children: ReactNode }) {
+/* ---------- AI-only test mode (AI_ONLY=1) ---------- */
+const AiOnlyCtx = createContext(false);
+/** True when the built-in engines are stood down and everything must
+    reach the model. Read by the check-in panel's local parsers. */
+export const useAiOnly = () => useContext(AiOnlyCtx);
+
+export function AppProviders({ lang, aiOnly = false, children }: { lang: Lang; aiOnly?: boolean; children: ReactNode }) {
   const i18n = useMemo(() => ({ lang, t: makeT(lang) }), [lang]);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const nextId = useRef(1);
@@ -32,18 +38,20 @@ export function AppProviders({ lang, children }: { lang: Lang; children: ReactNo
 
   return (
     <I18nCtx.Provider value={i18n}>
-      <ToastCtx.Provider value={pushToast}>
-        {children}
-        <div className="fixed bottom-6 end-6 z-120 flex flex-col gap-2.5" aria-live="polite">
-          {toasts.map((t) => (
-            <div key={t.id} className="card !rounded-xl !p-3.5 border-s-4 !border-s-accent max-w-xs text-sm">
-              <b className="block">{t.title}</b>
-              {t.body}
-            </div>
-          ))}
-        </div>
-        <GlobalTooltip />
-      </ToastCtx.Provider>
+      <AiOnlyCtx.Provider value={aiOnly}>
+        <ToastCtx.Provider value={pushToast}>
+          {children}
+          <div className="fixed bottom-6 end-6 z-120 flex flex-col gap-2.5" aria-live="polite">
+            {toasts.map((t) => (
+              <div key={t.id} className="card !rounded-xl !p-3.5 border-s-4 !border-s-accent max-w-xs text-sm">
+                <b className="block">{t.title}</b>
+                {t.body}
+              </div>
+            ))}
+          </div>
+          <GlobalTooltip />
+        </ToastCtx.Provider>
+      </AiOnlyCtx.Provider>
     </I18nCtx.Provider>
   );
 }

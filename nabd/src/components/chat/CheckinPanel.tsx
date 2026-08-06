@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { applyCheckin, applyTaskEdit, askAssistant, createTaskFromChat, getChatHistory, logChatMessage } from "@/app/actions";
-import { useI18n } from "@/components/providers";
+import { useAiOnly, useI18n } from "@/components/providers";
 import { Icon } from "@/components/ui";
 import {
   isQuestion, isSummaryRequest, matchTask, parseCreateTask, parseTaskEdit, parseUpdate,
@@ -102,6 +102,9 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
   compact?: boolean;
 }) {
   const { t, lang } = useI18n();
+  /* AI_ONLY=1 stands the local parsers down so every message reaches the
+     model — the way to see what the AI alone makes of a sentence. */
+  const aiOnly = useAiOnly();
   const [, startTransition] = useTransition();
   const [msgs, setMsgs] = useState<Msg[]>(() => {
     const opening: Msg[] = [{ who: "bot", text: t("chat_hello", { name: userFirstName }) }];
@@ -240,10 +243,10 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
     const text = raw.trim();
     if (!text) return;
     push({ who: "user", text });
-    if (isSummaryRequest(text)) { push({ who: "bot", text: summaryText() }); return; }
+    if (!aiOnly && isSummaryRequest(text)) { push({ who: "bot", text: summaryText() }); return; }
 
     // "create a new task assign it to omar, to update the policy by tomorrow…"
-    const create = parseCreateTask(text);
+    const create = aiOnly ? null : parseCreateTask(text);
     if (create) {
       startTransition(async () => {
         try {
@@ -262,7 +265,9 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
 
     const parsed = parseUpdate(text);
     const open = tasks.filter((x) => x.status !== "done");
-    const question = isQuestion(text);
+    // Treating everything as a question is what routes it to the model: it
+    // switches off the edit parser and both direct-apply branches below.
+    const question = aiOnly || isQuestion(text);
     // "it", "this one", … keep the conversation on the task discussed last.
     const refersBack = /\b(it|its|this|that|same)\b|هذه|ذلك|نفسها|عليها|فيها/i.test(text);
 
