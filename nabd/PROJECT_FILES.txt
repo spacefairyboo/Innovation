@@ -1,0 +1,657 @@
+==============================================================================
+  ECHO (صدى) — PROJECT FILE GUIDE
+  What every file does, and whether you can live without it.
+==============================================================================
+
+  How to read this document:
+  - Files are grouped the same way the folders are.
+  - Under each file name you'll see one of:
+      [ESSENTIAL]      the app breaks or loses a core function without it
+      [NOT ESSENTIAL]  demo asset, optional feature, docs, or side project —
+                       safe to remove or ignore without breaking the app
+  - A short plain-English description follows.
+
+
+==============================================================================
+  1. ROOT — configuration and docs
+==============================================================================
+
+package.json
+  [ESSENTIAL]
+  Declares the app's dependencies (Next.js, React, OpenAI SDK...) and the
+  npm scripts (dev / build / start). Nothing runs without it.
+
+package-lock.json
+  [ESSENTIAL]
+  Locks every dependency to an exact version so installs are reproducible.
+
+tsconfig.json
+  [ESSENTIAL]
+  TypeScript compiler settings. Also excludes the my-video folder so the
+  video side-project doesn't break the app build.
+
+next.config.ts
+  [ESSENTIAL]
+  Next.js configuration.
+
+postcss.config.mjs
+  [ESSENTIAL]
+  Wires Tailwind CSS into the build. Without it no styles compile.
+
+eslint.config.mjs
+  [NOT ESSENTIAL]
+  Linting rules. The app runs fine without it; code quality checks don't.
+
+.gitignore
+  [ESSENTIAL]
+  Keeps secrets (.env.local), node_modules and build output out of git.
+
+README.md
+  [NOT ESSENTIAL]
+  Human-readable intro to the project.
+
+ARCHITECTURE.md
+  [NOT ESSENTIAL]
+  Written overview of how the codebase is organized.
+
+AGENTS.md / CLAUDE.md
+  [NOT ESSENTIAL]
+  Notes for AI coding assistants working in this repo. No runtime effect.
+
+skills-lock.json
+  [NOT ESSENTIAL]
+  Bookkeeping for installed assistant skills. No runtime effect.
+
+
+==============================================================================
+  2. public/ — static assets served as-is
+==============================================================================
+
+public/models/avatar.glb
+  [NOT ESSENTIAL]
+  3D avatar model used by the podcast presenter. The player falls back to a
+  2D face without it.
+
+public/file.svg, globe.svg, next.svg, vercel.svg, window.svg
+  [NOT ESSENTIAL]
+  Leftover icons from the Next.js starter template. Unused; safe to delete.
+
+src/app/favicon.ico
+  [NOT ESSENTIAL]
+  Browser tab icon.
+
+
+==============================================================================
+  3. src/app — PAGES (one per route)
+==============================================================================
+
+src/app/layout.tsx
+  [ESSENTIAL]
+  The root HTML shell: language/direction (RTL for Arabic), fonts, theme.
+  Every page renders inside it.
+
+src/app/globals.css
+  [ESSENTIAL]
+  All global styling: theme colors (light/dark), glass cards, chart colors,
+  animations, the aurora login background.
+
+src/app/login/page.tsx
+  [ESSENTIAL]
+  The sign-in page. Aurora background, frosted-glass form, bilingual.
+
+src/app/not-found.tsx
+  [NOT ESSENTIAL]
+  Custom 404 page. Next.js shows a default one without it.
+
+src/app/actions.ts
+  [ESSENTIAL]
+  Small top-level server actions (language/theme switching).
+
+src/middleware.ts
+  [ESSENTIAL]
+  Runs before every request: blocks anyone who isn't signed in.
+
+--- inside src/app/(app)/ — everything behind the login ---
+
+(app)/layout.tsx
+  [ESSENTIAL]
+  Wraps all authenticated pages in the Shell (sidebar, topbar, mobile nav).
+
+(app)/template.tsx
+  [NOT ESSENTIAL]
+  Adds the page-enter animation between navigations. Cosmetic.
+
+(app)/loading.tsx
+  [NOT ESSENTIAL]
+  The pulse loader shown while a page loads. Cosmetic.
+
+(app)/page.tsx  — DASHBOARD
+  [ESSENTIAL]
+  The home page: greeting, KPI tiles, smart insight, needs-attention list,
+  charts, activity — everything scoped to the signed-in user's role.
+
+(app)/tasks/page.tsx  — ALL TASKS
+  [ESSENTIAL]
+  The full task table: sortable, filterable (status, priority, assignee...),
+  searchable. The main working surface.
+
+(app)/task/[id]/page.tsx  — TASK DETAILS
+  [ESSENTIAL]
+  One task in full. Assignees get the editable view; everyone else gets the
+  read-only briefing view with the dark hero and progress ring.
+
+(app)/teams/page.tsx  — PCA OVERVIEW
+  [ESSENTIAL]
+  The organization hub: PCA Department → sections → units, with health
+  cards and the full section overview when one is selected.
+
+(app)/teams/[teamId]/page.tsx  — UNIT PAGE
+  [ESSENTIAL]
+  One unit in full: dark banner, KPIs, needs-attention, activity, top
+  contributors, its task table, and the members card.
+
+(app)/stats/page.tsx  — STATISTICS
+  [ESSENTIAL]
+  The analytics page: status mix, completion trend, per-section groupings
+  for senior managers.
+
+(app)/podcast/page.tsx  — AUDIO BRIEFING
+  [NOT ESSENTIAL]
+  The spoken daily briefing with the animated presenter and voice picker.
+  A signature feature, but the app works without it.
+
+(app)/advisor/page.tsx  — AI ADVISOR
+  [NOT ESSENTIAL]
+  The AI planning advisor: reads a task's live context and writes a plan.
+  Needs an OpenAI key to be smart; has a built-in fallback.
+
+(app)/calendar/page.tsx  — CALENDAR
+  [NOT ESSENTIAL]
+  Month view of task due dates and meetings.
+
+(app)/meeting/[id]/page.tsx  — MEETING DETAILS
+  [NOT ESSENTIAL]
+  One meeting's agenda and linked tasks.
+
+(app)/notifications/page.tsx  — NOTIFICATIONS
+  [NOT ESSENTIAL]
+  The alert feed (blocked / delayed / stale / completed tasks).
+
+(app)/directory/page.tsx  — DIRECTORY
+  [NOT ESSENTIAL]
+  Searchable people directory with roles and units.
+
+(app)/profile/page.tsx  — PROFILE
+  [NOT ESSENTIAL]
+  Personal settings: language, theme, delegation of authority.
+
+(app)/tools/page.tsx  — TOOLS HUB
+  [NOT ESSENTIAL]
+  Landing page listing internal tools.
+
+(app)/tools/cg-reviewer/page.tsx  — DOCUMENT REVIEWER
+  [NOT ESSENTIAL]
+  The document-review tool (upload, per-document AI summary).
+
+
+==============================================================================
+  4. src/components — the building blocks pages are made of
+==============================================================================
+
+--- ui/ (generic, used everywhere) ---
+
+ui/Select.tsx
+  [ESSENTIAL]
+  The custom dropdown used across the whole app (searchable, keyboard
+  navigation, RTL-aware). System dropdowns are not used anywhere.
+
+ui/DataTable.tsx
+  [ESSENTIAL]
+  The sortable/filterable/searchable table engine behind every task table.
+
+ui/Modal.tsx
+  [ESSENTIAL]
+  The dialog framework (task editor, chat, confirmations).
+
+ui/Icon.tsx
+  [ESSENTIAL]
+  The icon set. Nearly every component draws from it.
+
+ui/Avatar.tsx
+  [ESSENTIAL]
+  Initial-based colored avatars for people.
+
+ui/StatusChip.tsx
+  [ESSENTIAL]
+  The colored status pills (done / on track / pending / blocked / delayed).
+
+ui/HealthChip.tsx
+  [NOT ESSENTIAL]
+  The unit-health pill (great / ok / at risk) on org cards.
+
+ui/GlassIcon.tsx
+  [NOT ESSENTIAL]
+  Decorative frosted icon tiles.
+
+ui/PulseLoader.tsx
+  [NOT ESSENTIAL]
+  The animated logo/loader (also the login logo mark).
+
+ui/dateTime.ts
+  [ESSENTIAL]
+  Date helpers: relative time ("2d ago"), due-date formatting, bilingual.
+
+ui/index.ts
+  [ESSENTIAL]
+  Re-exports the folder (all index.ts files in components do this; they are
+  small but imports break without them).
+
+--- tasks/ ---
+
+tasks/TaskList.tsx
+  [ESSENTIAL]
+  The task table section used by Tasks, unit and section pages (columns,
+  filters, the status-tile deep links).
+
+tasks/TaskModal.tsx
+  [ESSENTIAL]
+  The task editor dialog: status, progress, dates, assignees, checklist.
+
+tasks/TaskFullView.tsx
+  [ESSENTIAL]
+  The editable task-details page body (for assignees and managers).
+
+tasks/TaskReaderView.tsx
+  [ESSENTIAL]
+  The read-only task briefing page (for everyone else).
+
+tasks/ActivityLog.tsx
+  [ESSENTIAL]
+  The task's running history feed with notes.
+
+tasks/AssigneePicker.tsx
+  [ESSENTIAL]
+  Multi-select of people when creating/editing a task.
+
+tasks/ChecklistEditor.tsx
+  [NOT ESSENTIAL]
+  Personal checklist inside a task.
+
+tasks/NewTaskButton.tsx
+  [ESSENTIAL]
+  The "new task" entry point and its dialog.
+
+tasks/TaskChips.tsx
+  [ESSENTIAL]
+  The small status/priority/due chips reused across lists.
+
+tasks/TaskTabs.tsx
+  [NOT ESSENTIAL]
+  Tab strip for switching task groupings.
+
+tasks/TaskDelegationCard.tsx
+  [NOT ESSENTIAL]
+  Shows "delegated from X to Y until date" on a task.
+
+tasks/types.ts
+  [ESSENTIAL]
+  The TaskVM shape shared by all task components.
+
+--- overview/ (org pages) ---
+
+overview/SectionOverview.tsx
+  [ESSENTIAL]
+  The shared section/unit overview body: KPIs, needs-attention, status
+  donut, latest activity, top contributors, task table. Both the section
+  and unit pages are built from it.
+
+overview/LevelCard.tsx
+  [ESSENTIAL]
+  The dark hero banner (department / section / unit name, head, health).
+
+--- layout/ ---
+
+layout/Shell.tsx
+  [ESSENTIAL]
+  The app frame: sidebar, topbar, notifications bell, mobile bottom nav.
+
+layout/CommandPalette.tsx
+  [NOT ESSENTIAL]
+  Ctrl+K quick search over pages and tasks.
+
+layout/UserSwitcher.tsx
+  [NOT ESSENTIAL]
+  Demo helper to jump between seeded accounts quickly.
+
+--- charts/ ---
+
+charts/ChartCard.tsx
+  [ESSENTIAL]
+  The glass card wrapper every chart sits in.
+
+charts/Donut.tsx
+  [ESSENTIAL]
+  Status-mix donut (dashboard, section, unit views).
+
+charts/ColumnChart.tsx, LineChart.tsx, Sparkline.tsx
+  [ESSENTIAL]
+  Completion-trend and comparison charts on dashboard and statistics.
+
+charts/StatTiles.tsx
+  [ESSENTIAL]
+  The KPI tile row.
+
+charts/TeamBars.tsx, ProgressBars.tsx, RadialBars.tsx, BucketBars.tsx,
+charts/ArcChart.tsx, MiniBars.tsx, BreakdownTable.tsx, StatusTable.tsx,
+charts/Legend.tsx
+  [NOT ESSENTIAL]
+  The rest of the chart library — each powers one specific visualization on
+  the statistics or org pages; removing one removes just that visual.
+
+--- briefing/ (podcast) ---
+
+briefing/HomeBriefing.tsx
+  [NOT ESSENTIAL]
+  The dashboard's smart-insight briefing strip.
+
+briefing/PodcastPlayer.tsx
+  [NOT ESSENTIAL]
+  The audio briefing player: speech synthesis, EN/AR voices, transcript.
+
+briefing/PresenterAvatar.tsx / PresenterFace.tsx
+  [NOT ESSENTIAL]
+  The 3D (and 2D fallback) talking presenter.
+
+briefing/voiceUtils.ts
+  [NOT ESSENTIAL]
+  Picks the 4 most natural-sounding voices per gender, per language.
+
+--- chat/ (check-in assistant) ---
+
+chat/CheckinPanel.tsx
+  [NOT ESSENTIAL]
+  The conversational check-in: update progress, add notes, ask questions
+  in plain language (AI-backed when a key is configured).
+
+chat/ChatModal.tsx / CheckinButtons.tsx
+  [NOT ESSENTIAL]
+  The dialog shell and quick-reply buttons for the check-in.
+
+--- advisor/ ---
+
+advisor/AdvisorPanel.tsx / AdviceView.tsx
+  [NOT ESSENTIAL]
+  The AI advisor's input panel and the rendered plan (saved plans are
+  visible to assignees only).
+
+--- dashboard/ ---
+
+dashboard/AttentionList.tsx
+  [ESSENTIAL]
+  The "needs attention" list (blocked/delayed/stale tasks) used on the
+  dashboard and org pages.
+
+dashboard/ScopeSelect.tsx
+  [NOT ESSENTIAL]
+  Senior-manager scope filter (whole department vs one section).
+
+dashboard/ExportCsvButton.tsx
+  [NOT ESSENTIAL]
+  Downloads the current task list as CSV.
+
+--- smaller feature folders ---
+
+auth/LoginForm.tsx
+  [ESSENTIAL]
+  The email + password form and its error handling.
+
+auth/LoginBackdrop.tsx
+  [NOT ESSENTIAL]
+  The animated WebGL gradient behind the login page (CSS fallback exists).
+
+notifications/NotificationList.tsx
+  [NOT ESSENTIAL]
+  Renders the notification feed page.
+
+directory/DirectoryTable.tsx
+  [NOT ESSENTIAL]
+  The people directory table.
+
+teams/OrgCardGrid.tsx / TeamGlyph.tsx
+  [ESSENTIAL]
+  The section/unit cards on the PCA overview (grid, glyph, health, counts).
+
+profile/PreferencesCard.tsx / DelegationCard.tsx / ChoiceButton.tsx
+  [NOT ESSENTIAL]
+  Profile-page cards: preferences and delegation of authority.
+
+digest/EmailBriefingButton.tsx
+  [NOT ESSENTIAL]
+  Sends yourself the briefing by email (needs mail configuration).
+
+inbox/EmailSuggestions.tsx
+  [NOT ESSENTIAL]
+  Turns incoming email suggestions into tasks.
+
+tools/CgReviewer.tsx
+  [NOT ESSENTIAL]
+  The document-reviewer tool UI.
+
+providers/AppProviders.tsx
+  [ESSENTIAL]
+  Client-side context: language, translations, theme — every component
+  reads from it via useI18n().
+
+
+==============================================================================
+  5. src/lib — shared logic (no server, no UI)
+==============================================================================
+
+lib/types.ts
+  [ESSENTIAL]
+  The heart of the domain: Task, User, Team types, status rules (effStatus
+  decides "delayed" from due dates), health scoring, constants.
+
+lib/i18n.ts
+  [ESSENTIAL]
+  Every English and Arabic string in the app, plus the t() translator.
+
+lib/value.ts
+  [ESSENTIAL]
+  Computes a task's "value" score (drives the high-value badge).
+
+lib/constants.ts
+  [ESSENTIAL]
+  App-wide constants.
+
+lib/nlp.ts
+  [NOT ESSENTIAL]
+  Lightweight language parsing for the check-in assistant's local engine.
+
+lib/parser.ts
+  [NOT ESSENTIAL]
+  Parses quick-entry text ("tomorrow", "high priority") into task fields.
+
+lib/csv.ts
+  [NOT ESSENTIAL]
+  CSV string building for exports.
+
+
+==============================================================================
+  6. src/server — everything that runs on the server
+==============================================================================
+
+--- db/ ---
+
+db/connection.ts
+  [ESSENTIAL]
+  Opens the SQLite database (via node:sqlite).
+
+db/migrations.ts
+  [ESSENTIAL]
+  Creates/updates the tables on startup.
+
+db/seed.ts
+  [ESSENTIAL]
+  Fills the database with the demo organization, users and tasks on first
+  run. Without it a fresh install is an empty app with no accounts.
+
+--- auth/ ---
+
+auth/session.ts
+  [ESSENTIAL]
+  Cookie-based sessions: who is signed in, their language, sign in/out.
+
+auth/passwords.ts
+  [ESSENTIAL]
+  Password hashing and verification.
+
+--- repositories/ (all reads/writes to the database) ---
+
+repositories/taskRepository.ts
+  [ESSENTIAL]
+  Everything about tasks: create, update (with the bilingual title/note
+  storage the AI translation writes into), history, checklists.
+
+repositories/orgRepository.ts
+  [ESSENTIAL]
+  Users, teams (units), sections, membership, scoping ("which tasks can
+  this person see").
+
+repositories/delegationRepository.ts
+  [NOT ESSENTIAL]
+  Delegation-of-authority records.
+
+repositories/projectRepository.ts
+  [NOT ESSENTIAL]
+  Projects that group tasks.
+
+repositories/meetingRepository.ts
+  [NOT ESSENTIAL]
+  Meetings shown on the calendar.
+
+repositories/inboxRepository.ts / emailRepository.ts
+  [NOT ESSENTIAL]
+  Stored email suggestions and outgoing digest records.
+
+repositories/index.ts
+  [ESSENTIAL]
+  Re-exports all repositories (imports across the app go through it).
+
+--- services/ (business logic) ---
+
+services/accessService.ts
+  [ESSENTIAL]
+  The permission rules: who may view, edit, or update each task.
+
+services/translationService.ts
+  [ESSENTIAL]
+  The AI auto-translation: detects Arabic vs English, translates titles and
+  notes to the other language (runs in the background after saves, so
+  saving stays instant; mirrors text when no API key is set).
+
+services/briefingService.ts
+  [NOT ESSENTIAL]
+  Builds the smart-insight line, the spoken podcast script, and the
+  notification texts.
+
+services/assistantService.ts
+  [NOT ESSENTIAL]
+  The check-in assistant's brain: AI-backed when configured, with a full
+  local fallback engine.
+
+services/advisorService.ts
+  [NOT ESSENTIAL]
+  Builds the AI advisor's plan from a task's live context.
+
+services/docReviewService.ts
+  [NOT ESSENTIAL]
+  The document reviewer's analysis pipeline.
+
+services/delegationService.ts
+  [NOT ESSENTIAL]
+  Delegation rules (who may delegate to whom, active windows).
+
+services/mailerService.ts
+  [NOT ESSENTIAL]
+  Sends the email digest (needs SMTP configuration).
+
+--- actions/ (the bridge the UI calls) ---
+
+actions/taskActions.ts
+  [ESSENTIAL]
+  Save/create/update tasks, check-ins, and the background translation
+  trigger. The busiest file in the app.
+
+actions/authActions.ts
+  [ESSENTIAL]
+  Sign in / sign out.
+
+actions/guards.ts
+  [ESSENTIAL]
+  Shared "is this caller allowed" checks used by every action.
+
+actions/profileActions.ts
+  [NOT ESSENTIAL]
+  Saves profile preferences and delegation.
+
+actions/assistantActions.ts / advisorActions.ts / inboxActions.ts /
+actions/toolActions.ts / delegationActions.ts / systemActions.ts
+  [NOT ESSENTIAL]
+  One action file per optional feature (check-in chat, advisor, email
+  suggestions, document reviewer, delegation, system utilities).
+
+--- misc server files ---
+
+server/config.ts
+  [ESSENTIAL]
+  Reads environment settings (OpenAI key/model, mail settings) in one place.
+
+server/vm.ts
+  [ESSENTIAL]
+  Builds the "view models" pages render: task rows, org cards, activity
+  feeds, top contributors, CSV rows.
+
+server/validation.ts
+  [ESSENTIAL]
+  Validates and sanitizes everything the UI sends before it touches the
+  database.
+
+server/logger.ts
+  [NOT ESSENTIAL]
+  Small logging helper.
+
+src/types/untyped-modules.d.ts
+  [NOT ESSENTIAL]
+  Type declarations for packages that ship without types.
+
+
+==============================================================================
+  7. Side projects living in the same repo (not part of the app)
+==============================================================================
+
+my-video/  (entire folder)
+  [NOT ESSENTIAL]
+  A separate Remotion project that renders the Echo promo video. It has its
+  own package.json and is excluded from the app build. Deleting it does not
+  affect the app at all.
+
+.claude/skills/  and  .agents/skills/  (entire folders)
+  [NOT ESSENTIAL]
+  Installed AI-assistant skills used during development (Remotion guides,
+  design guides, debugging playbooks). No runtime effect on the app.
+
+
+==============================================================================
+  QUICK SUMMARY
+==============================================================================
+
+  If you kept only the [ESSENTIAL] files you would still have:
+  login → dashboard → tasks table → task details → org overview →
+  statistics, in both languages, with permissions, the database, and the
+  background AI translation.
+
+  Everything [NOT ESSENTIAL] is a layer on top: the podcast briefing, the
+  AI advisor and check-in chat, calendar/meetings, notifications, the
+  directory, profile/delegation, email features, the document reviewer,
+  decorative visuals, and the promo-video side project.
