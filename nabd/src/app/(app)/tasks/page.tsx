@@ -7,7 +7,7 @@ import { StatTiles } from "@/components/charts";
 import { CheckinButtons } from "@/components/chat";
 import { Icon } from "@/components/ui";
 import { EmailSuggestions } from "@/components/inbox";
-import { NewTaskButton, TaskTabs, type AssigneeOption } from "@/components/tasks";
+import { BulkUpdateButton, NewTaskButton, TaskTabs, type AssigneeOption } from "@/components/tasks";
 import { taskIdsDelegatedTo } from "@/server/repositories/delegationRepository";
 import { makeT } from "@/lib/i18n";
 import { pendingSuggestions } from "@/server/repositories/inboxRepository";
@@ -64,6 +64,7 @@ export default async function MyTasksPage({ searchParams }: {
         </div>
         <div className="flex-1" />
         {!senior && <CheckinButtons tasks={tasks} userFirstName={user.name[lang].split(" ")[0]} doneThisWeek={doneThisWeek} />}
+        <BulkUpdateButton />
         <NewTaskButton assignees={assignees} projects={projects} />
       </div>
 

@@ -5,7 +5,7 @@
    actions. Used inside the check-in modal and embedded on the home page. */
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { applyCheckin, applyTaskEdit, askAssistant, createTaskFromChat } from "@/app/actions";
+import { applyCheckin, applyTaskEdit, askAssistant, createTaskFromChat, getChatHistory, logChatMessage } from "@/app/actions";
 import { useI18n } from "@/components/providers";
 import { Icon } from "@/components/ui";
 import {
@@ -125,7 +125,24 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
   const logRef = useRef<HTMLDivElement>(null);
   const completions = useRef(doneThisWeek);
 
-  const push = (m: Msg) => setMsgs((ms) => [...ms, m]);
+  /** Every bubble also lands in the saved transcript, so the conversation
+      survives a page reload. Best effort — the chat never waits on it. */
+  const push = (m: Msg) => {
+    setMsgs((ms) => [...ms, m]);
+    logChatMessage(m.who, m.text).catch(() => {});
+  };
+
+  // Earlier conversation, restored above this session's opening line.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    getChatHistory()
+      .then((h) => {
+        if (h.length) setMsgs((ms) => [...h.map((x) => ({ who: x.who, text: x.text })), ...ms]);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: "smooth" });

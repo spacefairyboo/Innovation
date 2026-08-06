@@ -261,6 +261,12 @@ function updateTaskInner(
     changes.push({ field: "title", from: existing.title.en, to: patch.title });
   }
   if (nextAssignees) changes.push({ field: "assignee", from: existing.assigneeIds.join(","), to: nextAssignees.join(",") });
+  // Long descriptions are audited truncated: the trail shows what changed
+  // without storing the full text twice.
+  if (next.description !== existing.description) {
+    const clip = (s: string | null) => (s === null ? null : s.length > 140 ? `${s.slice(0, 140)}…` : s);
+    changes.push({ field: "description", from: clip(existing.description), to: clip(next.description) });
+  }
   for (const c of changes) logAudit(taskId, changedBy, now, c);
 
   db.prepare(

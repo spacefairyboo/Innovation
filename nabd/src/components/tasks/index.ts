@@ -3,6 +3,7 @@ export { DelegationChip, ValueChip } from "./TaskChips";
 export { AssigneePicker } from "./AssigneePicker";
 export { TaskListSection } from "./TaskList";
 export { TaskTabs } from "./TaskTabs";
+export { BulkUpdateButton } from "./BulkUpdateButton";
 export { NewTaskButton } from "./NewTaskButton";
 export { ActivityLog } from "./ActivityLog";
 export { ChecklistEditor } from "./ChecklistEditor";
