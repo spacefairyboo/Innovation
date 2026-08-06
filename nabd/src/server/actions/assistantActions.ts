@@ -6,6 +6,7 @@
    did not recognize, through the same validated edit path as the form. */
 
 import { getSession } from "../auth/session";
+import { chatHistory, saveChatMessage, type ChatMessage } from "../repositories/chatRepository";
 import { scopeTasks } from "../services/accessService";
 import { assistantAnswer, chatgptRespond } from "../services/assistantService";
 import { boundedText } from "../validation";
@@ -83,4 +84,20 @@ export async function askAssistant(message: string, ctx?: AskContext): Promise<s
   }
 
   return assistantAnswer(text, user, lang, tasks, opts);
+}
+
+/* ---------- persisted transcript: the chat survives page reloads ---------- */
+
+/** Records one chat bubble (either side) in the caller's transcript. */
+export async function logChatMessage(who: "user" | "bot", text: string): Promise<void> {
+  const { user } = await getSession();
+  const clean = boundedText(text, 2000);
+  if (!clean) return;
+  saveChatMessage(user.id, who === "user" ? "user" : "bot", clean);
+}
+
+/** The caller's saved transcript, oldest first. */
+export async function getChatHistory(): Promise<ChatMessage[]> {
+  const { user } = await getSession();
+  return chatHistory(user.id);
 }

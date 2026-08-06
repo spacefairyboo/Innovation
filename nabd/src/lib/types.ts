@@ -99,7 +99,7 @@ export interface EmailRecord {
 
 /** One field change captured in the audit log. */
 export interface FieldChange {
-  field: "status" | "progress" | "priority" | "due" | "title" | "assignee";
+  field: "status" | "progress" | "priority" | "due" | "title" | "assignee" | "description";
   from: string | null;
   to: string | null;
   /** Localized display values (e.g. assignee ids resolved to names), filled server-side. */

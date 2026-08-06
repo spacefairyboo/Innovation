@@ -141,6 +141,14 @@ export function migrate(d: DatabaseSync) {
       created_by TEXT REFERENCES users(id),
       created_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      ts INTEGER NOT NULL,
+      who TEXT NOT NULL CHECK (who IN ('user','bot')),
+      text TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_chat_user ON chat_messages(user_id, ts);
   `);
   // Databases created before the profile release lack user preference columns.
   const prefCols = d.prepare("SELECT name FROM pragma_table_info('users')").all() as { name: string }[];

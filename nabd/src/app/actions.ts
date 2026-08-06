@@ -34,6 +34,6 @@ export {
   resetDemo,
 } from '@/server/actions/systemActions';
 export { loginAction, logoutAction } from '@/server/actions/authActions';
-export { askAssistant } from '@/server/actions/assistantActions';
+export { askAssistant, getChatHistory, logChatMessage } from '@/server/actions/assistantActions';
 export { adviseTaskAction } from '@/server/actions/advisorActions';
 export { reviewDocsAction } from '@/server/actions/toolActions';

@@ -10,6 +10,8 @@ import { after } from "next/server";
 import { createTask, deleteTask, getChecklist, retranslateNote, saveChecklist, updateTask } from "../repositories/taskRepository";
 import { boundedText, clampProgress, validDate, validPriority, validStatus } from "../validation";
 import { localizeText } from "../services/translationService";
+import { matchBulkUpdates } from "../services/bulkUpdateService";
+import { canUpdateTask, scopeTasks } from "../services/accessService";
 import { assertCanEdit, delayLocked, refresh, sanitizeChecklist, vetAssignees } from "./guards";
 import type { ChecklistItem, Localized, Priority, TaskStatus, User } from "@/lib/types";
 
@@ -289,4 +291,85 @@ export async function applyTaskEdit(taskId: string, edit: {
   bumpStreak(user.id);
   refresh();
   return { assignee, assigneeFailed, checklistMatched, delayedLocked };
+}
+
+/* ---------- bulk check-in: paste many updates, AI matches the tasks ---------- */
+
+export interface BulkPreviewItem {
+  line: string;
+  taskId: string | null;
+  taskTitle: Localized | null;
+  status?: TaskStatus;
+  progress?: number;
+}
+
+/** Tasks the caller may actually write to — assignee or line manager —
+    which is both the matching pool and the preview's picker options. */
+async function editableTasks() {
+  const { user, lang } = await getSession();
+  const tasks = scopeTasks(user).filter((t) => t.status !== "done" && canUpdateTask(user, t));
+  return { user, lang, tasks };
+}
+
+/** Matches a pasted dump of updates against the caller's editable tasks.
+    Nothing is written: the caller reviews (and can fix) every match first. */
+export async function previewBulkUpdates(text: string): Promise<{
+  items: BulkPreviewItem[];
+  options: { id: string; title: Localized }[];
+}> {
+  const { lang, tasks } = await editableTasks();
+  const dump = boundedText(text, 8000) ?? "";
+  const matches = await matchBulkUpdates(dump, tasks, lang);
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+  return {
+    items: matches.map((m) => ({
+      line: m.line,
+      taskId: m.taskId,
+      taskTitle: m.taskId ? (byId.get(m.taskId)?.title ?? null) : null,
+      status: m.status,
+      progress: m.progress,
+    })),
+    options: tasks.map((t) => ({ id: t.id, title: t.title })),
+  };
+}
+
+/** Applies the confirmed bulk updates. Each line goes through the same
+    guarded path as a single check-in — permission check, delay lock, an
+    audited update with the pasted line as its history note — and one bad
+    line never blocks the rest. */
+export async function applyBulkUpdates(items: {
+  taskId: string;
+  note: string;
+  status?: TaskStatus;
+  progress?: number;
+}[]): Promise<{ applied: number; failed: number; delayedLocked: number }> {
+  const { user } = await getSession();
+  let applied = 0;
+  let failed = 0;
+  let lockedCount = 0;
+  for (const item of items.slice(0, 30)) {
+    try {
+      const { task } = await assertCanEdit(item.taskId);
+      const note = boundedText(item.note, 2000);
+      const status = validStatus(item.status);
+      const locked = delayLocked(task, status, undefined);
+      if (locked) lockedCount++;
+      updateTask(
+        item.taskId,
+        {
+          status: locked ? undefined : status,
+          progress: item.progress !== undefined ? clampProgress(item.progress) : undefined,
+        },
+        note ? { en: note, ar: note } : null,
+        user.id,
+      );
+      if (note) translateSoon(item.taskId, user.id, null, note);
+      applied++;
+    } catch {
+      failed++;
+    }
+  }
+  if (applied) bumpStreak(user.id);
+  refresh();
+  return { applied, failed, delayedLocked: lockedCount };
 }
