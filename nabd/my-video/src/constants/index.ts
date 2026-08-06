@@ -1,8 +1,9 @@
 /**
- * Global constants for the Echo advertisement.
+ * Global constants for the Echo advertisement (v3 — motion-graphics cut).
  *
- * Everything brand-related lives here: change a color/font/duration once
- * and the whole video updates.
+ * Deep emerald gradients + neon chartreuse accents, kinetic typography,
+ * and REAL product screenshots (captured from the running Echo app into
+ * public/screens/). Change values here and the whole video updates.
  */
 
 // ─── Video format ────────────────────────────────────────────────────────────
@@ -13,133 +14,81 @@ export const VIDEO = {
 } as const;
 
 // ─── Color palette ───────────────────────────────────────────────────────────
-// Cinematic dark-green-and-gold grade: deep forest shadows, antique-gold
-// practicals — old-library luxury with the illustrated-film lighting of the
-// inspiration piece.
 export const COLORS = {
-  // Environment
-  ink: "#0A140E", // near-black green — night shadows, letterbox
-  forest: "#10261B", // darkest scene base
-  pine: "#1B3A2A", // car interior / buildings
-  moss: "#2E5C42", // mid-tone structures
-  sage: "#7FA98E", // hazy distance
-  fern: "#BCD3C2", // overcast sky light
-  cream: "#F2ECDB", // warm ivory highlight
-  champagne: "#EFDCA8", // dawn sky warmth
+  // Deep emerald world
+  ink: "#04100A", // darkest background base
+  deep: "#07190F", // dark scene base
+  emerald: "#0E2C1C", // mid gradient stop
+  jade: "#17453A", // brighter gradient stop
+  mint: "#57D9A0", // app's own accent (matches the real UI)
+  tealGlow: "#2FA97A", // aurora ring inner color
 
-  // Brand / accents
-  gold: "#D9A63F", // Echo brand accent (antique gold)
-  brass: "#C68A2E", // secondary warm accent
-  lamp: "#F0C97F", // lamp light, lit windows, coffee warmth
-  emerald: "#2F7D5A", // saturated green accent
-  glow: "#E8C06A", // soft golden glow / practicals
+  // Neon + light section
+  lime: "#D7F050", // chartreuse neon accent (kinetic type highlights, CTA)
+  limeSoft: "#EAF788", // brighter lime for glows
+  cream: "#F5F8E9", // near-white warm text
+  pale: "#ECF5DF", // light-section background
+  paleDeep: "#DCEECB", // light-section secondary
 
-  // UI (Echo app)
-  uiGlass: "rgba(9, 22, 15, 0.85)", // dark green glass panels
-  uiStroke: "rgba(240, 220, 160, 0.16)", // faint gold hairline
-  uiText: "#F4EFDF",
-  uiSubtle: "rgba(244, 239, 223, 0.55)",
-  uiGreen: "#54C08A", // "done" status
-  uiAmber: "#E2B04E", // "in progress" status
+  // UI framing
+  frame: "#0A1D12", // browser/phone frame fill
+  frameStroke: "rgba(215, 240, 80, 0.5)", // neon outline stroke
+  hairline: "rgba(215, 240, 80, 0.22)",
 } as const;
 
 // ─── Timing (frames @ 30fps) ─────────────────────────────────────────────────
-export const TRANSITION_FRAMES = 18; // overlap between scenes
+export const TRANSITION_FRAMES = 12;
 
 export const SCENES = {
-  morning: 15 * VIDEO.fps, // Scene 1 — 450
-  listening: 10 * VIDEO.fps, // Scene 2 — 300
-  team: 18 * VIDEO.fps, // Scene 3 — 540
-  arrival: 8 * VIDEO.fps, // Scene 4 — 240
-  ending: 8 * VIDEO.fps, // Ending  — 240
+  hook: 210, // kinetic type + cursor click
+  product: 300, // real dashboard flythrough
+  voice: 270, // neon phone + real mobile screens
+  clarity: 240, // light typography section + stats/calendar
+  sweep: 180, // fast screen carousel
+  outro: 240, // logo, tagline, CTA
 } as const;
 
 /** Total length of the final composition (transitions overlap scenes). */
 export const TOTAL_DURATION =
-  SCENES.morning +
-  SCENES.listening +
-  SCENES.team +
-  SCENES.arrival +
-  SCENES.ending -
-  4 * TRANSITION_FRAMES; // = 1698 frames ≈ 56.6s
+  SCENES.hook +
+  SCENES.product +
+  SCENES.voice +
+  SCENES.clarity +
+  SCENES.sweep +
+  SCENES.outro -
+  5 * TRANSITION_FRAMES; // = 1380 frames = 46s
 
-// ─── Voiceover script ────────────────────────────────────────────────────────
-// Frame values are LOCAL to each scene. They double as caption timing and as
-// the reference grid for syncing the recorded voiceover files (see
-// public/audio/README.md).
-export type ScriptLine = {
-  id: string;
-  text: string;
-  from: number;
-  duration: number;
-};
-
-export const SCRIPT: Record<keyof typeof SCENES, ScriptLine[]> = {
-  morning: [
-    {
-      id: "vo-1a",
-      text: "Every morning starts the same way... traffic, emails, and the inevitable parade of people bumping into your office saying, “Just a quick update...”",
-      from: 30,
-      duration: 250,
-    },
-    {
-      id: "vo-1b",
-      text: "Funny how ten “quick updates” somehow become your entire morning.",
-      from: 300,
-      duration: 120,
-    },
-  ],
-  listening: [
-    {
-      id: "vo-2",
-      text: "Now, with Echo, your team's progress comes to you. Listen to project updates during your commute instead of your first coffee.",
-      from: 20,
-      duration: 260,
-    },
-  ],
-  team: [
-    {
-      id: "vo-3",
-      text: "No typing. No chasing people down. Just speak your update, and Echo turns it into organized task progress your whole team can follow.",
-      from: 40,
-      duration: 320,
-    },
-  ],
-  arrival: [
-    {
-      id: "vo-4",
-      text: "By the time you arrive, you're already caught up.",
-      from: 40,
-      duration: 150,
-    },
-  ],
-  ending: [
-    {
-      id: "vo-5",
-      text: "Less interruptions. More progress. That's Echo.",
-      from: 30,
-      duration: 150,
-    },
-  ],
-};
+// ─── Real product screenshots ────────────────────────────────────────────────
+// Captured from the running Echo app (dark theme) — see my-video/public/screens.
+// Desktop shots are 3200×2000 (@2x of 1600×1000); mobile are 1170×2532 (@3x).
+export const SCREENS = {
+  dashboard: "screens/dashboard.png",
+  dashboardLight: "screens/dashboard-light.png",
+  tasks: "screens/tasks.png",
+  calendar: "screens/calendar.png",
+  stats: "screens/stats.png",
+  advisor: "screens/advisor.png",
+  podcast: "screens/podcast.png",
+  teams: "screens/teams.png",
+  mobileDashboard: "screens/m-dashboard.png",
+  mobileTasks: "screens/m-tasks.png",
+  mobilePodcast: "screens/m-podcast.png",
+} as const;
 
 // ─── Audio placeholders ──────────────────────────────────────────────────────
-// Set `enabled: true` once the files below exist in public/audio/.
+// v3 is music-driven (no voiceover). Drop a track into public/audio/ and set
+// enabled: true. An upbeat, minimal electronic bed suits the motion style.
 export const AUDIO = {
-  enabled: false, // ← flip to true after dropping real files into public/audio/
-  music: "audio/music-ambient.mp3", // soft ambient bed, ~60s, gentle intro/outro
-  voiceover: {
-    morning: "audio/vo-scene1-morning.mp3",
-    listening: "audio/vo-scene2-listening.mp3",
-    team: "audio/vo-scene3-team.mp3",
-    arrival: "audio/vo-scene4-arrival.mp3",
-    ending: "audio/vo-ending.mp3",
-  },
+  enabled: false,
+  music: "audio/music-upbeat.mp3", // ~46s, energetic but clean
 } as const;
 
 // ─── Brand copy ──────────────────────────────────────────────────────────────
+// Taglines come from the real product (login page + app copy).
 export const BRAND = {
   name: "Echo",
-  tagline: "Less interruptions. More progress.",
-  cta: "Start listening — echohq.app",
+  org: "Team Echo",
+  tagline: "Manage work with clarity and confidence.",
+  sub: "Tasks, delegation, reporting, and AI assistance in one place.",
+  cta: "Start with Echo",
 } as const;

@@ -133,7 +133,7 @@ export const I18N: Record<Lang, Record<string, string>> = {
     completion_rate: 'Completion rate',
     needs_attention: 'Needs attention',
     needs_attention_sub: 'Blocked or delayed tasks in your scope',
-    matters_title: 'Priority items',
+    matters_title: 'Needs Attention',
     matters_sub: 'Tasks requiring your attention.',
     view_all: 'View all',
     home_briefing_title: 'Daily briefing',
