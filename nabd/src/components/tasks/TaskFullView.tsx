@@ -133,7 +133,7 @@ export function TaskFullView({ vm, canEdit, assignees, colleagues, backHref }: {
         <Meta icon="history" label={t("updated")}>{relTime(task.updatedAt, t)}</Meta>
       </div>
 
-      <div className="grid gap-5 lg:[grid-template-columns:1.5fr_1fr] items-start">
+      <div className="grid gap-5 lg:[grid-template-columns:1.5fr_1fr] *:min-w-0 items-start">
         {/* editor */}
         <div className="card flex flex-col gap-5">
           <label className="block">

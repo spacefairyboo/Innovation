@@ -180,7 +180,7 @@ export function TaskReaderView({
         </div>
       </div>
 
-      <div className='grid gap-5 lg:[grid-template-columns:1.55fr_1fr] items-start'>
+      <div className='grid gap-5 lg:[grid-template-columns:1.55fr_1fr] *:min-w-0 items-start'>
         <div className='grid gap-5 min-w-0'>
           {/* the story of the task */}
           <div className='card'>
