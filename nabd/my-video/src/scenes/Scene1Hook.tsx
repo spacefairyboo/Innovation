@@ -39,10 +39,10 @@ export const Scene1Hook: React.FC = () => {
       <GlowBlob x={1700} y={80} radius={480} color={COLORS.tealGlow} opacity={0.4} />
       <DotGrid opacity={0.1} />
 
-      <Sequence durationInFrames={112} layout="none">
+      <Sequence durationInFrames={100} layout="none">
         <BeatOne />
       </Sequence>
-      <Sequence from={112} layout="none">
+      <Sequence from={100} layout="none">
         <BeatTwo />
       </Sequence>
     </AbsoluteFill>
@@ -176,8 +176,8 @@ const BeatTwo: React.FC = () => {
           top: 310,
           display: "flex",
           justifyContent: "center",
-          scale: String(0.82 + springPop(frame, fps, 42) * 0.18),
-          rotate: `${(1 - springIn(frame, fps, 42, 90)) * -7}deg`,
+          scale: String(0.82 + springPop(frame, fps, 30) * 0.18),
+          rotate: `${(1 - springIn(frame, fps, 30, 90)) * -7}deg`,
         }}
       >
         <div
@@ -188,7 +188,7 @@ const BeatTwo: React.FC = () => {
             letterSpacing: "-0.04em",
             color: COLORS.lime,
             textShadow: "0 0 120px rgba(70, 199, 180, 0.5)",
-            opacity: springIn(frame, fps, 42, 80),
+            opacity: springIn(frame, fps, 30, 80),
           }}
         >
           ×10
@@ -205,7 +205,7 @@ const BeatTwo: React.FC = () => {
           fontWeight: 600,
           fontSize: 34,
           color: COLORS.cream,
-          opacity: springIn(frame, fps, 58),
+          opacity: springIn(frame, fps, 44),
         }}
       >
         Every. Single. Morning.

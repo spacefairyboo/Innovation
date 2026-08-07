@@ -31,7 +31,7 @@ import { COLORS, SCREENS } from "../constants";
 import { oscillate, springIn } from "../utils/animations";
 
 const PHONE_W = 400;
-const SWAP_AT = 150;
+const SWAP_AT = 118;
 
 export const Scene3Voice: React.FC = () => {
   const frame = useCurrentFrame();

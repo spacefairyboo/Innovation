@@ -40,13 +40,13 @@ export const COLORS = {
 export const TRANSITION_FRAMES = 12;
 
 export const SCENES = {
-  hook: 210, // kinetic type + cursor click
-  product: 300, // real dashboard flythrough
-  voice: 270, // neon phone + real mobile screens
-  clarity: 240, // light typography section + stats/calendar
-  advisor: 345, // dedicated Advisor segment — real plan UI
-  sweep: 210, // screen carousel
-  outro: 240, // logo, tagline, CTA
+  hook: 180, // kinetic type + cursor click
+  product: 240, // real dashboard flythrough
+  voice: 210, // neon phone + real mobile screens
+  clarity: 195, // light typography section + stats/calendar
+  advisor: 300, // dedicated Advisor segment — real plan UI
+  sweep: 180, // screen carousel
+  outro: 210, // logo, tagline, CTA
 } as const;
 
 /** Total length of the final composition (transitions overlap scenes). */
@@ -58,7 +58,7 @@ export const TOTAL_DURATION =
   SCENES.advisor +
   SCENES.sweep +
   SCENES.outro -
-  6 * TRANSITION_FRAMES; // = 1743 frames ≈ 58.1s
+  6 * TRANSITION_FRAMES; // = 1443 frames ≈ 48.1s
 
 // ─── Real product screenshots ────────────────────────────────────────────────
 // Captured from the running Echo app (dark theme) — see my-video/public/screens.
@@ -85,8 +85,8 @@ export const SCREENS = {
 // public/audio/ with a pro recording — same names, no code changes needed.
 export const AUDIO = {
   enabled: true,
-  music: "audio/music-bed.wav", // 58.5s pad progression, soft drums (Am7–Fmaj7–Cmaj7–G6)
-  musicVolume: 0.1,
+  music: "audio/music-bed.wav", // 48.5s pad progression, soft drums (Am7–Fmaj7–Cmaj7–G6)
+  musicVolume: 0.06, // narration clips are peak-normalized; keep the bed far below
   click: "audio/click.wav",
   narration: {
     hook: "audio/vo-hook.wav",

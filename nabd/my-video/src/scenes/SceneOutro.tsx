@@ -28,15 +28,15 @@ import { fadeIn, oscillate, springIn, springPop } from "../utils/animations";
 export const SceneOutro: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
-  const ctaIn = springIn(frame, fps, 120);
-  const clickAt = 168;
+  const ctaIn = springIn(frame, fps, 100);
+  const clickAt = 144;
 
   // Cursor sweeps up to the CTA.
-  const cx = interpolate(frame, [126, 162], [1520, 1052], {
+  const cx = interpolate(frame, [106, 140], [1520, 1052], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const cy = interpolate(frame, [126, 162], [1010, 792], {
+  const cy = interpolate(frame, [106, 140], [1010, 792], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -83,7 +83,7 @@ export const SceneOutro: React.FC = () => {
             { text: "and" },
             { text: "confidence.", tone: "lime" },
           ]}
-          from={44}
+          from={36}
           size={64}
           align="center"
           width={1400}
@@ -101,7 +101,7 @@ export const SceneOutro: React.FC = () => {
           fontWeight: 500,
           fontSize: 24,
           color: "rgba(245, 248, 233, 0.6)",
-          opacity: fadeIn(frame, 84, 20),
+          opacity: fadeIn(frame, 70, 20),
         }}
       >
         {BRAND.sub}

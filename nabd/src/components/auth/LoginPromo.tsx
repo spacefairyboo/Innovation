@@ -15,7 +15,9 @@ export function LoginPromo() {
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, close]);
@@ -24,7 +26,9 @@ export function LoginPromo() {
   return (
     <div
       className='fixed inset-0 z-95 grid place-items-center p-4 sm:p-8 bg-[rgb(4_20_16/0.62)] backdrop-blur-md animate-modal-pop'
-      onClick={(e) => { if (e.target === e.currentTarget) close(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) close();
+      }}
       role='dialog'
       aria-label='Echo introduction video'
     >
@@ -34,14 +38,22 @@ export function LoginPromo() {
           onClick={close}
           aria-label='Close video'
         >
-          <svg width='17' height='17' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2.5' strokeLinecap='round' aria-hidden>
+          <svg
+            width='17'
+            height='17'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            strokeWidth='2.5'
+            strokeLinecap='round'
+            aria-hidden
+          >
             <path d='M18 6 6 18M6 6l12 12' />
           </svg>
         </button>
         <video
           className='w-full rounded-2xl border border-white/15 shadow-2xl bg-black aspect-video'
           autoPlay
-          muted
           playsInline
           controls
           onEnded={close}
@@ -50,8 +62,8 @@ export function LoginPromo() {
               without proprietary codecs. Source failures fire on the
               <source> elements, in order - an error on the LAST one means
               nothing was playable, so the dialog stands down. */}
-          <source src='/promo.mp4' type='video/mp4' />
-          <source src='/promo.webm' type='video/webm' onError={() => setBroken(true)} />
+          <source src='/promov1.mp4' type='video/mp4' />
+          {/* <source src='/promo.webm' type='video/webm' onError={() => setBroken(true)} /> */}
         </video>
       </div>
     </div>

@@ -113,7 +113,9 @@ const SoundMix: React.FC = () => {
       6 * t,
   };
   // Cursor clicks: hook pill, the Advisor "Write my plan", the outro CTA.
-  const clicks = [64, start.advisor + 92, start.outro + 168];
+  const clicks = [64, start.advisor + 80, start.outro + 144];
+  // Narration entry per scene, spaced so lines never overlap across cuts.
+  const voOffset = { hook: 8, product: 8, voice: 8, clarity: 8, advisor: 8, sweep: 12, outro: 34 };
 
   return (
     <>
@@ -121,7 +123,7 @@ const SoundMix: React.FC = () => {
       {(
         Object.keys(AUDIO.narration) as Array<keyof typeof AUDIO.narration>
       ).map((scene) => (
-        <Sequence key={scene} from={start[scene] + 8} layout="none">
+        <Sequence key={scene} from={start[scene] + voOffset[scene]} layout="none">
           <Audio src={staticFile(AUDIO.narration[scene])} volume={1} />
         </Sequence>
       ))}

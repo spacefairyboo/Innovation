@@ -56,8 +56,8 @@ export const Scene4Clarity: React.FC = () => {
             fontWeight: 900,
             fontSize: 300,
             letterSpacing: "-0.02em",
-            color: row.filled ? "rgba(18, 53, 36, 0.9)" : "transparent",
-            WebkitTextStroke: row.filled ? undefined : `2.5px rgba(18, 53, 36, 0.3)`,
+            // Filled watermark type: light grey, mostly transparent.
+            color: row.filled ? "rgba(110, 124, 112, 0.22)" : "rgba(110, 124, 112, 0.14)",
             opacity: fadeIn(frame, 4 + i * 8, 20),
           }}
         >

@@ -32,7 +32,7 @@ import { COLORS, SCREENS } from "../constants";
 import { FONTS } from "../fonts";
 import { EASE_IN_OUT, springIn, springPop } from "../utils/animations";
 
-const SWITCH = 130;
+const SWITCH = 110;
 
 export const SceneAdvisor: React.FC = () => {
   return (
@@ -72,7 +72,7 @@ const PickTaskBeat: React.FC = () => {
   const btnX = FRAME_X + W * 0.9; // button center
   const btnY = FRAME_Y + CHROME + H * 0.27;
   // Cursor arcs in and lands on the button center.
-  const cp = interpolate(frame, [30, 86], [0, 1], {
+  const cp = interpolate(frame, [24, 74], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: EASE_IN_OUT,
@@ -118,12 +118,12 @@ const PickTaskBeat: React.FC = () => {
             borderRadius: 999,
             border: `2.5px solid ${COLORS.lime}`,
             boxShadow: `0 0 30px rgba(70, 199, 180, 0.5)`,
-            opacity: springPop(frame, fps, 78),
-            scale: String(0.9 + springIn(frame, fps, 78) * 0.1),
+            opacity: springPop(frame, fps, 66),
+            scale: String(0.9 + springIn(frame, fps, 66) * 0.1),
           }}
         />
       </div>
-      <Cursor x={cx} y={cy} clickAt={92} />
+      <Cursor x={cx} y={cy} clickAt={80} />
     </AbsoluteFill>
   );
 };
@@ -138,17 +138,17 @@ const PlanBeat: React.FC = () => {
   const H = 790;
   const imgH = W * (4638 / 2680);
   // Ride from the plan overview down to the email + risks.
-  const scroll = interpolate(frame, [10, 200], [0, imgH - H], {
+  const scroll = interpolate(frame, [10, 175], [0, imgH - H], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: EASE_IN_OUT,
   });
 
   const chips = [
-    { text: "Step-by-step plan", at: 22 },
-    { text: "Effort estimates", at: 44 },
-    { text: "Ready-to-send emails", at: 66 },
-    { text: "Risks + done-when", at: 88 },
+    { text: "Step-by-step plan", at: 16 },
+    { text: "Effort estimates", at: 36 },
+    { text: "Ready-to-send emails", at: 56 },
+    { text: "Risks + done-when", at: 76 },
   ];
 
   return (
