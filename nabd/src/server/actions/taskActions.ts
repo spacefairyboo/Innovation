@@ -348,28 +348,65 @@ export async function applyBulkUpdates(items: {
   let failed = 0;
   let lockedCount = 0;
   for (const item of items.slice(0, 30)) {
-    try {
-      const { task } = await assertCanEdit(item.taskId);
-      const note = boundedText(item.note, 2000);
-      const status = validStatus(item.status);
-      const locked = delayLocked(task, status, undefined);
-      if (locked) lockedCount++;
-      updateTask(
-        item.taskId,
-        {
-          status: locked ? undefined : status,
-          progress: item.progress !== undefined ? clampProgress(item.progress) : undefined,
-        },
-        note ? { en: note, ar: note } : null,
-        user.id,
-      );
-      if (note) translateSoon(item.taskId, user.id, null, note);
-      applied++;
-    } catch {
-      failed++;
-    }
+    const res = await applyOne(user.id, item);
+    if (!res) { failed++; continue; }
+    if (res.locked) lockedCount++;
+    applied++;
   }
   if (applied) bumpStreak(user.id);
   refresh();
   return { applied, failed, delayedLocked: lockedCount };
+}
+
+/** One guarded update: permission check, delay lock, and an audited write
+    whose history note is this task's own sentence. Null when it was not
+    allowed or the task vanished — one bad item never sinks the batch. */
+async function applyOne(userId: string, item: {
+  taskId: string; note: string; status?: TaskStatus; progress?: number;
+}): Promise<{ title: Localized; locked: boolean } | null> {
+  try {
+    const { task } = await assertCanEdit(item.taskId);
+    const note = boundedText(item.note, 2000);
+    const status = validStatus(item.status);
+    const locked = delayLocked(task, status, undefined);
+    updateTask(
+      item.taskId,
+      {
+        status: locked ? undefined : status,
+        progress: item.progress !== undefined ? clampProgress(item.progress) : undefined,
+      },
+      note ? { en: note, ar: note } : null,
+      userId,
+    );
+    if (note) translateSoon(item.taskId, userId, null, note);
+    return { title: task.title, locked };
+  } catch {
+    return null;
+  }
+}
+
+export interface BulkChatResult {
+  applied: { title: Localized; note: string; status?: TaskStatus; progress?: number; locked: boolean }[];
+  /** Updates the model could not place on a task; nothing was written for these. */
+  unmatched: string[];
+}
+
+/** One spoken or typed message covering several tasks. The model splits it
+    into per-task updates and matches each one, then every task is updated
+    with only its own sentence as the note — never the whole message. */
+export async function applyBulkFromText(text: string): Promise<BulkChatResult> {
+  const { user, lang, tasks } = await editableTasks();
+  const dump = boundedText(text, 8000) ?? "";
+  const matches = await matchBulkUpdates(dump, tasks, lang);
+  const applied: BulkChatResult["applied"] = [];
+  const unmatched: string[] = [];
+  for (const m of matches.slice(0, 30)) {
+    if (!m.taskId) { unmatched.push(m.line); continue; }
+    const res = await applyOne(user.id, { taskId: m.taskId, note: m.line, status: m.status, progress: m.progress });
+    if (!res) { unmatched.push(m.line); continue; }
+    applied.push({ title: res.title, note: m.line, status: m.status, progress: m.progress, locked: res.locked });
+  }
+  if (applied.length) bumpStreak(user.id);
+  refresh();
+  return { applied, unmatched };
 }

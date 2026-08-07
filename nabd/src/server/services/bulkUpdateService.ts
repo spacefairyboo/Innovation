@@ -28,12 +28,13 @@ export interface BulkMatch {
 
 const MAX_LINES = 30;
 
-/** Splits a dump into candidate update lines: newlines first, list bullets
-    and numbering stripped. Sentences on one line are left alone — a comma
-    inside one update is common ("waiting on vendor, will retry Sunday"). */
+/** Fallback splitter for when the model is unavailable: newlines first,
+    then sentence boundaries, with list bullets and numbering stripped.
+    Dictated speech often arrives as one long run-on line, which only the
+    model can segment reliably — this is the best a regex can do. */
 export function splitBulk(text: string): string[] {
   return text
-    .split(/\r?\n/)
+    .split(/\r?\n|(?<=[.!?؟؛])\s+/)
     .map((s) => s.replace(/^\s*(?:[-*•·]|\d{1,2}[.)-]|[أ-ي][.)])\s+/, "").trim())
     .filter((s) => s.length >= 3)
     .slice(0, MAX_LINES);
@@ -53,25 +54,33 @@ function localMatch(line: string, tasks: Task[]): BulkMatch {
   };
 }
 
-/** One API call matches every line at once. Returns null on any failure so
-    the caller falls back to the local engine line by line. */
-async function aiMatch(lines: string[], tasks: Task[], lang: Lang): Promise<BulkMatch[] | null> {
+/** One API call segments the whole message and matches every piece of it.
+    The model does the splitting, not a regex: dictated speech runs several
+    updates together with no punctuation, and only meaning separates them.
+    Returns null on any failure so the caller falls back to the local engine. */
+async function aiMatch(text: string, tasks: Task[], lang: Lang): Promise<BulkMatch[] | null> {
   if (!client) return null;
   const taskBlock = tasks
     .map((t) => `id=${t.id} | en="${t.title.en}" | ar="${t.title.ar}" | status: ${effStatus(t)} | progress: ${t.progress}% | due: ${t.due ?? "none"}`)
     .join("\n");
-  const updateBlock = lines.map((s, i) => `${i + 1}) ${s}`).join("\n");
   const instructions = [
     "You are the bulk check-in matcher inside Echo, a bilingual task-management app.",
-    "The user pasted several progress updates at once. Match each update line to exactly one of their tasks, by meaning - lines may be English or Arabic, and rarely quote the task title exactly.",
+    "The user has just written or dictated their progress on several tasks in one message. It may be typed with one update per line, or dictated as one run-on sentence with no punctuation, in English or Arabic or a mix.",
+    "",
+    "Do two things:",
+    "1. SPLIT the message into separate updates - one per task the user talked about. A single update may span several clauses (\"blocked, waiting on the vendor until Sunday\") and must stay whole.",
+    "2. MATCH each update to exactly one task below, by meaning. The user rarely quotes a task title exactly.",
+    "",
     "TASKS (live data):",
     taskBlock,
     "",
-    "For every update line, infer the change it describes:",
-    '- status: one of "done", "ontrack", "pending", "blocked" (only when the line clearly says so)',
-    "- progress: 0-100 (only when the line states or clearly implies it; done implies 100)",
-    "Respond with ONLY a JSON array, one object per update line, in order:",
-    '[{"i": 1, "id": "<task id or null>", "status": "<status or null>", "progress": <number or null>}]',
+    "For each update also infer:",
+    '- status: one of "done", "ontrack", "pending", "blocked" (only when the update clearly says so)',
+    "- progress: 0-100 (only when stated or clearly implied; done implies 100)",
+    "",
+    "Respond with ONLY a JSON array, in the order the updates appear:",
+    '[{"text": "<this update, in the user\'s own words>", "id": "<task id or null>", "status": "<status or null>", "progress": <number or null>}]',
+    'The "text" of each item must contain ONLY the words about that one task - never the whole message - because it is saved as that task\'s update note.',
     "Use id null when no task is a confident match. No commentary, no markdown.",
   ].join("\n");
   try {
@@ -79,20 +88,23 @@ async function aiMatch(lines: string[], tasks: Task[], lang: Lang): Promise<Bulk
       model: config.openai.model,
       max_output_tokens: 4000,
       instructions,
-      input: `UPDATES (${lang === "ar" ? "user writes Arabic and English" : "user writes English and Arabic"}):\n${updateBlock}`,
+      input: `UPDATES (${lang === "ar" ? "user writes Arabic and English" : "user writes English and Arabic"}):\n${text}`,
     });
     const raw = res.output_text.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
-    const arr = JSON.parse(raw) as { i?: number; id?: string | null; status?: string | null; progress?: number | null }[];
-    if (!Array.isArray(arr)) return null;
+    const arr = JSON.parse(raw) as { text?: string; id?: string | null; status?: string | null; progress?: number | null }[];
+    if (!Array.isArray(arr) || !arr.length) return null;
     const ids = new Set(tasks.map((t) => t.id));
-    return lines.map((line, idx) => {
-      const m = arr.find((x) => x.i === idx + 1) ?? arr[idx];
+    return arr.slice(0, MAX_LINES).flatMap((m) => {
+      // The segment the model returned is what gets stored as that task's
+      // note, so an empty one is dropped rather than saved blank.
+      const line = typeof m?.text === "string" ? m.text.trim() : "";
+      if (!line) return [];
       const id = m?.id && ids.has(m.id) ? m.id : null;
       const status = STATUSES.find((s) => s === m?.status);
       const progress = typeof m?.progress === "number" && m.progress >= 0 && m.progress <= 100
         ? Math.round(m.progress)
         : status === "done" ? 100 : undefined;
-      return { line, taskId: id, status, progress };
+      return [{ line, taskId: id, status, progress }];
     });
   } catch (err) {
     log.warn(`bulk match failed, using the local engine: ${err instanceof Error ? err.message : err}`);
@@ -100,11 +112,12 @@ async function aiMatch(lines: string[], tasks: Task[], lang: Lang): Promise<Bulk
   }
 }
 
-/** Matches a pasted dump against the caller's editable tasks. */
+/** Segments a written or dictated dump and matches each piece to a task. */
 export async function matchBulkUpdates(text: string, tasks: Task[], lang: Lang): Promise<BulkMatch[]> {
-  const lines = splitBulk(text);
-  if (!lines.length) return [];
-  const ai = await aiMatch(lines, tasks, lang);
+  const trimmed = text.trim();
+  if (trimmed.length < 3) return [];
+  const lines = splitBulk(trimmed);
+  const ai = await aiMatch(trimmed, tasks, lang);
   // AI-only test mode: whatever the model returned stands on its own, with
   // no local backfill and no fallback, so its matching can be judged.
   if (config.openai.aiOnly) return ai ?? lines.map((line) => ({ line, taskId: null }));

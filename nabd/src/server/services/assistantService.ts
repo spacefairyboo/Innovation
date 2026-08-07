@@ -34,6 +34,25 @@ const client = config.openai.enabled
   ? new OpenAI({ apiKey: config.openai.apiKey, timeout: 12_000, maxRetries: 0 })
   : null;
 
+/* What Echo itself is and where everything lives, so the assistant can
+   answer questions about the website as readily as about the work in it.
+   Kept in English regardless of UI language: the model answers in the
+   user's language either way. */
+const APP_GUIDE = `
+ABOUT ECHO (this website), so you can answer any question about using it:
+- Echo is the PCA department's bilingual (English/Arabic) task-management platform. The globe button in the top bar switches language; the whole layout flips to RTL in Arabic. The moon/sun button switches dark and light themes. Preferences can be saved on the Profile page.
+- Dashboard (home): greeting, KPI tiles (clicking one opens the task list filtered to that status), a smart insight line, the "needs attention" list of blocked/overdue/quiet tasks, charts, latest activity, and this check-in chat.
+- Tasks page: every task in a sortable, filterable table (status, priority, assignee, project, tags; search box on top). "New task" creates one; "Update" on a row edits it; "Bulk update" accepts many pasted updates at once and AI matches each line to the right task. Each task stores its title and notes in both languages - AI translates automatically in the background.
+- Task details page: full editing for assignees and the line manager (progress slider, status, checklist, notes); everyone else sees a read-only briefing view. Every change lands in an audit trail (who, when, old to new). The AI Advisor can write a step-by-step plan, visible to assignees.
+- This chat (AI check-in): update tasks in plain language or by voice (the mic button), several tasks in one message is fine, ask questions about tasks, meetings, people, or the site itself. The conversation is saved and survives reloads.
+- Podcast page: a spoken daily briefing of the user's work, with selectable voices in both languages and an animated presenter.
+- PCA Overview (Teams): the org hierarchy - PCA Department, then sections, then units - each level with health cards, KPIs, needs-attention, activity, top contributors, and its task table. Unit pages also list members.
+- Statistics: status mix, completion trend, and per-section breakdowns for senior managers. Calendar: task due dates and meetings. Notifications: alerts for blocked/overdue/quiet/completed work. Directory: everyone's role, unit, email, and extension. Tools: the document reviewer (upload Word documents, get per-document AI summaries).
+- Profile: language and theme preferences, and delegation of authority (hand your tasks to a colleague while away; they gain edit rights until it ends).
+- Roles: the senior manager sees everything; a section head sees their section's units; a unit head sees and can edit their unit's tasks; an employee sees and edits their own. Only assignees and the task's line manager may change a task.
+- Overdue tasks show as Delayed and stay locked in that status until the due date moves or the task completes. Data export: the CSV button on team pages.
+- Sign-in is by work email and password. There is a command palette (Ctrl+K / Cmd+K) to jump to pages and tasks.`;
+
 const STATUS_WORDS: Record<Lang, Record<string, string>> = {
   en: { done: "completed", ontrack: "on track", pending: "pending", blocked: "blocked", delayed: "overdue" },
   ar: { done: "مكتملة", ontrack: "على المسار", pending: "معلقة", blocked: "متعثرة", delayed: "متأخرة" },
@@ -184,6 +203,7 @@ export async function chatgptRespond(
     orgLines(lang),
     ...(meetings ? [``, `The user's meetings over the next 7 days:`, meetings] : []),
     ...(delegations ? [``, `Active delegations:`, delegations] : []),
+    APP_GUIDE,
     ``,
     `Rules:`,
     `- Answer in ${lang === "ar" ? "Arabic" : "English"}, in a warm, human tone. Plain sentences only: no markdown headings, no bullets unless listing tasks, and never use an em dash.`,
@@ -192,6 +212,7 @@ export async function chatgptRespond(
     `- When asked how to do a task, give short practical steps grounded in its remaining checklist, priority, blockers, and last note.`,
     `- Earlier turns of the chat are included; when the user says "it" or continues a thought, resolve it from that context.`,
     `- When the user asks to change a task (deadline, rename, assignee, checklist, progress, status, priority), call update_task with only the fields they asked to change, resolving relative dates ("Thursday", "غدًا") to YYYY-MM-DD. Never call it for questions or remarks.`,
+    `- Questions about the website itself (where a feature is, how to use it, what a page does, who can see what) are answered from ABOUT ECHO above, with concrete directions ("open Tasks, then...").`,
     `- If the question has nothing to do with work, still answer briefly and helpfully.`,
   ].join("\n");
 

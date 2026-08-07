@@ -5,11 +5,11 @@
    actions. Used inside the check-in modal and embedded on the home page. */
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { applyCheckin, applyTaskEdit, askAssistant, createTaskFromChat, getChatHistory, logChatMessage } from "@/app/actions";
+import { applyBulkFromText, applyCheckin, applyTaskEdit, askAssistant, createTaskFromChat, getChatHistory, logChatMessage } from "@/app/actions";
 import { useAiOnly, useI18n } from "@/components/providers";
 import { Icon } from "@/components/ui";
 import {
-  isQuestion, isSummaryRequest, matchTask, parseCreateTask, parseTaskEdit, parseUpdate,
+  countUpdateSignals, isQuestion, isSummaryRequest, matchTask, parseCreateTask, parseTaskEdit, parseUpdate,
   type ParsedEdit, type ParsedUpdate,
 } from "@/lib/parser";
 import { STATUS_META, effStatus, isStale, type Task, type TaskStatus } from "@/lib/types";
@@ -239,11 +239,47 @@ export function CheckinPanel({ tasks, userFirstName, doneThisWeek, startVoice, a
     });
   };
 
+  /** One message covering several tasks. The model splits it and each task
+      is updated with only its own sentence, so a run-on voice note lands as
+      several separate, correctly attributed updates. */
+  const applyMany = (text: string) => {
+    setThinking(true);
+    startTransition(async () => {
+      try {
+        const res = await applyBulkFromText(text);
+        if (!res.applied.length) {
+          push({ who: "bot", text: t("chat_multi_none") });
+          return;
+        }
+        const lines = res.applied.map((a) => {
+          const bits = [
+            a.status && !a.locked ? t(STATUS_META[a.status].labelKey) : "",
+            a.progress !== undefined ? `${a.progress}%` : "",
+          ].filter(Boolean).join(" · ");
+          return `• ${a.title[lang]}${bits ? ` — ${bits}` : ""}`;
+        });
+        const parts = [t("chat_multi_done", { n: res.applied.length }), ...lines];
+        const locked = res.applied.filter((a) => a.locked);
+        for (const a of locked) parts.push(t("chat_delayed_locked", { task: a.title[lang] }));
+        if (res.unmatched.length) parts.push(t("chat_multi_unmatched", { n: res.unmatched.length }));
+        push({ who: "bot", text: parts.join("\n") });
+      } catch {
+        push({ who: "bot", text: t("chat_edit_failed") });
+      } finally {
+        setThinking(false);
+      }
+    });
+  };
+
   const handle = (raw: string) => {
     const text = raw.trim();
     if (!text) return;
     push({ who: "user", text });
     if (!aiOnly && isSummaryRequest(text)) { push({ who: "bot", text: summaryText() }); return; }
+
+    // Several tasks in one breath: hand the whole message to the matcher
+    // instead of forcing it onto the single best-matching task.
+    if (!isQuestion(text) && countUpdateSignals(text) >= 2) { applyMany(text); return; }
 
     // "create a new task assign it to omar, to update the policy by tomorrow…"
     const create = aiOnly ? null : parseCreateTask(text);
