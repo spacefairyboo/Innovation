@@ -2,9 +2,16 @@
 
 /* The promo film, floating over the login page. It opens on every visit by
    design (no dismissal is remembered - a refresh brings it back) and goes
-   away with the X, the Escape key, or a click on the backdrop. Muted
-   autoplay so browsers allow it to start; the visitor can unmute with the
-   player's own controls. Renders nothing when /promo.mp4 fails to load. */
+   away with the X, the close bar (phones), the Escape key, or a click on
+   the backdrop. Muted autoplay so browsers allow it to start; the visitor
+   can unmute with the player's own controls. Renders nothing when the
+   video files are absent.
+
+   Layout rule that matters: the pop animation transforms ONLY the video
+   card. The close controls hang off the overlay itself, because WebKit
+   hit-tests fixed/absolute elements inside transformed ancestors at the
+   wrong position - the button is visible but taps land nowhere, which is
+   exactly an iPhone "X does nothing" bug. */
 
 import { useCallback, useEffect, useState } from 'react';
 
@@ -74,6 +81,18 @@ export function LoginPromo() {
           {/* <source src='/promo.webm' type='video/webm' onError={() => setBroken(true)} /> */}
         </video>
       </div>
+
+      {/* Phones also get a full-width close bar under the player - a tap
+          target that cannot be missed, overlapped, or pushed off-screen. */}
+      <button
+        type='button'
+        className='sm:hidden w-full max-w-4xl py-3.5 rounded-2xl border border-white/25 bg-white/10 text-white text-sm font-bold'
+        onClick={close}
+        onPointerUp={close}
+        onTouchEnd={(e) => { e.preventDefault(); close(); }}
+      >
+        ✕ &nbsp;Close
+      </button>
     </div>
   );
 }
