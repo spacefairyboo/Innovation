@@ -190,6 +190,30 @@ export function seedDomainTasks(d: DatabaseSync): void {
     ["k32", "m13", "t13", "ontrack", 35, "high", "Conduct the board assessment of Al-Noor Energy", "تنفيذ تقييم مجلس إدارة شركة النور للطاقة", inDays(7), ago(0, 9), "Questionnaires sent to members", "أُرسلت الاستبانات للأعضاء"],
     /* DSS */
     ["k33", "m14", "t14", "ontrack", 55, "med", "Review the rulebook content", "مراجعة محتوى الدليل التنظيمي", inDays(5), ago(0, 12), "Chapters one to three reviewed", "روجعت الفصول من الأول إلى الثالث"],
+    /* Section heads — approvals and section-level work, one team per section
+       carries it. Updates and dues are scattered across this week and next
+       so every chart on the statistics page has something to show. */
+    ["k36", "h1", "t2", "ontrack", 50, "high", "Prepare the section quarterly business review", "إعداد المراجعة الربعية لأعمال الإدارة", inDays(5), ago(0, 4), "Unit inputs collected", "جُمعت مدخلات الوحدات"],
+    ["k37", "h1", "t1", "pending", 20, "med", "Approve the data governance KPIs", "اعتماد مؤشرات حوكمة البيانات", inDays(8), ago(2), "Draft KPI list under review", "قائمة المؤشرات قيد المراجعة"],
+    ["k38", "h2", "t3", "ontrack", 60, "high", "Approve the escalation memo for Sahra Mining", "اعتماد مذكرة التصعيد بشأن شركة صحراء للتعدين", inDays(2), ago(0, 5), "Legal wording agreed", "اتُفق على الصياغة القانونية"],
+    ["k39", "h2", "t4", "done", 100, "med", "Sign off the general assembly calendar", "اعتماد تقويم الجمعيات العامة", inDays(-1), ago(4), "Calendar circulated to all units", "عُمم التقويم على جميع الوحدات"],
+    ["k40", "h3", "t5", "ontrack", 40, "high", "Consolidate the portfolio compliance report", "توحيد تقرير التزام الشركات التابعة", inDays(6), ago(1), "Two of four units reported", "وردت تقارير وحدتين من أربع"],
+    ["k41", "h4", "t9", "pending", 10, "high", "Approve the updated nomination criteria", "اعتماد معايير الترشيح المحدّثة", inDays(7), ago(3), "Awaiting the QA unit's remarks", "بانتظار ملاحظات وحدة ضمان الجودة"],
+    ["k42", "h5", "t14", "ontrack", 30, "med", "Approve the rulebook revision plan", "اعتماد خطة مراجعة الدليل التنظيمي", inDays(9), ago(2), "Scope agreed with the unit", "اتُفق على النطاق مع الوحدة"],
+    /* Unit heads — every manager carries visible work of their own */
+    ["k43", "m1", "t1", "ontrack", 45, "med", "Unit capacity plan for the data platform", "خطة الطاقة الاستيعابية لمنصة البيانات", inDays(10), ago(0, 9), "Current workload mapped", "حُصر عبء العمل الحالي"],
+    ["k44", "m3", "t3", "done", 100, "med", "Assign reviewers for the assembly season", "توزيع المراجعين لموسم الجمعيات", inDays(-2), ago(6), "All companies covered", "غُطيت جميع الشركات"],
+    ["k45", "m4", "t4", "ontrack", 55, "med", "Quarterly review of company files", "المراجعة الربعية لملفات الشركات", inDays(12), ago(1), "Six of ten files reviewed", "روجعت ستة ملفات من عشرة"],
+    ["k46", "m6", "t6", "done", 100, "low", "Rabwa Real Estate follow-up minutes", "محضر متابعة شركة الربوة العقارية", inDays(-1), ago(0, 20), "Minutes approved and filed", "اعتُمد المحضر وأُرشف"],
+    ["k47", "m9", "t9", "pending", 5, "low", "Board onboarding feedback survey", "استبانة تقييم تهيئة مجلس الإدارة", inDays(11), ago(2), "Question set drafted", "أُعدت مسودة الأسئلة"],
+    ["k48", "m11", "t11", "ontrack", 35, "high", "Interview shortlisted board candidates", "مقابلة مرشحي القائمة المختصرة للمجلس", inDays(4), ago(0, 2), "Three interviews scheduled", "جُدولت ثلاث مقابلات"],
+    ["k49", "m12", "t12", "done", 100, "med", "QA checklist refresh for board reports", "تحديث قائمة تدقيق تقارير المجلس", inDays(-3), ago(4), "New checklist in use", "قائمة التدقيق الجديدة قيد الاستخدام"],
+    ["k50", "m14", "t14", "ontrack", 25, "med", "Map rulebook gaps against regulations", "حصر فجوات الدليل التنظيمي مقابل الأنظمة", inDays(13), ago(3), "Regulation list compiled", "جُمعت قائمة الأنظمة"],
+    ["k51", "m5", "t5", "done", 100, "med", "Assembly logistics for Khaleej Cement", "الترتيبات اللوجستية لجمعية شركة الخليج للأسمنت", inDays(-1), ago(5), "Venue and quorum confirmed", "تأكد المكان والنصاب"],
+    ["k52", "m7", "t7", "ontrack", 50, "med", "Prepare the Safa Water meeting brief", "إعداد موجز اجتماع شركة صفا للمياه", inDays(3), ago(0, 16), "Company file summarized", "لُخّص ملف الشركة"],
+    ["k53", "m8", "t8", "done", 100, "low", "File the Rabwa escalation evidence", "أرشفة مستندات تصعيد شركة الربوة", inDays(-4), ago(6), "Evidence pack archived", "أُرشفت حزمة المستندات"],
+    ["k54", "m10", "t10", "ontrack", 75, "high", "Verify nominee disclosures for Safa Water", "التحقق من إفصاحات مرشحي شركة صفا للمياه", inDays(2), ago(0, 14), "Nine of twelve disclosures verified", "تُحقق من تسعة إفصاحات من اثني عشر"],
+    ["k55", "m13", "t13", "pending", 15, "med", "Plan the annual board engagement survey", "التخطيط لاستبانة تفاعل المجالس السنوية", inDays(9), ago(1), "Survey scope drafted", "أُعدت مسودة نطاق الاستبانة"],
   ];
   const insAssignee = d.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
   for (const [id, owner, team, status, progress, prio, en, arTitle, due, updatedAt, noteEn, noteAr] of rows) {
