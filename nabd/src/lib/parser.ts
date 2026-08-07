@@ -27,6 +27,19 @@ export function parseUpdate(text: string): ParsedUpdate {
   return { intent, pct };
 }
 
+/** How many separate progress signals one message carries — a status word
+    or a percentage each count as one. Two or more means the person covered
+    several tasks in one go ("finished the payment page, migration is at
+    70%"), which belongs to the bulk matcher rather than to a single task. */
+export function countUpdateSignals(text: string): number {
+  let n = (text.match(/\d{1,3}\s*[%٪]/g) ?? []).length;
+  for (const p of INTENT_PATTERNS) {
+    n += (text.match(new RegExp(p.re.source, `${p.re.flags.replace(/g/g, "")}g`)) ?? []).length;
+  }
+  const lines = text.split(/\r?\n/).filter((s) => s.trim().length > 2).length;
+  return Math.max(n, lines);
+}
+
 export function isSummaryRequest(text: string): boolean {
   return /\b(summary|status)\b|ملخص|وضعي/i.test(text);
 }

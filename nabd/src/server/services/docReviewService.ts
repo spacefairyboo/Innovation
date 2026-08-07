@@ -19,7 +19,7 @@ import {
   Document, HeadingLevel, Packer, Paragraph, TextRun,
 } from "docx";
 import { config } from "../config";
-import { logger } from "../logger";
+import { logAICall, logger } from "../logger";
 import type { Lang } from "@/lib/types";
 
 const log = logger("cg-review");
@@ -386,12 +386,12 @@ function localSummary(findings: Finding[], lang: Lang): string {
 async function polishSummary(review: DocReview, docName: string, lang: Lang): Promise<string> {
   if (!client || review.findings.length === 0) return review.summary;
   try {
-    const response = await client.responses.create({
+    const response = await logAICall("doc review", `summary for "${docName}" (${review.findings.length} findings)`, () => client.responses.create({
       model: config.openai.model,
       max_output_tokens: 300,
       instructions: `You are a compliance reviewer. Write a 2-3 sentence summary in ${lang === "ar" ? "Arabic" : "English"} of the review findings for the document "${docName}". Plain sentences, no markdown, no em dashes. Mention the most important issue first.`,
       input: review.findings.map((f) => `${f.kind}: ${f.comment}`).join("\n"),
-    });
+    }));
     return response.output_text.trim() || review.summary;
   } catch (err) {
     log.warn(`summary polish failed: ${err instanceof Error ? err.message : err}`);

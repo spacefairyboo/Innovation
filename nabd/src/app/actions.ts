@@ -35,5 +35,6 @@ export {
 } from '@/server/actions/systemActions';
 export { loginAction, logoutAction } from '@/server/actions/authActions';
 export { askAssistant, getChatHistory, logChatMessage } from '@/server/actions/assistantActions';
+export { applyBulkFromText } from '@/server/actions/taskActions';
 export { adviseTaskAction } from '@/server/actions/advisorActions';
 export { reviewDocsAction } from '@/server/actions/toolActions';

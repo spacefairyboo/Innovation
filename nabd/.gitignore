@@ -43,3 +43,7 @@ next-env.d.ts
 
 # local database
 /data/
+
+# the promo film is supplied locally, never committed
+/public/promo.mp4
+/public/promo.webm

@@ -2,7 +2,7 @@
    viewport is a slow-drifting aurora gradient with a film-grain finish; the
    form floats on frosted glass above it. */
 
-import { LoginBackdrop, LoginForm } from '@/components/auth';
+import { LoginBackdrop, LoginForm, LoginPromo } from '@/components/auth';
 import { EchoMark } from '@/components/ui';
 import { makeT } from '@/lib/i18n';
 import { getSession } from '@/server/auth/session';
@@ -13,6 +13,9 @@ export default async function LoginPage() {
 
   return (
     <div className='relative min-h-screen'>
+      {/* The promo film: opens on every visit, closes with the X (or Esc),
+          and a refresh brings it back - by design. */}
+      <LoginPromo />
       <div className='aurora' aria-hidden>
         <div className='au-css'>
           <span className='au-lime' />

@@ -292,6 +292,10 @@ export const I18N: Record<Lang, Record<string, string>> = {
     assistant_error: 'Unable to connect to the AI assistant. Please try again.',
     ai_only_failed:
       'AI-only mode is on and the model returned nothing usable for that message. The built-in engine is standing down, so nothing was applied.',
+    chat_multi_done: 'Done. I split that into {n} updates:',
+    chat_multi_none:
+      'I could not tell which tasks those updates belong to. Try naming them, or use Bulk update to match them yourself.',
+    chat_multi_unmatched: '{n} of them did not match a task, so I left those alone.',
     checkin_ask: 'Daily check-in: how is “{task}” going?',
     //podcast
     podcast_title: 'Daily audio briefing',
@@ -849,6 +853,10 @@ export const I18N: Record<Lang, Record<string, string>> = {
     assistant_error: 'تعذّر الاتصال بمساعد الذكاء الاصطناعي. حاول مرة أخرى.',
     ai_only_failed:
       'وضع الذكاء الاصطناعي فقط مُفعّل، ولم يُرجع النموذج نتيجة صالحة لهذه الرسالة. المحرك المدمج متوقف، لذلك لم يُطبَّق أي تغيير.',
+    chat_multi_done: 'تم. قسّمت ذلك إلى {n} تحديثات:',
+    chat_multi_none:
+      'لم أتمكن من تحديد المهام التي تخص هذه التحديثات. جرّب ذكر أسمائها، أو استخدم التحديث الجماعي لمطابقتها بنفسك.',
+    chat_multi_unmatched: '{n} منها لم تطابق أي مهمة، فتركتها دون تغيير.',
     checkin_ask: 'تسجيل اليوم: كيف تسير «{task}»؟',
     podcast_title: 'الملخص الصوتي اليومي',
     podcast_sub: 'سرد صوتي لمهام فريقك.',
