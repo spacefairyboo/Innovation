@@ -7,7 +7,7 @@
 
 import OpenAI from "openai";
 import { config } from "../config";
-import { logger } from "../logger";
+import { logAICall, logger } from "../logger";
 import { matchTask, parseUpdate } from "@/lib/parser";
 import { effStatus, type Lang, type Task, type TaskStatus } from "@/lib/types";
 
@@ -84,12 +84,12 @@ async function aiMatch(text: string, tasks: Task[], lang: Lang): Promise<BulkMat
     "Use id null when no task is a confident match. No commentary, no markdown.",
   ].join("\n");
   try {
-    const res = await client.responses.create({
+    const res = await logAICall("bulk matcher", `${text.length} chars against ${tasks.length} tasks`, () => client.responses.create({
       model: config.openai.model,
       max_output_tokens: 4000,
       instructions,
       input: `UPDATES (${lang === "ar" ? "user writes Arabic and English" : "user writes English and Arabic"}):\n${text}`,
-    });
+    }));
     const raw = res.output_text.trim().replace(/^```(?:json)?\s*|\s*```$/g, "");
     const arr = JSON.parse(raw) as { text?: string; id?: string | null; status?: string | null; progress?: number | null }[];
     if (!Array.isArray(arr) || !arr.length) return null;

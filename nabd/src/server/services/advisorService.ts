@@ -6,7 +6,7 @@
 
 import OpenAI from "openai";
 import { config } from "../config";
-import { logger } from "../logger";
+import { logAICall, logger } from "../logger";
 import { getChecklist, getTaskAdvice, getTeam, getUnit, getUser, saveTaskAdvice, scopeTasks } from "../repositories";
 import { effStatus, todayISO, type Lang, type Task, type User } from "@/lib/types";
 
@@ -168,12 +168,12 @@ export async function adviseOnTask(user: User, taskId: string, lang: Lang): Prom
   ].join("\n");
 
   try {
-    const response = await client.responses.create({
+    const response = await logAICall("advisor", `plan for "${task.title.en.slice(0, 50)}"`, () => client.responses.create({
       model: config.openai.model,
       max_output_tokens: 4096,
       instructions,
       input: taskContext(task, user, lang),
-    });
+    }));
     const advice = parseAdvice(response.output_text);
     if (!advice) {
       log.warn("advisor: model returned unparseable plan");

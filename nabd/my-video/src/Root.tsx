@@ -2,18 +2,18 @@
  * Composition registry.
  *
  * "EchoAd" is the deliverable. Each scene is also registered inside a
- * folder so it can be opened, scrubbed, and art-directed in isolation in
- * Remotion Studio (double-click a sequence to jump into it).
+ * folder for isolated scrubbing and art direction in Remotion Studio.
  */
 import "./index.css";
 import { Composition, Folder } from "remotion";
 import { EchoAd } from "./EchoAd";
 import { SCENES, TOTAL_DURATION, VIDEO } from "./constants";
-import { Scene1Morning } from "./scenes/Scene1Morning";
-import { Scene2Listening } from "./scenes/Scene2Listening";
-import { Scene3Team } from "./scenes/Scene3Team";
-import { Scene4Arrival } from "./scenes/Scene4Arrival";
-import { SceneEnding } from "./scenes/SceneEnding";
+import { Scene1Hook } from "./scenes/Scene1Hook";
+import { Scene2Product } from "./scenes/Scene2Product";
+import { Scene3Voice } from "./scenes/Scene3Voice";
+import { Scene4Clarity } from "./scenes/Scene4Clarity";
+import { Scene5Sweep } from "./scenes/Scene5Sweep";
+import { SceneOutro } from "./scenes/SceneOutro";
 
 const format = {
   fps: VIDEO.fps,
@@ -24,46 +24,19 @@ const format = {
 export const RemotionRoot: React.FC = () => {
   return (
     <>
-      {/* The full 57-second commercial */}
       <Composition
         id="EchoAd"
         component={EchoAd}
         durationInFrames={TOTAL_DURATION}
         {...format}
       />
-
-      {/* Individual scenes for iteration in Studio */}
       <Folder name="EchoAd-Scenes">
-        <Composition
-          id="Scene1-Morning"
-          component={Scene1Morning}
-          durationInFrames={SCENES.morning}
-          {...format}
-        />
-        <Composition
-          id="Scene2-Listening"
-          component={Scene2Listening}
-          durationInFrames={SCENES.listening}
-          {...format}
-        />
-        <Composition
-          id="Scene3-Team"
-          component={Scene3Team}
-          durationInFrames={SCENES.team}
-          {...format}
-        />
-        <Composition
-          id="Scene4-Arrival"
-          component={Scene4Arrival}
-          durationInFrames={SCENES.arrival}
-          {...format}
-        />
-        <Composition
-          id="Ending"
-          component={SceneEnding}
-          durationInFrames={SCENES.ending}
-          {...format}
-        />
+        <Composition id="S1-Hook" component={Scene1Hook} durationInFrames={SCENES.hook} {...format} />
+        <Composition id="S2-Product" component={Scene2Product} durationInFrames={SCENES.product} {...format} />
+        <Composition id="S3-Voice" component={Scene3Voice} durationInFrames={SCENES.voice} {...format} />
+        <Composition id="S4-Clarity" component={Scene4Clarity} durationInFrames={SCENES.clarity} {...format} />
+        <Composition id="S5-Sweep" component={Scene5Sweep} durationInFrames={SCENES.sweep} {...format} />
+        <Composition id="Outro" component={SceneOutro} durationInFrames={SCENES.outro} {...format} />
       </Folder>
     </>
   );

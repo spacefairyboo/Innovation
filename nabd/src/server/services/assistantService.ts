@@ -5,7 +5,7 @@
 
 import OpenAI from "openai";
 import { config } from "../config";
-import { logger } from "../logger";
+import { logAICall, logger } from "../logger";
 import { getChecklist } from "../repositories/taskRepository";
 import { getTeam, getUser, listTeams, listUnits, teamMembers } from "../repositories/orgRepository";
 import { activeDelegationFrom, activeDelegationsTo } from "../repositories/delegationRepository";
@@ -222,13 +222,13 @@ export async function chatgptRespond(
   }));
 
   try {
-    const response = await client.responses.create({
+    const response = await logAICall("assistant", `"${message.slice(0, 60)}" (${tasks.length} tasks in context)`, () => client.responses.create({
       model: config.openai.model,
       max_output_tokens: 1024,
       instructions,
       input: [...history, { role: "user", content: message }],
       tools: [EDIT_TOOL],
-    });
+    }));
 
     const call = response.output.find((o) => o.type === "function_call" && o.name === "update_task");
     if (call && call.type === "function_call") {

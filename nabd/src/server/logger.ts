@@ -21,3 +21,19 @@ export const logger = (scope: string) => ({
   warn: (msg: string, detail?: unknown) => write("warn", scope, msg, detail),
   error: (msg: string, detail?: unknown) => write("error", scope, msg, detail),
 });
+
+/** Console visibility for every OpenAI round trip: one line going out
+    (what and how much), one line coming back (how long, or how it broke).
+    Always printed regardless of LOG_LEVEL — watching the AI is the point. */
+export async function logAICall<T>(purpose: string, detail: string, run: () => Promise<T>): Promise<T> {
+  const t0 = Date.now();
+  console.log(`[AI] → ${purpose}: ${detail}`);
+  try {
+    const out = await run();
+    console.log(`[AI] ✓ ${purpose} in ${Date.now() - t0}ms`);
+    return out;
+  } catch (err) {
+    console.log(`[AI] ✗ ${purpose} after ${Date.now() - t0}ms: ${err instanceof Error ? err.message : err}`);
+    throw err;
+  }
+}

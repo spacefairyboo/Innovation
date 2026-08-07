@@ -1,28 +1,17 @@
 /**
- * Typography — loaded via @remotion/google-fonts (render-safe: rendering
- * blocks until fonts are ready).
+ * Typography — loaded via @remotion/google-fonts (render-safe).
  *
- * DISPLAY: Fraunces — warm, slightly retro editorial serif for headlines,
- *          matching the vintage-poster feel of the inspiration grade.
- * UI/BODY: Inter — clean geometric sans for app UI and captions.
- *
- * To change branding fonts, swap the imports below; `fontFamily` values
- * propagate everywhere through FONTS.
+ * One family, many weights: Inter — matching the real Echo app's clean
+ * grotesque UI type. Kinetic headlines use 800/900, body 500/600.
  */
-import { loadFont as loadFraunces } from "@remotion/google-fonts/Fraunces";
 import { loadFont as loadInter } from "@remotion/google-fonts/Inter";
 
-const fraunces = loadFraunces("normal", {
-  weights: ["600", "700", "900"],
-  subsets: ["latin"],
-});
-
 const inter = loadInter("normal", {
-  weights: ["400", "500", "600", "700"],
+  weights: ["500", "600", "700", "800", "900"],
   subsets: ["latin"],
 });
 
 export const FONTS = {
-  display: fraunces.fontFamily,
   ui: inter.fontFamily,
+  display: inter.fontFamily,
 } as const;

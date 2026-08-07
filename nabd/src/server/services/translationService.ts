@@ -7,7 +7,7 @@
 
 import OpenAI from "openai";
 import { config } from "../config";
-import { logger } from "../logger";
+import { logAICall, logger } from "../logger";
 import type { Localized } from "@/lib/types";
 
 const log = logger("translate");
@@ -27,7 +27,7 @@ export async function localizeText(text: string): Promise<Localized> {
   if (!client || !trimmed) return fallback;
   const src = hasArabic(trimmed) ? "ar" : "en";
   try {
-    const res = await client.responses.create({
+    const res = await logAICall("translate", `${src}→${src === "ar" ? "en" : "ar"}, ${trimmed.length} chars`, () => client.responses.create({
       model: config.openai.model,
       max_output_tokens: 1000,
       instructions: [
@@ -39,7 +39,7 @@ export async function localizeText(text: string): Promise<Localized> {
         "Respond with ONLY the translation - no quotes, no commentary.",
       ].join("\n"),
       input: trimmed,
-    });
+    }));
     const out = res.output_text.trim();
     if (!out) return fallback;
     return src === "ar" ? { en: out, ar: text } : { en: text, ar: out };
