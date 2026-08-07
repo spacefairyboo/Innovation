@@ -7,7 +7,11 @@
 
 import Link from 'next/link';
 import { AttentionList } from '@/components/dashboard';
-import { mattersMost, SectionOverviewBody, UnitOverviewBody } from '@/components/overview/SectionOverview';
+import {
+  mattersMost,
+  SectionOverviewBody,
+  UnitOverviewBody,
+} from '@/components/overview/SectionOverview';
 import { HomeBriefing } from '@/components/briefing';
 import { CheckinPanel } from '@/components/chat';
 import { HealthChip, Icon } from '@/components/ui';
@@ -25,13 +29,12 @@ import {
   teamTasks,
 } from '@/server/repositories';
 import { getSession } from '@/server/auth/session';
+import { countStatuses, teamHealth, type Task } from '@/lib/types';
 import {
-  countStatuses,
-  teamHealth,
-  type Task,
-} from '@/lib/types';
-import {
-  doneThisWeekCount, greetingKey, sectionCardVMs, unitCardVMs,
+  doneThisWeekCount,
+  greetingKey,
+  sectionCardVMs,
+  unitCardVMs,
 } from '@/server/vm';
 import { OrgCardGrid } from '@/components/teams';
 
@@ -128,7 +131,12 @@ export default async function Dashboard({
             </div>
           </div>
           <span className='relative'>
-            <HealthChip health={health} pill onDark prefix={`${t('health_overall')}: `} />
+            <HealthChip
+              health={health}
+              pill
+              onDark
+              prefix={`${t('health_overall')}: `}
+            />
           </span>
         </div>
 
@@ -187,11 +195,21 @@ export default async function Dashboard({
             </div>
           </div>
           <span className='relative'>
-            <HealthChip health={health} pill onDark prefix={`${t('health_overall')}: `} />
+            <HealthChip
+              health={health}
+              pill
+              onDark
+              prefix={`${t('health_overall')}: `}
+            />
           </span>
         </div>
 
-        <SectionOverviewBody sectionId={focusSection.id} user={user} lang={lang} t={t} />
+        <SectionOverviewBody
+          sectionId={focusSection.id}
+          user={user}
+          lang={lang}
+          t={t}
+        />
       </>
     );
   }
@@ -203,7 +221,12 @@ export default async function Dashboard({
   // whole department plus every section and unit; a section head their
   // section and its units; a unit head their unit. Both narration languages
   // are generated so the player can switch without a round trip.
-  const mkScope = (id: string, label: string, ts: Task[], roundup: boolean) => ({
+  const mkScope = (
+    id: string,
+    label: string,
+    ts: Task[],
+    roundup: boolean,
+  ) => ({
     id,
     label,
     en: buildPodcastScript(user, 'en', ts, roundup),
@@ -214,20 +237,50 @@ export default async function Dashboard({
       ? [
           mkScope('all', t('org_pulse'), tasks, true),
           ...listUnits().map((sec) =>
-            mkScope(sec.id, `${t('unit')}: ${sec.name[lang]}`, sectionTasks(sec.id), false)),
+            mkScope(
+              sec.id,
+              `${t('unit')}: ${sec.name[lang]}`,
+              sectionTasks(sec.id),
+              false,
+            ),
+          ),
           ...listTeams().map((tm) =>
-            mkScope(tm.id, `${t('team')}: ${tm.name[lang]}`, teamTasks(tm.id), false)),
+            mkScope(
+              tm.id,
+              `${t('team')}: ${tm.name[lang]}`,
+              teamTasks(tm.id),
+              false,
+            ),
+          ),
         ]
       : user.role === 'section' && user.sectionId
         ? [
-            mkScope(user.sectionId, `${t('unit')}: ${getUnit(user.sectionId)!.name[lang]}`, sectionTasks(user.sectionId), false),
+            mkScope(
+              user.sectionId,
+              `${t('unit')}: ${getUnit(user.sectionId)!.name[lang]}`,
+              sectionTasks(user.sectionId),
+              false,
+            ),
             ...listTeams()
               .filter((x) => x.unitId === user.sectionId)
               .map((tm) =>
-                mkScope(tm.id, `${t('team')}: ${tm.name[lang]}`, teamTasks(tm.id), false)),
+                mkScope(
+                  tm.id,
+                  `${t('team')}: ${tm.name[lang]}`,
+                  teamTasks(tm.id),
+                  false,
+                ),
+              ),
           ]
         : user.role === 'manager' && user.teamId
-          ? [mkScope(user.teamId, getTeam(user.teamId)!.name[lang], teamTasks(user.teamId), false)]
+          ? [
+              mkScope(
+                user.teamId,
+                getTeam(user.teamId)!.name[lang],
+                teamTasks(user.teamId),
+                false,
+              ),
+            ]
           : [];
 
   const kpis = [
@@ -276,22 +329,11 @@ export default async function Dashboard({
 
   return (
     <>
-      {/* ---- Greeting: the moment, in full, then a clean row of numbers ---- */}
       <div className='mb-5'>
         <div className='flex items-start justify-between gap-4 flex-wrap mb-10'>
-          <div className='text-xs font-semibold uppercase tracking-wide text-ink-3'>
-            {/* {scopeTitle} */}
-          </div>
-          <div className='flex items-center gap-2.5 flex-wrap pt-1 shrink-0'>
-            <HealthChip health={health} pill />
-            {user.role !== 'employee' && (
-              <Link href='/stats' className='btn-ghost btn-sm no-underline'>
-                <Icon name='trending-up' size={14} /> {t('nav_stats')}
-              </Link>
-            )}
-          </div>
+          <div className='text-xs font-semibold uppercase tracking-wide text-ink-3'></div>
+
           <div className='w-full flex items-start justify-between'>
-            {/* Left side */}
             <div>
               <h2 className='mt-1.5 m-0 text-[1.7rem] leading-tight font-bold text-ink'>
                 {greeting},{' '}
@@ -342,9 +384,6 @@ export default async function Dashboard({
         {user.role !== 'senior' && (
           <div className='card'>
             <div className='flex items-center gap-3 mb-4'>
-              <span className='w-10 h-10 rounded-xl grid place-items-center bg-accent-soft text-primary shrink-0'>
-                <Icon name='mic' size={18} />
-              </span>
               <div>
                 <h3 className='m-0 text-base font-bold'>
                   {t('home_checkin_title')}

@@ -221,7 +221,7 @@ export const KineticText: React.FC<{
               display: "inline-block",
               textShadow:
                 word.color === COLORS.lime
-                  ? `0 0 40px rgba(215, 240, 80, 0.45)`
+                  ? `0 0 40px rgba(70, 199, 180, 0.45)`
                   : undefined,
             }}
           >
@@ -540,7 +540,7 @@ export const LimeWave: React.FC<{
               borderRadius: 99,
               background: COLORS.lime,
               opacity: 0.5 + h * 0.5,
-              boxShadow: `0 0 8px rgba(215, 240, 80, ${h * 0.6})`,
+              boxShadow: `0 0 8px rgba(70, 199, 180, ${h * 0.6})`,
             }}
           />
         );
@@ -551,9 +551,42 @@ export const LimeWave: React.FC<{
 
 // ─── Logo ────────────────────────────────────────────────────────────────────
 /**
- * The Echo logo, matching the real app: a hand-drawn scribble ring next
- * to the wordmark. The ring draws itself on when `animateIn` is set.
+ * The Echo logo — the app's ACTUAL mark, ported from
+ * src/components/ui/PulseLoader.tsx: a circular soundwave of flowing wavy
+ * line-rings, two bundles turning in opposite directions with a slow
+ * breathing pulse. Same ring math, same layer structure, mono cream like
+ * the login page.
  */
+const RING_N = 140;
+
+/** A closed wavy ring: radius R0 rippled by two sine waves (app-identical). */
+const ringPath = (
+  R0: number,
+  a1: number,
+  k1: number,
+  a2: number,
+  k2: number,
+  phase: number,
+): string => {
+  const pts: string[] = [];
+  for (let i = 0; i <= RING_N; i++) {
+    const th = (i / RING_N) * Math.PI * 2;
+    const r =
+      R0 + a1 * Math.sin(k1 * th + phase) + a2 * Math.sin(k2 * th + phase * 1.7);
+    pts.push(
+      `${(50 + r * Math.cos(th)).toFixed(2)},${(50 + r * Math.sin(th)).toFixed(2)}`,
+    );
+  }
+  return `M${pts.join("L")}Z`;
+};
+
+const LOGO_LAYER_A = Array.from({ length: 7 }, (_, j) =>
+  ringPath(40 - j * 0.6, 5.2, 3, 3.2, 5, j * 0.42),
+);
+const LOGO_LAYER_B = Array.from({ length: 7 }, (_, j) =>
+  ringPath(35.5 - j * 0.5, 4.2, 4, 2.6, 6, 1.3 + j * 0.5),
+);
+
 export const EchoLogo: React.FC<{
   size?: number;
   animateIn?: boolean;
@@ -561,47 +594,54 @@ export const EchoLogo: React.FC<{
 }> = ({ size = 120, animateIn = false, withWordmark = true }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const draw = animateIn ? springIn(frame, fps, 4, 110) : 1;
-  const draw2 = animateIn ? springIn(frame, fps, 14, 110) : 1;
-  // Two slightly irregular overlapping rings → the app's scribble mark.
-  const C = 2 * Math.PI * 38;
+  const appear = animateIn ? springIn(frame, fps, 4, 110) : 1;
+  // The app's pulse: layers counter-rotate; the whole mark breathes.
+  const breathe = 1 + oscillate(frame, 120, 0.03);
+  const sw = 1.6; // the app's small-size stroke weight, bold placement
+
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: size * 0.28 }}>
-      <svg width={size} height={size} viewBox="0 0 100 100">
-        <ellipse
-          cx="50"
-          cy="51"
-          rx="38"
-          ry="35"
-          fill="none"
-          stroke={COLORS.cream}
-          strokeWidth="4.5"
-          strokeLinecap="round"
-          strokeDasharray={C}
-          strokeDashoffset={(1 - draw) * C}
-          transform="rotate(-24 50 50)"
-        />
-        <ellipse
-          cx="49"
-          cy="49"
-          rx="36"
-          ry="38"
-          fill="none"
-          stroke={COLORS.cream}
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray={C}
-          strokeDashoffset={(1 - draw2) * C}
-          opacity="0.65"
-          transform="rotate(38 50 50)"
-        />
+    <div style={{ display: "flex", alignItems: "center", gap: size * 0.26 }}>
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 100 100"
+        style={{
+          scale: String(appear * breathe),
+          opacity: appear,
+          color: COLORS.cream,
+        }}
+      >
+        <g transform={`rotate(${frame * 0.25} 50 50)`}>
+          {LOGO_LAYER_A.map((d, i) => (
+            <path
+              key={i}
+              d={d}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={sw * 1.7}
+              opacity={0.9}
+            />
+          ))}
+        </g>
+        <g transform={`rotate(${-frame * 0.18} 50 50)`}>
+          {LOGO_LAYER_B.map((d, i) => (
+            <path
+              key={i}
+              d={d}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={sw * 1.7 * 0.85}
+              opacity={0.75}
+            />
+          ))}
+        </g>
       </svg>
       {withWordmark ? (
         <span
           style={{
             fontFamily: FONTS.display,
             fontWeight: 700,
-            fontSize: size * 0.72,
+            fontSize: size * 0.66,
             letterSpacing: "-0.01em",
             color: COLORS.cream,
             opacity: animateIn ? fadeIn(frame, 16, 18) : 1,

@@ -2,8 +2,8 @@
  * SCENE 1 — HOOK (~7s)
  *
  * Beat 1: "Everything starts with an [✱ update]" — the cursor flies in
- * and clicks the neon pill; a spark flower blooms.
- * Beat 2: interruption pills rain diagonally; a giant lime "×10" slams in.
+ * and clicks the neon pill.
+ * Beat 2: interruption pills rain diagonally; a giant "×10" slams in.
  */
 import React from "react";
 import {
@@ -39,10 +39,10 @@ export const Scene1Hook: React.FC = () => {
       <GlowBlob x={1700} y={80} radius={480} color={COLORS.tealGlow} opacity={0.4} />
       <DotGrid opacity={0.1} />
 
-      <Sequence durationInFrames={112} layout="none">
+      <Sequence durationInFrames={100} layout="none">
         <BeatOne />
       </Sequence>
-      <Sequence from={112} layout="none">
+      <Sequence from={100} layout="none">
         <BeatTwo />
       </Sequence>
     </AbsoluteFill>
@@ -100,12 +100,12 @@ const BeatOne: React.FC = () => {
           padding: "18px 44px",
           borderRadius: 999,
           background: COLORS.lime,
-          boxShadow: `0 0 70px rgba(215, 240, 80, 0.55), 0 24px 60px rgba(2, 8, 5, 0.5)`,
+          boxShadow: `0 0 70px rgba(70, 199, 180, 0.55), 0 24px 60px rgba(2, 8, 5, 0.5)`,
           fontFamily: FONTS.display,
           fontWeight: 800,
           fontSize: 84,
           letterSpacing: "-0.02em",
-          color: "#12351F",
+          color: "#06231C",
         }}
       >
         <svg width="52" height="52" viewBox="0 0 100 100">
@@ -116,7 +116,7 @@ const BeatOne: React.FC = () => {
               cy="28"
               rx="12"
               ry="24"
-              fill="#12351F"
+              fill="#06231C"
               transform={`rotate(${i * 45} 50 50)`}
             />
           ))}
@@ -176,8 +176,8 @@ const BeatTwo: React.FC = () => {
           top: 310,
           display: "flex",
           justifyContent: "center",
-          scale: String(0.82 + springPop(frame, fps, 42) * 0.18),
-          rotate: `${(1 - springIn(frame, fps, 42, 90)) * -7}deg`,
+          scale: String(0.82 + springPop(frame, fps, 30) * 0.18),
+          rotate: `${(1 - springIn(frame, fps, 30, 90)) * -7}deg`,
         }}
       >
         <div
@@ -187,8 +187,8 @@ const BeatTwo: React.FC = () => {
             fontSize: 330,
             letterSpacing: "-0.04em",
             color: COLORS.lime,
-            textShadow: "0 0 120px rgba(215, 240, 80, 0.5)",
-            opacity: springIn(frame, fps, 42, 80),
+            textShadow: "0 0 120px rgba(70, 199, 180, 0.5)",
+            opacity: springIn(frame, fps, 30, 80),
           }}
         >
           ×10
@@ -205,7 +205,7 @@ const BeatTwo: React.FC = () => {
           fontWeight: 600,
           fontSize: 34,
           color: COLORS.cream,
-          opacity: springIn(frame, fps, 58),
+          opacity: springIn(frame, fps, 44),
         }}
       >
         Every. Single. Morning.

@@ -43,11 +43,11 @@ const REGIONS = {
 /** Camera keyframes: [frame, scale, centerXfrac, centerYfrac]. */
 const CAMERA: Array<[number, number, number, number]> = [
   [0, 1.0, 0.5, 0.42],
-  [80, 1.02, 0.5, 0.44],
-  [120, 1.26, 0.578, 0.427],
-  [180, 1.26, 0.578, 0.427],
-  [214, 1.24, 0.578, 0.56],
-  [290, 1.28, 0.578, 0.6],
+  [60, 1.02, 0.5, 0.44],
+  [95, 1.26, 0.578, 0.427],
+  [145, 1.26, 0.578, 0.427],
+  [172, 1.24, 0.578, 0.56],
+  [232, 1.28, 0.578, 0.6],
 ];
 
 export const Scene2Product: React.FC = () => {
@@ -111,8 +111,8 @@ export const Scene2Product: React.FC = () => {
                 style={{ width: "100%", display: "block" }}
               />
               {/* Highlight rings land on the REAL UI regions */}
-              <Highlight region={REGIONS.briefing} at={126} until={200} />
-              <Highlight region={REGIONS.updateTasks} at={222} until={288} />
+              <Highlight region={REGIONS.briefing} at={100} until={162} />
+              <Highlight region={REGIONS.updateTasks} at={178} until={232} />
             </div>
           </div>
         </BrowserFrame>
@@ -121,9 +121,9 @@ export const Scene2Product: React.FC = () => {
 
       {/* Focus labels, synced to the camera beats */}
       <div style={{ position: "absolute", left: 110, bottom: 64 }}>
-        <Label from={10} until={104} kicker="The real Echo dashboard" text="Your whole day, one glance" />
-        <Label from={126} until={204} kicker="Daily briefing" text="Hear your team's progress" lime />
-        <Label from={228} until={296} kicker="Update tasks" text="Voice or text — your call" lime />
+        <Label from={8} until={84} kicker="The real Echo dashboard" text="Your whole day, one glance" />
+        <Label from={100} until={164} kicker="Daily briefing" text="Hear your team's progress" lime />
+        <Label from={180} until={236} kicker="Update tasks" text="Voice or text — your call" lime />
       </div>
     </AbsoluteFill>
   );
@@ -155,7 +155,7 @@ const Highlight: React.FC<{
         height: `${h * 100}%`,
         borderRadius: 14,
         border: `2.5px solid ${COLORS.lime}`,
-        boxShadow: `0 0 ${28 + breathe * 16}px rgba(215, 240, 80, ${0.32 + breathe * 0.2}), inset 0 0 26px rgba(215, 240, 80, 0.10)`,
+        boxShadow: `0 0 ${28 + breathe * 16}px rgba(70, 199, 180, ${0.32 + breathe * 0.2}), inset 0 0 26px rgba(70, 199, 180, 0.10)`,
         scale: String(0.94 + pop * 0.06),
         opacity: pop * gone,
         pointerEvents: "none",

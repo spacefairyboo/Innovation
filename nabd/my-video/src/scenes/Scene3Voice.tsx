@@ -31,7 +31,7 @@ import { COLORS, SCREENS } from "../constants";
 import { oscillate, springIn } from "../utils/animations";
 
 const PHONE_W = 400;
-const SWAP_AT = 150;
+const SWAP_AT = 118;
 
 export const Scene3Voice: React.FC = () => {
   const frame = useCurrentFrame();
@@ -179,7 +179,7 @@ const MicDot: React.FC = () => {
           inset: 12,
           borderRadius: "50%",
           background: COLORS.lime,
-          boxShadow: `0 0 30px rgba(215, 240, 80, 0.7)`,
+          boxShadow: `0 0 30px rgba(70, 199, 180, 0.7)`,
         }}
       />
     </div>

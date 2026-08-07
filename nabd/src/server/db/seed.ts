@@ -156,7 +156,7 @@ export function seedDomainTasks(d: DatabaseSync): void {
        the busiest queue in the department */
     ["k7", "e4", "t2", "ontrack", 65, "high", "Review the Data Request BRD", "مراجعة وثيقة متطلبات طلبات البيانات", inDays(4), ago(0, 3), "Walked through the requirements with the requesting unit", "روجعت المتطلبات مع الإدارة الطالبة"],
     ["k8", "e4", "t2", "blocked", 40, "high", "Conduct UAT for the AI use case", "تنفيذ اختبار القبول لحالة استخدام الذكاء الاصطناعي", inDays(2), ago(1), "Waiting on the vendor to load the test dataset", "بانتظار تحميل بيانات الاختبار من المورد"],
-    ["k9", "e5", "t2", "blocked", 20, "med", "Update the AoP", "تحديث خطة التشغيل السنوية", inDays(5), ago(2), "Waiting on the budget figures from Finance", "بانتظار أرقام الميزانية من المالية"],
+    ["k9", "e5", "t2", "ontrack", 20, "med", "Update the AoP", "تحديث خطة التشغيل السنوية", inDays(5), ago(2), "Waiting on the budget figures from Finance", "بانتظار أرقام الميزانية من المالية"],
     ["k10", "e5", "t2", "pending", 0, "low", "Develop the digitization roadmap", "إعداد خارطة طريق الرقمنة", inDays(14), ago(6), "Added to the quarter backlog", "أُضيفت إلى خطة الربع"],
     ["k11", "e4", "t2", "ontrack", 45, "med", "Update the Delegation of Authority Procedure", "تحديث إجراء تفويض الصلاحيات", inDays(-1), ago(4), "Redlines back from Legal", "وردت ملاحظات الإدارة القانونية"],
     ["k12", "e5", "t2", "ontrack", 70, "high", "Review the e-services enhancement BRD", "مراجعة وثيقة متطلبات تطوير الخدمات الإلكترونية", inDays(3), ago(0, 5), "Sign-off pending one open requirement", "الاعتماد متوقف على متطلب واحد"],
