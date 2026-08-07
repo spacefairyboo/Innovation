@@ -4,7 +4,6 @@
 
 import type { DatabaseSync } from "node:sqlite";
 import { DAY_MS } from "@/lib/constants";
-import { getDB } from "./connection";
 import { hashPassword } from "../auth/passwords";
 
 /** Every demo account signs in with this password (shown on the login page). */
@@ -118,12 +117,14 @@ export function seed(d: DatabaseSync) {
 
 
 
+  // The expanded org must exist before the tasks: the domain set assigns
+  // work to the CG2, BCO, and DSS managers it creates.
+  ensureExpandedOrg(d);
   seedDomainTasks(d);
   seedInboxSuggestions(d);
   seedMeetings(d);
   ensureDemoPasswords(d);
   ensurePhoneExts(d);
-  ensureExpandedOrg(d);
   ensureDemoProjects(d);
 }
 
@@ -324,9 +325,3 @@ export function seedMeetings(d: DatabaseSync) {
   for (const r of rows) ins.run(...r);
 }
 
-/** Test/demo helper: wipe and reseed. */
-export function resetDB() {
-  const d = getDB();
-  d.exec("DELETE FROM notif_reads; DELETE FROM email_suggestions; DELETE FROM meetings; DELETE FROM delegation_tasks; DELETE FROM delegations; DELETE FROM emails; DELETE FROM task_assignees; DELETE FROM task_notes; DELETE FROM audit_logs; DELETE FROM task_updates; DELETE FROM tasks; DELETE FROM users; DELETE FROM teams; DELETE FROM units;");
-  seed(d);
-}
