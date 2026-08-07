@@ -35,10 +35,15 @@ export function LoginPromo() {
       <div className='relative w-full max-w-4xl'>
         {/* On phones the card is flush with the screen edge, so an offset X
             would hang half off-screen: pin it to the viewport corner there,
-            and float it off the card's corner from sm: up. */}
+            and float it off the card's corner from sm: up. Touch closes via
+            onTouchEnd directly - mobile browsers cancel the synthesized
+            click too easily (any movement mid-tap, or the hover transform
+            shifting the target under the finger, kills it). */}
         <button
-          className='fixed top-3 end-3 sm:absolute sm:-top-4 sm:-end-4 z-10 w-11 h-11 rounded-full grid place-items-center cursor-pointer border border-white/25 bg-[rgb(10_34_28/0.9)] text-white shadow-xl backdrop-blur-md transition hover:bg-[rgb(20_54_45)] hover:scale-105'
+          type='button'
+          className='fixed top-3 end-3 sm:absolute sm:-top-4 sm:-end-4 z-10 w-11 h-11 rounded-full grid place-items-center cursor-pointer border border-white/25 bg-[rgb(10_34_28/0.9)] text-white shadow-xl backdrop-blur-md transition hover:bg-[rgb(20_54_45)] sm:hover:scale-105'
           onClick={close}
+          onTouchEnd={(e) => { e.preventDefault(); close(); }}
           aria-label='Close video'
         >
           <svg
