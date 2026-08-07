@@ -144,21 +144,24 @@ export function seedDomainTasks(d: DatabaseSync): void {
   type SeedTask = [id: string, owner: string, team: string, status: string, progress: number, prio: string,
     en: string, arTitle: string, due: string, updatedAt: number, noteEn: string, noteAr: string];
   const rows: SeedTask[] = [
-    /* Business Excellence · Data Management — the digitization workbench */
-    ["k1", "e1", "t1", "ontrack", 65, "high", "Review the Data Request BRD", "مراجعة وثيقة متطلبات طلبات البيانات", inDays(4), ago(0, 3), "Walked through the requirements with the requesting unit", "روجعت المتطلبات مع الإدارة الطالبة"],
-    ["k2", "e1", "t1", "blocked", 40, "high", "Conduct UAT for the AI use case", "تنفيذ اختبار القبول لحالة استخدام الذكاء الاصطناعي", inDays(2), ago(1), "Waiting on the vendor to load the test dataset", "بانتظار تحميل بيانات الاختبار من المورد"],
+    /* Business Excellence · Data Management — the data-operations desk */
+    ["k1", "e1", "t1", "ontrack", 65, "high", "Run the quarterly data health check", "تنفيذ الفحص الدوري لصحة البيانات", inDays(4), ago(0, 3), "Source system availability stats pulled", "جُمعت إحصاءات جاهزية الأنظمة المصدرية"],
+    ["k2", "e1", "t1", "blocked", 40, "high", "Create the department head dashboard", "إنشاء لوحة مؤشرات رئيس القسم", inDays(2), ago(1), "Waiting on the KPI list sign-off", "بانتظار اعتماد قائمة المؤشرات"],
     ["k3", "e2", "t1", "ontrack", 80, "med", "Automate the monthly data quality report", "أتمتة تقرير جودة البيانات الشهري", inDays(6), ago(0, 6), "Completeness checks live, accuracy checks remain", "فحوص الاكتمال جاهزة وبقيت فحوص الدقة"],
-    ["k4", "e2", "t1", "done", 100, "med", "Digitize the correspondence register", "رقمنة سجل المراسلات", inDays(-1), ago(1), "Register migrated and verified", "رُحّل السجل وتم التحقق منه"],
+    ["k4", "e2", "t1", "done", 100, "med", "Update the data catalog", "تحديث فهرس البيانات", inDays(-1), ago(1), "All active datasets documented", "وُثّقت جميع مجموعات البيانات النشطة"],
     ["k5", "e3", "t1", "pending", 10, "low", "Cleanse the entities master data", "تنقية البيانات الرئيسية للجهات", inDays(10), ago(5), "Scoped the duplicate records", "حُصرت السجلات المكررة"],
     ["k6", "e3", "t1", "ontrack", 30, "high", "Data classification for shared folders", "تصنيف بيانات المجلدات المشتركة", inDays(-2), ago(4), "Classification matrix drafted", "أُعدت مسودة مصفوفة التصنيف"],
-    /* Business Excellence · Business Development — the busiest queue */
-    ["k7", "e4", "t2", "ontrack", 55, "high", "Update the Data Governance Procedure", "تحديث إجراء حوكمة البيانات", inDays(7), ago(0, 26), "New approval flow agreed with stakeholders", "اتُفق على مسار الاعتماد الجديد مع المعنيين"],
-    ["k8", "e4", "t2", "done", 100, "med", "Update the Conflict of Interest Policy", "تحديث سياسة تعارض المصالح", inDays(-3), ago(2), "Approved and published on the intranet", "اعتُمدت ونُشرت على الشبكة الداخلية"],
+    /* Business Excellence · Business Development — digitization + policy,
+       the busiest queue in the department */
+    ["k7", "e4", "t2", "ontrack", 65, "high", "Review the Data Request BRD", "مراجعة وثيقة متطلبات طلبات البيانات", inDays(4), ago(0, 3), "Walked through the requirements with the requesting unit", "روجعت المتطلبات مع الإدارة الطالبة"],
+    ["k8", "e4", "t2", "blocked", 40, "high", "Conduct UAT for the AI use case", "تنفيذ اختبار القبول لحالة استخدام الذكاء الاصطناعي", inDays(2), ago(1), "Waiting on the vendor to load the test dataset", "بانتظار تحميل بيانات الاختبار من المورد"],
     ["k9", "e5", "t2", "blocked", 20, "med", "Update the AoP", "تحديث خطة التشغيل السنوية", inDays(5), ago(2), "Waiting on the budget figures from Finance", "بانتظار أرقام الميزانية من المالية"],
     ["k10", "e5", "t2", "pending", 0, "low", "Develop the digitization roadmap", "إعداد خارطة طريق الرقمنة", inDays(14), ago(6), "Added to the quarter backlog", "أُضيفت إلى خطة الربع"],
     ["k11", "e4", "t2", "ontrack", 45, "med", "Update the Delegation of Authority Procedure", "تحديث إجراء تفويض الصلاحيات", inDays(-1), ago(4), "Redlines back from Legal", "وردت ملاحظات الإدارة القانونية"],
     ["k12", "e5", "t2", "ontrack", 70, "high", "Review the e-services enhancement BRD", "مراجعة وثيقة متطلبات تطوير الخدمات الإلكترونية", inDays(3), ago(0, 5), "Sign-off pending one open requirement", "الاعتماد متوقف على متطلب واحد"],
     ["k13", "m2", "t2", "pending", 15, "med", "Benchmark study of leading governance practices", "دراسة مقارنة لأفضل ممارسات الحوكمة", inDays(9), ago(1), "Collected three reference frameworks", "جُمعت ثلاثة أطر مرجعية"],
+    ["k34", "e4", "t2", "ontrack", 55, "high", "Update the Data Governance Procedure", "تحديث إجراء حوكمة البيانات", inDays(7), ago(0, 26), "New approval flow agreed with stakeholders", "اتُفق على مسار الاعتماد الجديد مع المعنيين"],
+    ["k35", "e5", "t2", "done", 100, "med", "Update the Conflict of Interest Policy", "تحديث سياسة تعارض المصالح", inDays(-3), ago(2), "Approved and published on the intranet", "اعتُمدت ونُشرت على الشبكة الداخلية"],
     /* Corporate Governance · Unit 1 */
     ["k14", "e6", "t3", "ontrack", 70, "high", "Prepare the general assembly of Al-Noor Energy", "التحضير للجمعية العامة لشركة النور للطاقة", inDays(3), ago(0, 5), "Agenda and proxies drafted", "أُعدت مسودة جدول الأعمال والتوكيلات"],
     ["k15", "e6", "t3", "done", 100, "med", "Review the charter of Bawadi Foods", "مراجعة ميثاق شركة بوادي للأغذية", inDays(-5), ago(3), "Comments sent to the company", "أُرسلت الملاحظات للشركة"],
@@ -211,6 +214,11 @@ export function seedDomainTasks(d: DatabaseSync): void {
 
   // Seed a couple of personal checklists ("note to self").
   insNote.run("k1", "e1", JSON.stringify([
+    { text: "Pull availability stats from the source systems", done: true },
+    { text: "Compare scores against last quarter", done: false },
+    { text: "Draft the remediation list for low scorers", done: false },
+  ]));
+  insNote.run("k7", "e4", JSON.stringify([
     { text: "Cross-check fields against the data dictionary", done: true },
     { text: "Verify the retention clause with Legal", done: false },
     { text: "Confirm the delivery format with the requester", done: false },
@@ -230,11 +238,11 @@ export function seedInboxSuggestions(d: DatabaseSync): void {
     "Urgent: data request delivery due Friday",
     "Hi Yousef, the approved data request must be delivered by Friday. Please confirm the extract passes the quality checks before it goes out.",
     ago(0, 2));
-  insSugg.run("e1", "Sara Nasser", "sara.nasser@echo.example",
+  insSugg.run("e4", "Sara Nasser", "sara.nasser@echo.example",
     "BRD comments ready for review",
     "My comments on the Data Request BRD are ready. Could you review them by Tuesday so we can close the document?",
     ago(0, 6));
-  insSugg.run("e2", "AI Vendor Support", "support@aivendor.example",
+  insSugg.run("e4", "AI Vendor Support", "support@aivendor.example",
     "Action required: UAT sign-off form",
     "The UAT sign-off form for the AI use case needs your part completed before Thursday so the go-live slot holds.",
     ago(1));
@@ -268,7 +276,7 @@ export function ensureDemoProjects(d: DatabaseSync): void {
   d.prepare("UPDATE projects SET name = 'Board Cycle 2026' WHERE id = 'p2' AND name = 'Q3 Campaign'").run();
   const link = d.prepare("UPDATE tasks SET project_id = ? WHERE id = ? AND project_id IS NULL");
   for (const [pid, tid] of [
-    ["p1", "k1"], ["p1", "k2"], ["p1", "k12"],
+    ["p1", "k7"], ["p1", "k8"], ["p1", "k12"],
     ["p2", "k26"], ["p2", "k27"], ["p2", "k28"],
     ["p3", "k17"], ["p3", "k20"], ["p3", "k25"],
   ] as const) link.run(pid, tid);
@@ -289,11 +297,11 @@ export function seedMeetings(d: DatabaseSync) {
     orgName: string, orgEmail: string, start: number, end: number, body: string];
   const rows: M[] = [
     ["e1", "Weekly sync: Data Management", "Room 2A", null,
-      "Omar Hassan", "omar.hassan@echo.example", ...at(0, 10), "Weekly unit sync. Bring the status of the Data Request BRD review."],
-    ["e1", "AI use case vendor call", "Microsoft Teams", teams,
+      "Omar Hassan", "omar.hassan@echo.example", ...at(0, 10), "Weekly unit sync. Bring the status of the quarterly data health check."],
+    ["e4", "AI use case vendor call", "Microsoft Teams", teams,
       "Salem Al-Qahtani", "salem@dataoffice.example", ...at(1, 14), "Walkthrough of the UAT test dataset with the vendor's team."],
     ["e1", "1:1 with Omar", "Omar's office", null,
-      "Omar Hassan", "omar.hassan@echo.example", ...at(3, 9, 30), "Monthly one-to-one. Agenda: growth plan, AI use case UAT status."],
+      "Omar Hassan", "omar.hassan@echo.example", ...at(3, 9, 30), "Monthly one-to-one. Agenda: growth plan, department head dashboard status."],
     ["e1", "Section all-hands", "Auditorium", null,
       "Layla Al-Harbi", "layla.alharbi@echo.example", ...at(8, 11, 90), "Quarterly all-hands for the Business Excellence section."],
     ["m1", "Weekly sync: Data Management", "Room 2A", null,

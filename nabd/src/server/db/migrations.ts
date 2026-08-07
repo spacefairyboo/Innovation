@@ -282,8 +282,8 @@ export function migrate(d: DatabaseSync) {
   // Runs after the expanded org exists (the new set assigns work to its
   // managers) and before the project linking picks up the new ids.
   const oldK1 = d.prepare("SELECT title_en FROM tasks WHERE id = 'k1'").get() as { title_en: string } | undefined;
-  if (oldK1?.title_en === "Payment page redesign") {
-    const ids = Array.from({ length: 20 }, (_, i) => `'k${i + 1}'`).join(",");
+  if (oldK1 && ["Payment page redesign", "Review the Data Request BRD"].includes(oldK1.title_en)) {
+    const ids = Array.from({ length: 35 }, (_, i) => `'k${i + 1}'`).join(",");
     d.exec(`
       DELETE FROM task_assignees WHERE task_id IN (${ids});
       DELETE FROM task_notes WHERE task_id IN (${ids});
