@@ -4,7 +4,7 @@
    existing databases upgrade in place with no external tooling. */
 
 import type { DatabaseSync } from "node:sqlite";
-import { deriveEmail, ensureDemoPasswords, ensureDemoProjects, ensureExpandedOrg, ensurePhoneExts, seedMeetings } from "./seed";
+import { deriveEmail, ensureDemoPasswords, ensureDemoProjects, ensureExpandedOrg, ensurePhoneExts, seedDomainTasks, seedInboxSuggestions, seedMeetings } from "./seed";
 
 export function migrate(d: DatabaseSync) {
   d.exec(`
@@ -275,6 +275,30 @@ export function migrate(d: DatabaseSync) {
   // still-empty databases skip it here; seed() adds it with everything else.
   const anyUsers = (d.prepare("SELECT COUNT(*) AS c FROM users").get() as { c: number }).c > 0;
   if (anyUsers) ensureExpandedOrg(d);
+  // Demo tasks moved from generic product work to the department's real
+  // domains (digitization, governance, the board cycle). Databases seeded
+  // with the old set are rebuilt once: only the seeded ids are replaced -
+  // tasks people created themselves have random ids and stay untouched.
+  // Runs after the expanded org exists (the new set assigns work to its
+  // managers) and before the project linking picks up the new ids.
+  const oldK1 = d.prepare("SELECT title_en FROM tasks WHERE id = 'k1'").get() as { title_en: string } | undefined;
+  if (oldK1 && ["Payment page redesign", "Review the Data Request BRD"].includes(oldK1.title_en)) {
+    const ids = Array.from({ length: 35 }, (_, i) => `'k${i + 1}'`).join(",");
+    d.exec(`
+      DELETE FROM task_assignees WHERE task_id IN (${ids});
+      DELETE FROM task_notes WHERE task_id IN (${ids});
+      DELETE FROM audit_logs WHERE task_id IN (${ids});
+      DELETE FROM task_updates WHERE task_id IN (${ids});
+      DELETE FROM task_advice WHERE task_id IN (${ids});
+      DELETE FROM delegation_tasks WHERE task_id IN (${ids});
+      DELETE FROM emails WHERE task_id IN (${ids});
+      DELETE FROM tasks WHERE id IN (${ids});
+    `);
+    seedDomainTasks(d);
+    // The inbox demo referenced the old work; refresh the untouched ones.
+    d.exec("DELETE FROM email_suggestions WHERE status = 'pending'");
+    seedInboxSuggestions(d);
+  }
   if (anyUsers) ensureDemoProjects(d);
   // Backfill: tasks created before multi-assignee support get their owner as assignee.
   d.exec(`

@@ -118,6 +118,23 @@ export function seed(d: DatabaseSync) {
 
 
 
+  seedDomainTasks(d);
+  seedInboxSuggestions(d);
+  seedMeetings(d);
+  ensureDemoPasswords(d);
+  ensurePhoneExts(d);
+  ensureExpandedOrg(d);
+  ensureDemoProjects(d);
+}
+
+/* The demo task set mirrors the department's real work per unit:
+   Business Excellence carries the digitization and business-development
+   load (the busiest unit by design), the two Corporate Governance
+   sections handle assemblies, charters, bylaws and escalations for
+   portfolio companies, BCO runs the board nomination and onboarding
+   cycle with QA and Engagement alongside, and DSS keeps the rulebook.
+   Company names are fictional. */
+export function seedDomainTasks(d: DatabaseSync): void {
   const insTask = d.prepare(
     "INSERT INTO tasks (id, owner_id, team_id, status, progress, priority, title_en, title_ar, due, updated_at, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
   );
@@ -127,26 +144,51 @@ export function seed(d: DatabaseSync) {
   type SeedTask = [id: string, owner: string, team: string, status: string, progress: number, prio: string,
     en: string, arTitle: string, due: string, updatedAt: number, noteEn: string, noteAr: string];
   const rows: SeedTask[] = [
-    ["k1", "e1", "t1", "ontrack", 65, "high", "Payment page redesign", "إعادة تصميم صفحة الدفع", inDays(4), ago(0, 3), "Checkout flow wired up", "تم ربط مسار الدفع"],
-    ["k2", "e1", "t1", "blocked", 40, "high", "API security review", "مراجعة أمان الواجهة البرمجية", inDays(2), ago(1), "Waiting on security team credentials", "بانتظار صلاحيات فريق الأمن"],
-    ["k3", "e2", "t1", "ontrack", 80, "med", "Mobile app push notifications", "إشعارات تطبيق الجوال", inDays(6), ago(0, 6), "iOS done, Android in progress", "iOS جاهز وAndroid قيد العمل"],
-    ["k4", "e2", "t1", "done", 100, "med", "Database migration script", "سكربت ترحيل قاعدة البيانات", inDays(-1), ago(1), "Migration completed and verified", "اكتمل الترحيل وتم التحقق"],
-    ["k5", "e3", "t1", "pending", 10, "low", "Refactor logging module", "إعادة هيكلة وحدة السجلات", inDays(10), ago(5), "Scoped the work", "تم تحديد نطاق العمل"],
-    ["k6", "e3", "t1", "ontrack", 30, "high", "Load testing for launch", "اختبار الضغط قبل الإطلاق", inDays(-2), ago(4), "Test environment prepared", "تم تجهيز بيئة الاختبار"],
-    ["k7", "e4", "t2", "ontrack", 55, "high", "New brand guidelines", "دليل الهوية الجديد", inDays(7), ago(0, 26), "Color system approved", "اعتُمد نظام الألوان"],
-    ["k8", "e4", "t2", "done", 100, "med", "Landing page illustrations", "رسومات الصفحة الرئيسية", inDays(-3), ago(2), "Delivered all 6 illustrations", "سُلّمت الرسومات الست"],
-    ["k9", "e5", "t2", "blocked", 20, "med", "Design system tokens", "رموز نظام التصميم", inDays(5), ago(2), "Blocked on engineering handoff format", "متعثرة بانتظار صيغة التسليم الهندسي"],
-    ["k10", "e5", "t2", "pending", 0, "low", "Icon library refresh", "تحديث مكتبة الأيقونات", inDays(14), ago(6), "Added to backlog", "أُضيفت إلى قائمة الانتظار"],
-    ["k11", "e6", "t3", "ontrack", 70, "high", "Q3 campaign launch", "إطلاق حملة الربع الثالث", inDays(3), ago(0, 5), "Ad creatives finalized", "اكتملت المواد الإعلانية"],
-    ["k12", "e6", "t3", "done", 100, "med", "Newsletter automation", "أتمتة النشرة البريدية", inDays(-5), ago(3), "Automation live, open rate 42%", "الأتمتة فعّالة ونسبة الفتح ٤٢٪"],
-    ["k13", "e7", "t3", "ontrack", 45, "med", "Social media calendar", "تقويم وسائل التواصل", inDays(-1), ago(4), "Drafted first two weeks", "أُعدّت مسودة أول أسبوعين"],
-    ["k14", "e7", "t3", "pending", 5, "low", "Influencer outreach list", "قائمة التواصل مع المؤثرين", inDays(9), ago(1), "Collected 20 candidates", "جُمع ٢٠ مرشحًا"],
-    ["k15", "e8", "t4", "done", 100, "high", "Enterprise onboarding kit", "حقيبة تأهيل عملاء المؤسسات", inDays(-2), ago(0, 8), "Kit shipped to 3 new clients", "أُرسلت الحقيبة لثلاثة عملاء جدد"],
-    ["k16", "e8", "t4", "ontrack", 60, "med", "Customer health dashboard", "لوحة صحة العملاء", inDays(8), ago(0, 30), "KPIs agreed with data team", "اتُّفق على المؤشرات مع فريق البيانات"],
-    ["k17", "e9", "t4", "blocked", 35, "high", "Support ticket SLA revamp", "تطوير اتفاقية مستوى خدمة التذاكر", inDays(1), ago(3), "Blocked on legal approval", "متعثرة بانتظار موافقة القانونية"],
-    ["k18", "e9", "t4", "pending", 15, "med", "Renewal playbook", "دليل تجديد العقود", inDays(12), ago(5), "Outline drafted", "أُعدّت المسودة الأولية"],
-    ["k19", "m1", "t1", "ontrack", 50, "med", "Hiring: senior backend engineer", "توظيف مهندس خلفية أول", inDays(15), ago(1), "4 candidates in final round", "٤ مرشحين في الجولة النهائية"],
-    ["k20", "m3", "t3", "done", 100, "low", "Marketing budget review", "مراجعة ميزانية التسويق", inDays(-4), ago(2), "Approved by finance", "اعتمدتها المالية"],
+    /* Business Excellence · Data Management — the data-operations desk */
+    ["k1", "e1", "t1", "ontrack", 65, "high", "Run the quarterly data health check", "تنفيذ الفحص الدوري لصحة البيانات", inDays(4), ago(0, 3), "Source system availability stats pulled", "جُمعت إحصاءات جاهزية الأنظمة المصدرية"],
+    ["k2", "e1", "t1", "blocked", 40, "high", "Create the department head dashboard", "إنشاء لوحة مؤشرات رئيس القسم", inDays(2), ago(1), "Waiting on the KPI list sign-off", "بانتظار اعتماد قائمة المؤشرات"],
+    ["k3", "e2", "t1", "ontrack", 80, "med", "Automate the monthly data quality report", "أتمتة تقرير جودة البيانات الشهري", inDays(6), ago(0, 6), "Completeness checks live, accuracy checks remain", "فحوص الاكتمال جاهزة وبقيت فحوص الدقة"],
+    ["k4", "e2", "t1", "done", 100, "med", "Update the data catalog", "تحديث فهرس البيانات", inDays(-1), ago(1), "All active datasets documented", "وُثّقت جميع مجموعات البيانات النشطة"],
+    ["k5", "e3", "t1", "pending", 10, "low", "Cleanse the entities master data", "تنقية البيانات الرئيسية للجهات", inDays(10), ago(5), "Scoped the duplicate records", "حُصرت السجلات المكررة"],
+    ["k6", "e3", "t1", "ontrack", 30, "high", "Data classification for shared folders", "تصنيف بيانات المجلدات المشتركة", inDays(-2), ago(4), "Classification matrix drafted", "أُعدت مسودة مصفوفة التصنيف"],
+    /* Business Excellence · Business Development — digitization + policy,
+       the busiest queue in the department */
+    ["k7", "e4", "t2", "ontrack", 65, "high", "Review the Data Request BRD", "مراجعة وثيقة متطلبات طلبات البيانات", inDays(4), ago(0, 3), "Walked through the requirements with the requesting unit", "روجعت المتطلبات مع الإدارة الطالبة"],
+    ["k8", "e4", "t2", "blocked", 40, "high", "Conduct UAT for the AI use case", "تنفيذ اختبار القبول لحالة استخدام الذكاء الاصطناعي", inDays(2), ago(1), "Waiting on the vendor to load the test dataset", "بانتظار تحميل بيانات الاختبار من المورد"],
+    ["k9", "e5", "t2", "blocked", 20, "med", "Update the AoP", "تحديث خطة التشغيل السنوية", inDays(5), ago(2), "Waiting on the budget figures from Finance", "بانتظار أرقام الميزانية من المالية"],
+    ["k10", "e5", "t2", "pending", 0, "low", "Develop the digitization roadmap", "إعداد خارطة طريق الرقمنة", inDays(14), ago(6), "Added to the quarter backlog", "أُضيفت إلى خطة الربع"],
+    ["k11", "e4", "t2", "ontrack", 45, "med", "Update the Delegation of Authority Procedure", "تحديث إجراء تفويض الصلاحيات", inDays(-1), ago(4), "Redlines back from Legal", "وردت ملاحظات الإدارة القانونية"],
+    ["k12", "e5", "t2", "ontrack", 70, "high", "Review the e-services enhancement BRD", "مراجعة وثيقة متطلبات تطوير الخدمات الإلكترونية", inDays(3), ago(0, 5), "Sign-off pending one open requirement", "الاعتماد متوقف على متطلب واحد"],
+    ["k13", "m2", "t2", "pending", 15, "med", "Benchmark study of leading governance practices", "دراسة مقارنة لأفضل ممارسات الحوكمة", inDays(9), ago(1), "Collected three reference frameworks", "جُمعت ثلاثة أطر مرجعية"],
+    ["k34", "e4", "t2", "ontrack", 55, "high", "Update the Data Governance Procedure", "تحديث إجراء حوكمة البيانات", inDays(7), ago(0, 26), "New approval flow agreed with stakeholders", "اتُفق على مسار الاعتماد الجديد مع المعنيين"],
+    ["k35", "e5", "t2", "done", 100, "med", "Update the Conflict of Interest Policy", "تحديث سياسة تعارض المصالح", inDays(-3), ago(2), "Approved and published on the intranet", "اعتُمدت ونُشرت على الشبكة الداخلية"],
+    /* Corporate Governance · Unit 1 */
+    ["k14", "e6", "t3", "ontrack", 70, "high", "Prepare the general assembly of Al-Noor Energy", "التحضير للجمعية العامة لشركة النور للطاقة", inDays(3), ago(0, 5), "Agenda and proxies drafted", "أُعدت مسودة جدول الأعمال والتوكيلات"],
+    ["k15", "e6", "t3", "done", 100, "med", "Review the charter of Bawadi Foods", "مراجعة ميثاق شركة بوادي للأغذية", inDays(-5), ago(3), "Comments sent to the company", "أُرسلت الملاحظات للشركة"],
+    ["k16", "e7", "t3", "ontrack", 45, "med", "Meeting with the Amwaj Shipping board secretary", "اجتماع مع أمين مجلس شركة أمواج للشحن", inDays(-1), ago(4), "Agenda shared ahead of the meeting", "شورك جدول الأعمال قبل الاجتماع"],
+    ["k17", "e7", "t3", "blocked", 35, "high", "Raise an escalation on Sahra Mining", "رفع تصعيد بشأن شركة صحراء للتعدين", inDays(1), ago(3), "Waiting on Legal to endorse the escalation memo", "بانتظار اعتماد مذكرة التصعيد من الإدارة القانونية"],
+    /* Corporate Governance · Unit 2 */
+    ["k18", "e8", "t4", "done", 100, "high", "Review the bylaw of Manar Telecom", "مراجعة النظام الأساسي لشركة منار للاتصالات", inDays(-2), ago(0, 8), "Final comments incorporated", "أُدرجت الملاحظات النهائية"],
+    ["k19", "e8", "t4", "ontrack", 60, "med", "General assembly follow-up: Rawafid Utilities", "متابعة الجمعية العامة لشركة روافد للمرافق", inDays(8), ago(0, 30), "Resolutions circulated for signature", "عُممت القرارات للتوقيع"],
+    ["k20", "e9", "t4", "blocked", 35, "high", "Raise an escalation on Manar Telecom disclosure", "رفع تصعيد بشأن إفصاح شركة منار للاتصالات", inDays(1), ago(3), "Escalation pending director approval", "التصعيد بانتظار اعتماد المدير"],
+    ["k21", "e9", "t4", "pending", 15, "med", "Review the charter of Amwaj Shipping", "مراجعة ميثاق شركة أمواج للشحن", inDays(12), ago(5), "First read completed", "اكتملت القراءة الأولى"],
+    /* Corporate Governance 2 · four units */
+    ["k22", "m5", "t5", "ontrack", 50, "high", "Prepare the general assembly of Khaleej Cement", "التحضير للجمعية العامة لشركة الخليج للأسمنت", inDays(6), ago(1), "Invitations issued", "صدرت الدعوات"],
+    ["k23", "m6", "t6", "ontrack", 40, "med", "Review the bylaw of Rabwa Real Estate", "مراجعة النظام الأساسي لشركة الربوة العقارية", inDays(9), ago(2), "Halfway through the articles", "اكتملت مراجعة نصف المواد"],
+    ["k24", "m7", "t7", "pending", 5, "med", "Meeting with the Safa Water board", "اجتماع مع مجلس إدارة شركة صفا للمياه", inDays(11), ago(4), "Proposed two dates", "اقتُرح موعدان"],
+    ["k25", "m8", "t8", "blocked", 25, "high", "Raise an escalation on Rabwa Real Estate", "رفع تصعيد بشأن شركة الربوة العقارية", inDays(2), ago(2), "Awaiting the compliance opinion", "بانتظار رأي الالتزام"],
+    /* BCO · nomination and onboarding cycle */
+    ["k26", "m9", "t9", "ontrack", 60, "high", "Onboarding the board of Khaleej Cement", "تهيئة مجلس إدارة شركة الخليج للأسمنت", inDays(5), ago(0, 10), "Induction sessions scheduled", "جُدولت جلسات التعريف"],
+    ["k27", "m10", "t10", "ontrack", 45, "med", "Prepare the nomination pack for Safa Water", "إعداد ملف الترشيح لشركة صفا للمياه", inDays(4), ago(1), "CVs and disclosures collected", "جُمعت السير الذاتية والإفصاحات"],
+    ["k28", "m11", "t11", "pending", 10, "med", "Shortlist candidates for the Bawadi Foods board", "إعداد القائمة المختصرة لمرشحي مجلس شركة بوادي للأغذية", inDays(8), ago(3), "Longlist of 14 candidates ready", "القائمة الأولية تضم ١٤ مرشحًا"],
+    /* BCO · Quality Assurance */
+    ["k29", "m12", "t12", "pending", 20, "high", "Review the nomination pack of Safa Water", "مراجعة ملف الترشيح لشركة صفا للمياه", inDays(6), ago(2), "Review checklist prepared", "أُعدت قائمة التدقيق"],
+    ["k30", "m12", "t12", "ontrack", 65, "med", "Prepare the quarterly board report", "إعداد تقرير مجلس الإدارة الربعي", inDays(3), ago(0, 7), "KPI section drafted", "أُعد قسم المؤشرات"],
+    /* BCO · Engagement Unit */
+    ["k31", "m13", "t13", "done", 100, "med", "Send the notification to the board of Khaleej Cement", "إرسال الإشعار لمجلس إدارة شركة الخليج للأسمنت", inDays(-1), ago(1), "Notification acknowledged by all members", "أكد جميع الأعضاء استلام الإشعار"],
+    ["k32", "m13", "t13", "ontrack", 35, "high", "Conduct the board assessment of Al-Noor Energy", "تنفيذ تقييم مجلس إدارة شركة النور للطاقة", inDays(7), ago(0, 9), "Questionnaires sent to members", "أُرسلت الاستبانات للأعضاء"],
+    /* DSS */
+    ["k33", "m14", "t14", "ontrack", 55, "med", "Review the rulebook content", "مراجعة محتوى الدليل التنظيمي", inDays(5), ago(0, 12), "Chapters one to three reviewed", "روجعت الفصول من الأول إلى الثالث"],
   ];
   const insAssignee = d.prepare("INSERT OR IGNORE INTO task_assignees (task_id, user_id) VALUES (?,?)");
   for (const [id, owner, team, status, progress, prio, en, arTitle, due, updatedAt, noteEn, noteAr] of rows) {
@@ -157,8 +199,8 @@ export function seed(d: DatabaseSync) {
   // A few tasks are shared between colleagues to demo multi-assignee support.
   insAssignee.run("k1", "e2");
   insAssignee.run("k6", "e1");
-  insAssignee.run("k11", "e7");
-  insAssignee.run("k16", "e9");
+  insAssignee.run("k14", "e7");
+  insAssignee.run("k19", "e9");
 
   // Seed audit trail so the activity log has real, attributable history.
   insAudit.run("k4", "e2", ago(1), "status", "ontrack", "done");
@@ -166,55 +208,56 @@ export function seed(d: DatabaseSync) {
   insAudit.run("k2", "e1", ago(1), "status", "ontrack", "blocked");
   insAudit.run("k1", "e1", ago(0, 3), "progress", "50", "65");
   insAudit.run("k1", "m1", ago(2), "due", inDays(2), inDays(4));
-  insAudit.run("k17", "e9", ago(3), "status", "pending", "blocked");
-  insAudit.run("k15", "e8", ago(0, 8), "status", "ontrack", "done");
+  insAudit.run("k17", "e7", ago(3), "status", "pending", "blocked");
+  insAudit.run("k18", "e8", ago(0, 8), "status", "ontrack", "done");
   insAudit.run("k9", "m2", ago(4), "assignee", "e4", "e5");
 
   // Seed a couple of personal checklists ("note to self").
   insNote.run("k1", "e1", JSON.stringify([
-    { text: "Test with saved cards", done: true },
-    { text: "Verify RTL layout of the form", done: false },
-    { text: "Ask QA for a regression pass", done: false },
+    { text: "Pull availability stats from the source systems", done: true },
+    { text: "Compare scores against last quarter", done: false },
+    { text: "Draft the remediation list for low scorers", done: false },
   ]));
-  insNote.run("k16", "e8", JSON.stringify([
-    { text: "Confirm churn KPI formula", done: true },
-    { text: "Draft dashboard wireframe", done: false },
+  insNote.run("k7", "e4", JSON.stringify([
+    { text: "Cross-check fields against the data dictionary", done: true },
+    { text: "Verify the retention clause with Legal", done: false },
+    { text: "Confirm the delivery format with the requester", done: false },
   ]));
+  insNote.run("k19", "e8", JSON.stringify([
+    { text: "Collect the signed resolutions", done: true },
+    { text: "Archive the assembly minutes", done: false },
+  ]));
+}
 
-  // Demo inbox — inbound emails the AI scanner turns into task suggestions.
+/** Demo inbox — inbound emails the AI scanner turns into task suggestions. */
+export function seedInboxSuggestions(d: DatabaseSync): void {
   const insSugg = d.prepare(
     "INSERT INTO email_suggestions (user_id, from_name, from_email, subject, snippet, ts, status) VALUES (?,?,?,?,?,?,'pending')",
   );
-  insSugg.run("e1", "Salem Al-Qahtani", "salem@acmecorp.example",
-    "Urgent: payment gateway certificate expires Friday",
-    "Hi Yousef, the TLS certificate on the payment gateway expires this week. Please renew it by Friday; this is urgent for the launch.",
+  insSugg.run("e1", "Salem Al-Qahtani", "salem@dataoffice.example",
+    "Urgent: data request delivery due Friday",
+    "Hi Yousef, the approved data request must be delivered by Friday. Please confirm the extract passes the quality checks before it goes out.",
     ago(0, 2));
-  insSugg.run("e1", "Sara Nasser", "sara.nasser@echo.example",
-    "Checkout assets ready for review",
-    "The new checkout illustrations are ready. Could you review them by Tuesday and confirm they fit the payment page?",
+  insSugg.run("e4", "Sara Nasser", "sara.nasser@echo.example",
+    "BRD comments ready for review",
+    "My comments on the Data Request BRD are ready. Could you review them by Tuesday so we can close the document?",
     ago(0, 6));
-  insSugg.run("e2", "App Store Ops", "ops@appstore.example",
-    "Action required: push notification copy approval",
-    "Your push notification templates need copy approval before release. Please submit the final wording by Thursday.",
+  insSugg.run("e4", "AI Vendor Support", "support@aivendor.example",
+    "Action required: UAT sign-off form",
+    "The UAT sign-off form for the AI use case needs your part completed before Thursday so the go-live slot holds.",
     ago(1));
   insSugg.run("m1", "Layla Al-Harbi", "layla.alharbi@echo.example",
-    "Board asks for a hiring update by July 15",
-    "The board would like a one-page summary of the backend hiring pipeline by July 15. No need for slides.",
+    "Board asks for a digitization update by July 15",
+    "The board would like a one-page summary of the digitization roadmap progress by July 15. No need for slides.",
     ago(0, 4));
-  insSugg.run("e8", "Gulf Retail Co.", "success@gulfretail.example",
-    "Onboarding feedback call: client wants a date",
-    "Our team enjoyed the onboarding kit. Could we schedule the feedback call sometime next Wednesday? The client is keen.",
+  insSugg.run("e8", "Rawafid Utilities IR", "ir@rawafid.example",
+    "General assembly minutes need your signature",
+    "The minutes of the Rawafid Utilities general assembly are ready. Could you sign and return them by Wednesday?",
     ago(0, 9));
-  insSugg.run("e6", "Media Buyer", "buyer@adnetwork.example",
-    "Q3 campaign budgets due tomorrow",
-    "Reminder: the final Q3 campaign budget split is due tomorrow. Urgent: the network locks placements after that.",
+  insSugg.run("e6", "Al-Noor Energy IR", "ir@alnoor.example",
+    "General assembly documents due tomorrow",
+    "Reminder: the final agenda and proxy forms for the Al-Noor Energy general assembly are due tomorrow.",
     ago(0, 1));
-
-  seedMeetings(d);
-  ensureDemoPasswords(d);
-  ensurePhoneExts(d);
-  ensureExpandedOrg(d);
-  ensureDemoProjects(d);
 }
 
 /* Demo Outlook calendar — meetings the Graph sync would pull from each
@@ -225,14 +268,17 @@ export function seed(d: DatabaseSync) {
 export function ensureDemoProjects(d: DatabaseSync): void {
   const ins = d.prepare("INSERT OR IGNORE INTO projects (id, name, created_by, ts) VALUES (?,?,?,?)");
   const now = Date.now();
-  ins.run("p1", "Website Launch", "m1", now);
-  ins.run("p2", "Q3 Campaign", "m3", now);
+  ins.run("p1", "Digitization Drive", "m1", now);
+  ins.run("p2", "Board Cycle 2026", "m10", now);
   ins.run("p3", "Compliance Drive", "s1", now);
+  // Databases seeded under the old generic demo carry the old project names.
+  d.prepare("UPDATE projects SET name = 'Digitization Drive' WHERE id = 'p1' AND name = 'Website Launch'").run();
+  d.prepare("UPDATE projects SET name = 'Board Cycle 2026' WHERE id = 'p2' AND name = 'Q3 Campaign'").run();
   const link = d.prepare("UPDATE tasks SET project_id = ? WHERE id = ? AND project_id IS NULL");
   for (const [pid, tid] of [
-    ["p1", "k1"], ["p1", "k3"], ["p1", "k16"],
-    ["p2", "k11"], ["p2", "k13"], ["p2", "k14"],
-    ["p3", "k2"], ["p3", "k17"], ["p3", "k6"],
+    ["p1", "k7"], ["p1", "k8"], ["p1", "k12"],
+    ["p2", "k26"], ["p2", "k27"], ["p2", "k28"],
+    ["p3", "k17"], ["p3", "k20"], ["p3", "k25"],
   ] as const) link.run(pid, tid);
 }
 
@@ -250,30 +296,30 @@ export function seedMeetings(d: DatabaseSync) {
   type M = [user: string, subject: string, location: string, url: string | null,
     orgName: string, orgEmail: string, start: number, end: number, body: string];
   const rows: M[] = [
-    ["e1", "Sprint planning: Development", "Room 2A, Tech floor", null,
-      "Omar Hassan", "omar.hassan@echo.example", ...at(0, 10), "Planning for the next sprint. Bring your estimates for the payment page work."],
-    ["e1", "Payment gateway vendor call", "Microsoft Teams", teams,
-      "Salem Al-Qahtani", "salem@acmecorp.example", ...at(1, 14), "Walkthrough of the certificate renewal process with the vendor's security team."],
+    ["e1", "Weekly sync: Data Management", "Room 2A", null,
+      "Omar Hassan", "omar.hassan@echo.example", ...at(0, 10), "Weekly unit sync. Bring the status of the quarterly data health check."],
+    ["e4", "AI use case vendor call", "Microsoft Teams", teams,
+      "Salem Al-Qahtani", "salem@dataoffice.example", ...at(1, 14), "Walkthrough of the UAT test dataset with the vendor's team."],
     ["e1", "1:1 with Omar", "Omar's office", null,
-      "Omar Hassan", "omar.hassan@echo.example", ...at(3, 9, 30), "Monthly one-to-one. Agenda: growth plan, API security review status."],
-    ["e1", "Tech all-hands", "Auditorium", null,
-      "Layla Al-Harbi", "layla.alharbi@echo.example", ...at(8, 11, 90), "Quarterly all-hands for the Technology unit."],
-    ["m1", "Sprint planning: Development", "Room 2A, Tech floor", null,
-      "Omar Hassan", "omar.hassan@echo.example", ...at(0, 10), "Planning for the next sprint."],
-    ["m1", "Hiring panel: senior backend engineer", "Microsoft Teams", teams,
-      "HR Team", "hr@echo.example", ...at(2, 13, 90), "Final-round interviews. Review the four candidate scorecards beforehand."],
+      "Omar Hassan", "omar.hassan@echo.example", ...at(3, 9, 30), "Monthly one-to-one. Agenda: growth plan, department head dashboard status."],
+    ["e1", "Section all-hands", "Auditorium", null,
+      "Layla Al-Harbi", "layla.alharbi@echo.example", ...at(8, 11, 90), "Quarterly all-hands for the Business Excellence section."],
+    ["m1", "Weekly sync: Data Management", "Room 2A", null,
+      "Omar Hassan", "omar.hassan@echo.example", ...at(0, 10), "Weekly unit sync."],
+    ["m1", "Digitization roadmap workshop", "Microsoft Teams", teams,
+      "Sara Nasser", "sara.nasser@echo.example", ...at(2, 13, 90), "Working session on the digitization roadmap and the AoP dependencies."],
     ["m1", "Leadership sync", "Boardroom", null,
       "Layla Al-Harbi", "layla.alharbi@echo.example", ...at(4, 15), "Weekly managers' sync with the senior leadership."],
     ["s1", "Leadership sync", "Boardroom", null,
-      "Layla Al-Harbi", "layla.alharbi@echo.example", ...at(4, 15), "Weekly managers' sync. Review team health across all units."],
-    ["s1", "Board review: Q3 outlook", "Executive briefing room", null,
-      "Board Office", "board@echo.example", ...at(6, 9, 120), "Quarterly review with the board. Hiring update and Q3 campaign figures on the agenda."],
-    ["s1", "Enterprise client visit: Gulf Retail Co.", "Client HQ, King Fahd Rd", null,
-      "Gulf Retail Co.", "success@gulfretail.example", ...at(9, 12, 120), "On-site visit to review the onboarding rollout."],
-    ["e6", "Q3 campaign kickoff", "Marketing studio", null,
-      "Khalid Amin", "khalid.amin@echo.example", ...at(1, 11), "Kickoff for the Q3 campaign launch. Creatives and budget split review."],
-    ["e8", "Onboarding feedback call: Gulf Retail", "Microsoft Teams", teams,
-      "Gulf Retail Co.", "success@gulfretail.example", ...at(5, 13), "Feedback call on the enterprise onboarding kit."],
+      "Layla Al-Harbi", "layla.alharbi@echo.example", ...at(4, 15), "Weekly managers' sync. Review section health across the department."],
+    ["s1", "Board review: quarterly outlook", "Executive briefing room", null,
+      "Board Office", "board@echo.example", ...at(6, 9, 120), "Quarterly review with the board. Digitization update and the board cycle on the agenda."],
+    ["s1", "Company visit: Khaleej Cement", "Company HQ, King Fahd Rd", null,
+      "Khaleej Cement IR", "ir@khaleejcement.example", ...at(9, 12, 120), "On-site visit to review the board onboarding progress."],
+    ["e6", "General assembly prep: Al-Noor Energy", "Meeting room 1", null,
+      "Khalid Amin", "khalid.amin@echo.example", ...at(1, 11), "Final run-through of the assembly agenda, proxies, and quorum plan."],
+    ["e8", "Rawafid Utilities follow-up call", "Microsoft Teams", teams,
+      "Rawafid Utilities IR", "ir@rawafid.example", ...at(5, 13), "Follow-up on the general assembly resolutions and signatures."],
   ];
   for (const r of rows) ins.run(...r);
 }
