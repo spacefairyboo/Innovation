@@ -2,7 +2,8 @@
 
 /* System actions — notifications, the email digest, and the demo reset. */
 
-import { resetDB } from "../db/seed";
+import { seed } from "../db/seed";
+import { getDB } from "../db/connection";
 import { getSession } from "../auth/session";
 import { markAllRead, scopeTasks } from "../services/accessService";
 import { buildPodcastScript } from "../services/briefingService";
@@ -30,7 +31,13 @@ export async function emailMyBriefing() {
   refresh();
 }
 
+/** Wipes the demo data and reseeds from scratch — the one and only reset. */
 export async function resetDemo() {
-  resetDB();
+  const d = getDB();
+  // Order matters: every table referencing users/teams/units goes first
+  // (projects and chat messages included), or the user delete trips a
+  // foreign key and the reset dies half-done.
+  d.exec("DELETE FROM notif_reads; DELETE FROM email_suggestions; DELETE FROM meetings; DELETE FROM delegation_tasks; DELETE FROM delegations; DELETE FROM emails; DELETE FROM chat_messages; DELETE FROM task_assignees; DELETE FROM task_notes; DELETE FROM audit_logs; DELETE FROM task_updates; DELETE FROM tasks; DELETE FROM projects; DELETE FROM users; DELETE FROM teams; DELETE FROM units;");
+  seed(d);
   refresh();
 }
