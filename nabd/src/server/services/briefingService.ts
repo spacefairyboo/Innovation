@@ -90,11 +90,12 @@ export function buildPodcastScript(user: User, lang: Lang, tasks: Task[], includ
       : `Recently completed: "${first.title.en}" by ${owner.name.en}${recentDone.length > 1 ? `, with ${recentDone.length - 1} more ${recentDone.length - 1 === 1 ? "completion" : "completions"} this week` : ""}.${note ? ` Closing note: "${note}".` : ""}`);
   }
 
-  /* Blockers, one line each */
+  /* Blockers, one line each. The briefing is the complete update: every
+     blocker is spoken, none deferred to the dashboard. */
   const blocked = tasks.filter((x) => effStatus(x) === "blocked");
   if (blocked.length) {
     say(ar ? "المتعثرات التي تحتاج قرارًا:" : "Blocked and waiting on a decision:");
-    for (const x of blocked.slice(0, 3)) {
+    for (const x of blocked) {
       const owner = getUser(x.ownerId)!;
       const team = getTeam(x.teamId)!;
       const note = x.history.find((h) => h.text[lang])?.text[lang] ?? "";
@@ -102,22 +103,20 @@ export function buildPodcastScript(user: User, lang: Lang, tasks: Task[], includ
         ? `«${x.title.ar}»، مع ${owner.name.ar} في ${team.name.ar}${note ? `. السبب المسجل: «${note}»` : ""}.`
         : `"${x.title.en}", with ${owner.name.en} in ${team.name.en}${note ? `. Recorded reason: "${note}"` : ""}.`);
     }
-    if (blocked.length > 3) {
-      say(ar
-        ? `${blocked.length - 3} ${blocked.length - 3 === 1 ? "مهمة متعثرة أخرى مفصلة" : "مهام متعثرة أخرى مفصلة"} في لوحة المتابعة.`
-        : `${blocked.length - 3} more blocked ${blocked.length - 3 === 1 ? "task is" : "tasks are"} detailed on the dashboard.`);
-    }
   }
 
-  /* Slipped deadlines */
+  /* Slipped deadlines — every one, with owner and how late it is */
   const delayed = tasks.filter((x) => effStatus(x) === "delayed");
   if (delayed.length) {
-    const first = delayed[0];
-    const owner = getUser(first.ownerId)!;
-    const d = daysPastDue(first.due);
-    say(ar
-      ? `المتأخرات: «${first.title.ar}» (${owner.name.ar}) متأخرة ${d} ${d === 1 ? "يومًا" : "أيام"}${delayed.length > 1 ? `، إضافة إلى ${delayed.length - 1} ${delayed.length - 1 === 1 ? "مهمة أخرى" : "مهام أخرى"}` : ""}. يجري الاتفاق على مواعيد جديدة اليوم.`
-      : `Past due: "${first.title.en}" (${owner.name.en}), ${d} ${d === 1 ? "day" : "days"} late${delayed.length > 1 ? `, plus ${delayed.length - 1} ${delayed.length - 1 === 1 ? "other" : "others"}` : ""}. Revised dates are being agreed today.`);
+    say(ar ? "المتأخرات عن موعدها:" : "Past their due date:");
+    for (const x of delayed) {
+      const owner = getUser(x.ownerId)!;
+      const d = daysPastDue(x.due);
+      say(ar
+        ? `«${x.title.ar}» (${owner.name.ar})، متأخرة ${d} ${d === 1 ? "يومًا" : "أيام"}.`
+        : `"${x.title.en}" (${owner.name.en}), ${d} ${d === 1 ? "day" : "days"} late.`);
+    }
+    say(ar ? "يجري الاتفاق على مواعيد جديدة اليوم." : "Revised dates are being agreed today.");
   }
 
   /* Unit roundup for the org-wide view */
@@ -135,26 +134,17 @@ export function buildPodcastScript(user: User, lang: Lang, tasks: Task[], includ
       const section = getUnit(team.unitId);
       return section ? `${bare} (${section.name[lang]})` : bare;
     };
-    const byHealth: Record<string, string[]> = { great: [], ok: [], risk: [] };
-    for (const team of teams) {
-      byHealth[teamHealth(countStatuses(teamTasks(team.id)))].push(label(team));
-    }
-    const parts: string[] = [];
-    // A long healthy list is noise when spoken: state the count instead.
-    if (byHealth.great.length > 3) parts.push(ar
-      ? `${byHealth.great.length} وحدات بوضع جيد`
-      : `${byHealth.great.length} units healthy`);
-    else if (byHealth.great.length) parts.push(ar
-      ? `${prose(byHealth.great, lang)} بوضع جيد`
-      : `${prose(byHealth.great, lang)} healthy`);
-    if (byHealth.ok.length) parts.push(ar
-      ? `${prose(byHealth.ok, lang)} تحت متابعة دقيقة`
-      : `${prose(byHealth.ok, lang)} under close watch`);
-    if (byHealth.risk.length) parts.push(ar
-      ? `${prose(byHealth.risk, lang)} في دائرة الخطر`
-      : `${prose(byHealth.risk, lang)} at risk`);
-    if (parts.length) {
-      say(ar ? `حالة الوحدات: ${parts.join("؛ ")}.` : `Unit status: ${parts.join("; ")}.`);
+    // Only the risks are worth airtime: healthy and watch-listed units
+    // would turn the roundup into a roll call.
+    const atRisk = teams
+      .filter((team) => teamHealth(countStatuses(teamTasks(team.id))) === "risk")
+      .map(label);
+    if (atRisk.length) {
+      say(ar
+        ? `الوحدات في دائرة الخطر: ${prose(atRisk, lang)}.`
+        : `Units at risk: ${prose(atRisk, lang)}.`);
+    } else {
+      say(ar ? "لا توجد وحدات في دائرة الخطر." : "No units are at risk.");
     }
   }
 
