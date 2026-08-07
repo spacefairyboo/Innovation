@@ -21,6 +21,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except static assets and framework internals.
-  matcher: ["/((?!_next|favicon.ico|models|basis|.*\\.(?:png|jpg|svg|glb|wasm)).*)"],
+  // Everything except static assets and framework internals. Media files
+  // stay reachable pre-auth: the login page itself plays the promo film.
+  matcher: ["/((?!_next|favicon.ico|models|basis|.*\\.(?:png|jpg|svg|glb|wasm|mp4|webm)).*)"],
 };

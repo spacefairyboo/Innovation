@@ -40,14 +40,19 @@ export function LoginPromo() {
         </button>
         <video
           className='w-full rounded-2xl border border-white/15 shadow-2xl bg-black aspect-video'
-          src='/promo.mp4'
           autoPlay
           muted
           playsInline
           controls
           onEnded={close}
-          onError={() => setBroken(true)}
-        />
+        >
+          {/* H.264 first for Safari; the WebM twin covers browsers built
+              without proprietary codecs. Source failures fire on the
+              <source> elements, in order - an error on the LAST one means
+              nothing was playable, so the dialog stands down. */}
+          <source src='/promo.mp4' type='video/mp4' />
+          <source src='/promo.webm' type='video/webm' onError={() => setBroken(true)} />
+        </video>
       </div>
     </div>
   );
