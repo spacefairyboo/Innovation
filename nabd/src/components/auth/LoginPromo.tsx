@@ -2,16 +2,16 @@
 
 /* The promo film, floating over the login page. It opens on every visit by
    design (no dismissal is remembered - a refresh brings it back) and goes
-   away with the X, the close bar (phones), the Escape key, or a click on
-   the backdrop. Muted autoplay so browsers allow it to start; the visitor
-   can unmute with the player's own controls. Renders nothing when the
-   video files are absent.
+   away with the X, the close bar (phones), the Escape key, or a tap on
+   the backdrop. Renders nothing when the video file is absent.
 
-   Layout rule that matters: the pop animation transforms ONLY the video
-   card. The close controls hang off the overlay itself, because WebKit
-   hit-tests fixed/absolute elements inside transformed ancestors at the
-   wrong position - the button is visible but taps land nowhere, which is
-   exactly an iPhone "X does nothing" bug. */
+   Two layout rules that matter, both for touch screens:
+   - The pop animation transforms ONLY the video card. WebKit hit-tests
+     fixed/absolute elements inside transformed ancestors at the wrong
+     position - a visible button whose taps land nowhere.
+   - The page behind is scroll-locked while the dialog is up, and the
+     overlay is a solid dim without backdrop-filter; a blurred fixed
+     overlay is WebKit's worst territory for taps falling through. */
 
 import { useCallback, useEffect, useState } from 'react';
 
@@ -26,46 +26,61 @@ export function LoginPromo() {
       if (e.key === 'Escape') close();
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    // The page behind must not scroll while the dialog is up - on touch
+    // screens a moving background steals the gesture from the overlay.
+    const prevBody = document.body.style.overflow;
+    const prevRoot = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevBody;
+      document.documentElement.style.overflow = prevRoot;
+    };
   }, [open, close]);
 
   if (!open || broken) return null;
   return (
     <div
-      className='fixed inset-0 z-95 grid place-items-center p-4 sm:p-8 bg-[rgb(4_20_16/0.62)] backdrop-blur-md animate-modal-pop'
+      className='fixed inset-0 z-95 flex flex-col items-center justify-center gap-3 p-4 sm:p-8 bg-[rgb(4_20_16/0.78)] overscroll-contain'
+      style={{ touchAction: 'none' }}
       onClick={(e) => {
+        if (e.target === e.currentTarget) close();
+      }}
+      onTouchEnd={(e) => {
         if (e.target === e.currentTarget) close();
       }}
       role='dialog'
       aria-label='Echo introduction video'
     >
-      <div className='relative w-full max-w-4xl'>
-        {/* On phones the card is flush with the screen edge, so an offset X
-            would hang half off-screen: pin it to the viewport corner there,
-            and float it off the card's corner from sm: up. Touch closes via
-            onTouchEnd directly - mobile browsers cancel the synthesized
-            click too easily (any movement mid-tap, or the hover transform
-            shifting the target under the finger, kills it). */}
-        <button
-          type='button'
-          className='fixed top-3 end-3 sm:absolute sm:-top-4 sm:-end-4 z-10 w-11 h-11 rounded-full grid place-items-center cursor-pointer border border-white/25 bg-[rgb(10_34_28/0.9)] text-white shadow-xl backdrop-blur-md transition hover:bg-[rgb(20_54_45)] sm:hover:scale-105'
-          onClick={close}
-          onTouchEnd={(e) => { e.preventDefault(); close(); }}
-          aria-label='Close video'
+      {/* Anchored to the overlay (the screen), outside the animated card */}
+      <button
+        type='button'
+        className='absolute top-3 end-3 sm:top-5 sm:end-6 z-10 w-11 h-11 rounded-full grid place-items-center cursor-pointer border border-white/25 bg-[rgb(10_34_28/0.9)] text-white shadow-xl transition hover:bg-[rgb(20_54_45)] sm:hover:scale-105'
+        onClick={close}
+        onPointerUp={close}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          close();
+        }}
+        aria-label='Close video'
+      >
+        <svg
+          width='17'
+          height='17'
+          viewBox='0 0 24 24'
+          fill='none'
+          stroke='currentColor'
+          strokeWidth='2.5'
+          strokeLinecap='round'
+          aria-hidden
         >
-          <svg
-            width='17'
-            height='17'
-            viewBox='0 0 24 24'
-            fill='none'
-            stroke='currentColor'
-            strokeWidth='2.5'
-            strokeLinecap='round'
-            aria-hidden
-          >
-            <path d='M18 6 6 18M6 6l12 12' />
-          </svg>
-        </button>
+          <path d='M18 6 6 18M6 6l12 12' />
+        </svg>
+      </button>
+
+      {/* Only this card animates */}
+      <div className='w-full max-w-4xl animate-modal-pop'>
         <video
           className='w-full rounded-2xl border border-white/15 shadow-2xl bg-black aspect-video'
           autoPlay
@@ -73,10 +88,6 @@ export function LoginPromo() {
           controls
           onEnded={close}
         >
-          {/* H.264 first for Safari; the WebM twin covers browsers built
-              without proprietary codecs. Source failures fire on the
-              <source> elements, in order - an error on the LAST one means
-              nothing was playable, so the dialog stands down. */}
           <source src='/promov1.mp4' type='video/mp4' />
           {/* <source src='/promo.webm' type='video/webm' onError={() => setBroken(true)} /> */}
         </video>
@@ -89,7 +100,10 @@ export function LoginPromo() {
         className='sm:hidden w-full max-w-4xl py-3.5 rounded-2xl border border-white/25 bg-white/10 text-white text-sm font-bold'
         onClick={close}
         onPointerUp={close}
-        onTouchEnd={(e) => { e.preventDefault(); close(); }}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          close();
+        }}
       >
         ✕ &nbsp;Close
       </button>
