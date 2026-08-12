@@ -88,8 +88,9 @@ export function LoginPromo() {
           controls
           onEnded={close}
         >
-          <source src='/promov1.mp4' type='video/mp4' />
-          {/* <source src='/promo.webm' type='video/webm' onError={() => setBroken(true)} /> */}
+          {/* Last source in the list: an error here means nothing was
+              playable, so the dialog stands down instead of a black box. */}
+          <source src='/promov1.mp4' type='video/mp4' onError={() => setBroken(true)} />
         </video>
       </div>
 
